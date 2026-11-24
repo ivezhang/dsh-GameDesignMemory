@@ -14,7 +14,7 @@ export const name = 'design-memory'
 export const inject = ['tools']
 
 const ROUTE_PATH = '/design-memory'
-const CATEGORIES = ['system', 'numbers', 'other']
+const CATEGORIES = ['system', 'numbers', 'workflow', 'other']
 const STATUSES = ['draft', 'confirmed', 'deprecated']
 const MAX_BODY_BYTES = 2 * 1024 * 1024
 const LIMITS = {
@@ -27,11 +27,13 @@ const LIMITS = {
   factLabel: 80,
   factValue: 400,
   facts: 40,
+  links: 40,
+  linkLabel: 80,
   note: 500,
   history: 30
 }
 
-const CATEGORY_LABEL = { system: '系统', numbers: '数值', other: '其他' }
+const CATEGORY_LABEL = { system: '系统', numbers: '数值', workflow: '工作流', other: '其他' }
 const STATUS_LABEL = { draft: '待确认', confirmed: '已确认', deprecated: '已废弃' }
 
 const SEARCH_PARAMETERS = {
@@ -45,7 +47,7 @@ const SEARCH_PARAMETERS = {
     category: {
       type: 'string',
       enum: CATEGORIES,
-      description: 'system=系统规则与模块机制；numbers=数值口径、产出消耗、概率阈值；other=流程、I18N、工具链等其他约定。'
+      description: 'system=系统规则与模块机制；numbers=数值口径、产出消耗、概率阈值；workflow=常用工作细节与流程（翻译、找竞品、目录与交付约定等）；other=其他设计约定。'
     },
     status: {
       type: 'string',
@@ -69,17 +71,22 @@ const WRITE_PARAMETERS = {
   properties: {
     action: {
       type: 'string',
-      enum: ['save', 'update', 'delete'],
-      description: 'save=新建；update=修改已有条目；delete=删除。'
+      enum: ['save', 'update', 'delete', 'status', 'link', 'unlink'],
+      description:
+        'save=新建；update=修改已有条目；status=只改状态（确认/废弃）；link=新增一条关联；unlink=移除一条关联；delete=删除。'
     },
     id: {
       type: 'string',
-      description: 'update / delete 必填：条目 id（来自 design_memory_search 的结果）。'
+      description: 'update / delete / status / link / unlink 必填：条目 id（来自 design_memory_search 的结果）。'
+    },
+    targetId: {
+      type: 'string',
+      description: 'link / unlink 必填：要关联或解除关联的另一条记忆 id。'
     },
     category: {
       type: 'string',
       enum: CATEGORIES,
-      description: 'system=系统；numbers=数值；other=其他。save 时缺省为 other。'
+      description: 'system=系统；numbers=数值；workflow=工作流；other=其他。save 时缺省为 other。'
     },
     title: {
       type: 'string',
@@ -100,6 +107,11 @@ const WRITE_PARAMETERS = {
     facts: {
       type: 'string',
       description: '关键要点，每行「名称=值」，例如「随机皮肤放大器=20」；多行用换行分隔。'
+    },
+    links: {
+      type: 'string',
+      description:
+        '关联到其它记忆：每行一个 id，需要说明关系时写「id=关系说明」（例如「mem_abc123=依赖这条规则」）；多行用换行分隔。'
     },
     status: {
       type: 'string',
@@ -153,6 +165,7 @@ export function apply(ctx) {
       state.entries = list
         .filter((item) => item && typeof item === 'object' && typeof item.title === 'string' && item.title.trim())
         .map(normalizeStored)
+      pruneDanglingLinks()
     } catch (error) {
       state.entries = []
       if (!error || error.code !== 'ENOENT') {
@@ -188,13 +201,15 @@ export function apply(ctx) {
   }
 
   function stats() {
-    const byCategory = { system: 0, numbers: 0, other: 0 }
+    const byCategory = { system: 0, numbers: 0, workflow: 0, other: 0 }
     const byStatus = { draft: 0, confirmed: 0, deprecated: 0 }
+    let links = 0
     for (const entry of state.entries) {
       byCategory[entry.category] = (byCategory[entry.category] || 0) + 1
       byStatus[entry.status] = (byStatus[entry.status] || 0) + 1
+      links += entry.links.length
     }
-    return { total: state.entries.length, byCategory, byStatus }
+    return { total: state.entries.length, byCategory, byStatus, links }
   }
 
   async function createEntry(input) {
@@ -209,6 +224,7 @@ export function apply(ctx) {
       body: cleanText(input.body, LIMITS.body),
       tags: normalizeTags(input.tags),
       facts: normalizeFacts(input.facts),
+      links: normalizeLinks(input.links),
       status: STATUSES.includes(input.status) ? input.status : 'draft',
       pinned: input.pinned === true,
       source: cleanText(input.source, LIMITS.source),
@@ -232,10 +248,11 @@ export function apply(ctx) {
       ...current,
       tags: current.tags.slice(),
       facts: current.facts.map((fact) => ({ ...fact })),
+      links: current.links.map((link) => ({ ...link })),
       history: current.history.slice()
     }
     if (input.category !== undefined) {
-      if (!CATEGORIES.includes(input.category)) throw httpError(400, 'invalid-category', 'category 必须是 system / numbers / other')
+      if (!CATEGORIES.includes(input.category)) throw httpError(400, 'invalid-category', 'category 必须是 system / numbers / workflow / other')
       next.category = input.category
     }
     if (input.title !== undefined) {
@@ -247,6 +264,7 @@ export function apply(ctx) {
     if (input.body !== undefined) next.body = cleanText(input.body, LIMITS.body)
     if (input.tags !== undefined) next.tags = normalizeTags(input.tags)
     if (input.facts !== undefined) next.facts = normalizeFacts(input.facts)
+    if (input.links !== undefined) next.links = normalizeLinks(input.links)
     if (input.source !== undefined) next.source = cleanText(input.source, LIMITS.source)
     if (input.status !== undefined) {
       if (!STATUSES.includes(input.status)) throw httpError(400, 'invalid-status', 'status 必须是 draft / confirmed / deprecated')
@@ -263,6 +281,54 @@ export function apply(ctx) {
     return next
   }
 
+  async function linkEntry(input) {
+    const id = typeof input.id === 'string' ? input.id.trim() : ''
+    const targetId = typeof input.targetId === 'string' ? input.targetId.trim() : ''
+    if (!id || !targetId) throw httpError(400, 'missing-id', 'link 需要 id 与 targetId')
+    if (id === targetId) throw httpError(400, 'self-link', '不能把一条记忆关联到它自己')
+    const index = state.entries.findIndex((entry) => entry.id === id)
+    if (index === -1) throw httpError(404, 'not-found', '记忆条目不存在：' + id)
+    if (!state.entries.some((entry) => entry.id === targetId)) throw httpError(404, 'not-found', '要关联的记忆不存在：' + targetId)
+    const current = state.entries[index]
+    const label = cleanText(input.label, LIMITS.linkLabel)
+    const links = current.links.map((link) => ({ ...link }))
+    const existing = links.find((link) => link.to === targetId)
+    if (existing) {
+      if (label) existing.label = label
+    } else {
+      if (links.length >= LIMITS.links) throw httpError(400, 'too-many-links', '关联数量已达上限 ' + LIMITS.links)
+      links.push({ to: targetId, label })
+    }
+    return applyPatch(current, { links, note: cleanText(input.note, LIMITS.note) || '新增关联' })
+  }
+
+  async function unlinkEntry(input) {
+    const id = typeof input.id === 'string' ? input.id.trim() : ''
+    const targetId = typeof input.targetId === 'string' ? input.targetId.trim() : ''
+    if (!id || !targetId) throw httpError(400, 'missing-id', 'unlink 需要 id 与 targetId')
+    const index = state.entries.findIndex((entry) => entry.id === id)
+    if (index === -1) throw httpError(404, 'not-found', '记忆条目不存在：' + id)
+    const current = state.entries[index]
+    const links = current.links.filter((link) => link.to !== targetId)
+    return applyPatch(current, { links, note: cleanText(input.note, LIMITS.note) || '移除关联' })
+  }
+
+  async function applyPatch(current, patch) {
+    const updatedAt = new Date().toISOString()
+    const next = {
+      ...current,
+      ...patch,
+      updatedAt,
+      history: current.history.concat([{ at: updatedAt, note: patch.note || '' }]).slice(-LIMITS.history)
+    }
+    delete next.note
+    await persist((entries) => {
+      const position = entries.findIndex((entry) => entry.id === next.id)
+      if (position !== -1) entries[position] = next
+    })
+    return next
+  }
+
   async function deleteEntry(rawId) {
     const id = typeof rawId === 'string' ? rawId.trim() : ''
     if (!id) throw httpError(400, 'missing-id', 'delete 需要 id')
@@ -272,8 +338,20 @@ export function apply(ctx) {
     await persist((entries) => {
       const position = entries.findIndex((item) => item.id === id)
       if (position !== -1) entries.splice(position, 1)
+      for (const item of entries) {
+        if (!Array.isArray(item.links) || !item.links.length) continue
+        const filtered = item.links.filter((link) => link.to !== id)
+        if (filtered.length !== item.links.length) item.links = filtered
+      }
     })
     return entry
+  }
+
+  function pruneDanglingLinks() {
+    const known = new Set(state.entries.map((entry) => entry.id))
+    for (const entry of state.entries) {
+      entry.links = entry.links.filter((link) => known.has(link.to) && link.to !== entry.id)
+    }
   }
 
   function searchEntries(input) {
@@ -293,9 +371,10 @@ export function apply(ctx) {
     const lines = shown.map((entry, index) => {
       const summary = entry.summary ? '\n   ' + entry.summary : ''
       const tags = entry.tags.length ? ' · #' + entry.tags.join(' #') : ''
+      const links = entry.links.length ? ' · 关联 ' + entry.links.length : ''
       return (
         `${index + 1}. [${labelCategory(entry.category)}/${labelStatus(entry.status)}] ${entry.title}${summary}` +
-        `\n   id=${entry.id} · 更新 ${formatDay(entry.updatedAt)}${tags}`
+        `\n   id=${entry.id} · 更新 ${formatDay(entry.updatedAt)}${tags}${links}`
       )
     })
     return (
@@ -308,7 +387,7 @@ export function apply(ctx) {
   ctx.tools.register({
     name: 'design_memory_search',
     description:
-      '查询「策划记忆」：该用户是游戏策划，这里长期沉淀了他的系统规则、数值口径与流程约定。改动某个系统、重新配数值，或回答「这个数为什么这么定 / 之前定的多少」之前先查这里。返回带 id 的摘要列表；传 id 读取全文。',
+      '查询「策划记忆」：该用户是游戏策划，这里长期沉淀了他的系统规则、数值口径、工作流约定与设计结论。改动某个系统、重新配数值，或做翻译、找竞品之前先查这里。返回带 id 的摘要列表；传 id 读取全文（含关联的记忆）。',
     parameters: SEARCH_PARAMETERS,
     output: TEXT_OUTPUT,
     async execute(args) {
@@ -317,7 +396,7 @@ export function apply(ctx) {
       if (typeof input.id === 'string' && input.id.trim()) {
         const entry = state.entries.find((item) => item.id === input.id.trim())
         if (!entry) return { text: `没有找到 id 为 ${input.id} 的记忆。可先不带 id 搜索候选。` }
-        return { text: formatEntry(entry) }
+        return { text: formatEntry(entry, state.entries) }
       }
       const limit = Math.min(Math.max(Number.isInteger(input.limit) ? input.limit : 8, 1), 30)
       const matches = searchEntries(input)
@@ -334,7 +413,7 @@ export function apply(ctx) {
   ctx.tools.register({
     name: 'design_memory_write',
     description:
-      '写入 / 修改 / 删除「策划记忆」条目（左侧栏同名面板读取同一份数据）。用户确认了新的系统规则、数值结论或流程约定之后调用，让结论跨会话保留。分类：system=系统规则与模块机制；numbers=数值口径、产出消耗、概率阈值；other=流程、I18N、工具链与跨部门约定。facts 每行「名称=值」；tags 逗号分隔；update 的 note 会写入改动记录。',
+      '写入 / 修改 / 删除「策划记忆」条目（左侧栏同名面板读取同一份数据）。用户确认了新的系统规则、数值结论、工作流细节或设计约定之后调用，让结论跨会话保留。分类：system=系统规则与模块机制；numbers=数值口径、产出消耗、概率阈值；workflow=常用工作细节与流程（翻译、找竞品、目录约定、交付方式等）；other=其他设计约定。facts 每行「名称=值」；tags 逗号分隔；links 每行一个关联记忆 id（可写「id=说明」），把相关记忆串成关系网；status 动作用来只改状态（confirmed=用户已确认，deprecated=结论作废）；update 的 note 会写入改动记录。',
     parameters: WRITE_PARAMETERS,
     output: TEXT_OUTPUT,
     async execute(args) {
@@ -354,11 +433,29 @@ export function apply(ctx) {
             `id=${entry.id} · 状态 ${labelStatus(entry.status)} · 改动记录 ${entry.history.length} 条`
         }
       }
+      if (input.action === 'status') {
+        const entry = await updateEntry({ id: input.id, status: input.status, note: input.note })
+        return { text: `已把记忆「${entry.title}」标记为 ${labelStatus(entry.status)}（id=${entry.id}）` }
+      }
+      if (input.action === 'link') {
+        const entry = await linkEntry(input)
+        const target = state.entries.find((item) => item.id === input.targetId)
+        return {
+          text:
+            `已关联：「${entry.title}」→「${target ? target.title : input.targetId}」` +
+            (input.label ? `（${input.label}）` : '') +
+            `\n当前关联 ${entry.links.length} 条`
+        }
+      }
+      if (input.action === 'unlink') {
+        const entry = await unlinkEntry(input)
+        return { text: `已解除关联：${entry.title}（剩余关联 ${entry.links.length} 条）` }
+      }
       if (input.action === 'delete') {
         const entry = await deleteEntry(input.id)
-        return { text: `已删除记忆：${entry.title}（id=${entry.id}）` }
+        return { text: `已删除记忆：${entry.title}（id=${entry.id}），指向它的关联也已清理` }
       }
-      throw new Error('action 必须是 save / update / delete')
+      throw new Error('action 必须是 save / update / delete / status / link / unlink')
     }
   })
 
@@ -407,8 +504,11 @@ export function apply(ctx) {
     if (!input || typeof input !== 'object') throw httpError(400, 'invalid-payload', '请求体必须是 JSON 对象')
     if (input.action === 'save') return { entry: await createEntry(input) }
     if (input.action === 'update') return { entry: await updateEntry(input) }
+    if (input.action === 'status') return { entry: await updateEntry({ id: input.id, status: input.status, note: input.note }) }
+    if (input.action === 'link') return { entry: await linkEntry(input) }
+    if (input.action === 'unlink') return { entry: await unlinkEntry(input) }
     if (input.action === 'delete') return { entry: await deleteEntry(input.id) }
-    throw httpError(400, 'unknown-action', 'action 必须是 save / update / delete')
+    throw httpError(400, 'unknown-action', 'action 必须是 save / update / delete / status / link / unlink')
   }
 
   ctx.inject(['webServer'], (webCtx) => {
@@ -489,6 +589,43 @@ function normalizeFacts(value) {
   return facts
 }
 
+/**
+ * Accepts ["mem_a", "mem_b=说明"], [{ to, label }] or a "id=说明" multi-line string.
+ * Self references and duplicates are dropped; the caller prunes unknown ids.
+ */
+function normalizeLinks(value) {
+  let rows = []
+  if (Array.isArray(value)) {
+    rows = value.map((item) => {
+      if (typeof item === 'string') return item
+      if (item && typeof item === 'object') return { to: item.to || item.id || item.targetId || '', label: item.label || item.note || '' }
+      return ''
+    })
+  } else if (typeof value === 'string') {
+    rows = value
+      .split(/\r?\n|[,，;；]/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const match = line.match(/^\s*([^\s=:：]+)\s*[=:：]?\s*(.*)$/)
+        return match ? { to: match[1], label: match[2] } : null
+      })
+      .filter(Boolean)
+  }
+  const seen = new Set()
+  const links = []
+  for (const row of rows) {
+    const to = typeof row === 'string' ? row.trim() : typeof row.to === 'string' ? row.to.trim() : ''
+    if (!to) continue
+    if (seen.has(to)) continue
+    seen.add(to)
+    const label = typeof row === 'string' ? '' : typeof row.label === 'string' ? row.label.trim().slice(0, LIMITS.linkLabel) : ''
+    links.push({ to, label })
+    if (links.length >= LIMITS.links) break
+  }
+  return links
+}
+
 function normalizeStored(raw) {
   const now = new Date().toISOString()
   return {
@@ -499,6 +636,7 @@ function normalizeStored(raw) {
     body: typeof raw.body === 'string' ? raw.body.slice(0, LIMITS.body) : '',
     tags: normalizeTags(raw.tags),
     facts: normalizeFacts(raw.facts),
+    links: normalizeLinks(raw.links),
     status: STATUSES.includes(raw.status) ? raw.status : 'draft',
     pinned: raw.pinned === true,
     source: typeof raw.source === 'string' ? raw.source.slice(0, LIMITS.source) : '',
@@ -546,7 +684,7 @@ function formatDay(iso) {
   return date.toLocaleDateString('zh-CN')
 }
 
-function formatEntry(entry) {
+function formatEntry(entry, entries) {
   const lines = [
     `【${labelCategory(entry.category)} · ${labelStatus(entry.status)}】${entry.title}`,
     `id: ${entry.id} ｜ 更新: ${formatDay(entry.updatedAt)} ｜ 标签: ${entry.tags.length ? entry.tags.join('、') : '无'}`
@@ -561,6 +699,21 @@ function formatEntry(entry) {
     lines.push(entry.body)
   }
   if (entry.source) lines.push('来源: ' + entry.source)
+  if (entry.links.length) {
+    lines.push('关联:')
+    for (const link of entry.links) {
+      const target = Array.isArray(entries) ? entries.find((item) => item.id === link.to) : null
+      const name = target ? `【${labelCategory(target.category)}】${target.title}` : '（已删除）'
+      lines.push(`- ${name}${link.label ? ' — ' + link.label : ''}  id=${link.to}`)
+    }
+  }
+  if (Array.isArray(entries)) {
+    const backlinks = entries.filter((item) => item.id !== entry.id && item.links.some((link) => link.to === entry.id))
+    if (backlinks.length) {
+      lines.push('被关联:')
+      for (const item of backlinks) lines.push(`- 【${labelCategory(item.category)}】${item.title}  id=${item.id}`)
+    }
+  }
   if (entry.history.length) {
     lines.push('改动记录:')
     for (const item of entry.history.slice(-5)) lines.push(`- ${formatDay(item.at)} ${item.note || '（未填写说明）'}`)

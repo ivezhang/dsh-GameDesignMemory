@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Design memory",
+    "description": "A planner's long-term memory: system rules, numeric decisions, and project conventions organized as Systems, Numbers, and Other, opened from the left sidebar and readable by the agent through tools.",
+    "detail": "docs/DETAIL.md"
+  }
+}

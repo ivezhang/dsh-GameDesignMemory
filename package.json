@@ -1,6 +1,6 @@
 {
   "name": "@local/design-memory",
-  "version": "2.6.5",
+  "version": "2.6.6",
   "private": true,
   "description": "知微：面向游戏策划的 AI 知识工作台 —— 记忆与知识对象双层网络、棘轮式演进、固有约定保护、自动关系与召回记录",
   "license": "MIT",

@@ -2243,6 +2243,29 @@ async function runKnowledgeSuite() {
     ok(workflows[0].steps.length >= 6, 'all six steps are stored')
     ok((workflows[0].versions || []).length >= 2, 'the merge is recorded in the version history')
   })
+  await test('export carries knowledge nodes and can be scoped to one project', async () => {
+    const created = await postOk(
+      { action: 'node-save', title: '导出用对象', nodeType: 'concept', status: 'active' },
+      'save node for export'
+    )
+    const dump = await postOk({ action: 'export' }, 'export full store')
+    const nodes = (dump.data && dump.data.nodes) || []
+    ok(nodes.some((node) => node.id === created.node.id), 'full export includes knowledge nodes')
+    const project = await postOk({ action: 'project-save', name: '导出测试项目' }, 'create export project')
+    const projectId = project.project.id
+    await postOk(
+      { action: 'node-save', title: '项目内对象', nodeType: 'system', projectId: projectId, status: 'active' },
+      'save node inside the export project'
+    )
+    const scoped = await postOk({ action: 'export', projectId: projectId }, 'export one project')
+    eq(scoped.scope, 'project', 'the dump is scoped to a project')
+    const scopedNodes = scoped.data.nodes || []
+    ok(scopedNodes.length > 0, 'the project dump carries its nodes')
+    ok(scopedNodes.every((node) => node.projectId === projectId), 'only that project object comes along')
+    ok(!scopedNodes.some((node) => node.id === created.node.id), 'objects from other projects stay out')
+    ok((scoped.data.entries || []).every((entry) => entry.projectId === projectId), 'entries are scoped too')
+  })
+
   await test('tidy flags two workflows whose steps overlap', async () => {
     const stepsA = [
       { title: '打开活动配置表，找到星云勘测这一行' },
@@ -2272,4 +2295,15 @@ async function runKnowledgeSuite() {
     ok(hit && /步骤/.test(hit.reason), 'the reason mentions the overlapping steps')
   })
 
+  await test('import restores exported knowledge nodes', async () => {
+    const dump = await postOk({ action: 'export' }, 'export for round trip')
+    const beforeIds = (dump.data.nodes || []).map((node) => node.id)
+    ok(beforeIds.length > 0, 'there is something to restore')
+    const result = await postOk({ action: 'import', mode: 'replace', data: dump.data }, 'import the dump back')
+    ok(result.imported.nodes >= beforeIds.length, 'every exported object is imported')
+    const after = await api.get()
+    const afterIds = new Set((after.json.nodes || []).map((node) => node.id))
+    const missing = beforeIds.filter((id) => !afterIds.has(id))
+    eq(missing.length, 0, 'no exported knowledge object is lost')
+  })
 }

@@ -1487,6 +1487,8 @@ async function workspaceChecks() {
     check(byClass('zw-menu').length >= 1, 'right click opens the project menu')
     const renameItem = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['action.rename']))[0]
     check(Boolean(renameItem), 'project menu offers rename')
+    const exportItem = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['action.exportProject']))[0]
+    check(Boolean(exportItem), 'project menu offers a per-project export')
     if (renameItem) {
       click(renameItem)
       await settle(6)

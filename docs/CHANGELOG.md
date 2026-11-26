@@ -1,5 +1,19 @@
 # 更新记录
 
+## 2.6.8 — 导出现在真的带走知识对象，并且能只导一个项目
+
+- **修数据丢失**：整库导出原来漏了 `nodes`，导入也从不写回知识对象——2.4 之后建的 object 层，导出再导入就全没了。现在导出带上 nodes，导入按 id 合并 / 整体替换都恢复对象，计数里也有 `imported.nodes`。
+- 新增按项目导出：`export` 带 `projectId` 时只带这个项目的对象、记忆、两端都在范围内的关系、集合、记忆框与画布坐标。
+- 项目空间右键菜单加「导出这个项目」，导出的文件名是 `zhiwei-<项目名>-<日期>.json`。
+- host 测试加「export carries knowledge nodes and can be scoped to one project」与「import restores exported knowledge nodes」，渲染加菜单项断言；全套 101 tests / 239 checks 通过。
+
+## 2.6.7 — 整理中心能认出「步骤几乎一样」的两条流程
+
+- `duplicateNodePairs` 的对象语料把流程步骤标题也算进去，并按 nodeType 分桶。
+- 两个流程对象只要共享 2 个同名步骤就判为疑似重复，理由写明「都是流程对象，有 N 个步骤同名」。
+- 之前只看标题/描述，措辞不同的两条流程在整理中心里发现不了，只能等人工撞见。
+- host 测试新增「tidy flags two workflows whose steps overlap」，全套 99 tests 通过。
+
 ## 2.6.6 — 补齐交付文档：架构、数据模型、界面变更、未完成清单
 
 - 新增 `docs/ARCHITECTURE.md`：插件跑在哪、宿主 8 个分件与客户端 14 个分件各管什么、一次请求怎么走、AI 是怎么接进来的、数据存在哪、可预期的边界。

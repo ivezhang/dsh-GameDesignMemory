@@ -4206,7 +4206,7 @@ function importStore(state, input) {
     throw httpError(400, 'bad-import', '导入文件不是有效的知微数据：' + (error && error.message))
   }
   if (!incoming.entries.length) throw httpError(400, 'empty-import', '导入文件里没有记忆')
-  const imported = { entries: 0, relations: 0, collections: 0, projects: 0, frames: 0, skipped: 0 }
+  const imported = { entries: 0, relations: 0, collections: 0, projects: 0, frames: 0, nodes: 0, skipped: 0 }
   if (mode === 'replace') {
     state.projects = incoming.projects
     state.entries = incoming.entries
@@ -4216,12 +4216,14 @@ function importStore(state, input) {
     state.proposals = incoming.proposals || []
     state.recalls = incoming.recalls || []
     state.frames = incoming.frames || []
+    state.nodes = incoming.nodes || []
     state.layout = incoming.layout || { positions: {}, updatedAt: '' }
     imported.entries = incoming.entries.length
     imported.relations = incoming.relations.length
     imported.collections = incoming.collections.length
     imported.projects = incoming.projects.length
     imported.frames = (incoming.frames || []).length
+    imported.nodes = (incoming.nodes || []).length
     return { imported, mode }
   }
   const projectIds = new Set(state.projects.map((project) => project.id))
@@ -4229,6 +4231,7 @@ function importStore(state, input) {
   const relationKeys = new Set(state.relations.map((relation) => relation.sourceMemoryId + '\u0000' + relation.targetMemoryId + '\u0000' + relation.relationType))
   const collectionIds = new Set(state.collections.map((collection) => collection.id))
   const frameIds = new Set(state.frames.map((frame) => frame.id))
+  const nodeIds = new Set(state.nodes.map((node) => node.id))
   for (const project of incoming.projects) {
     if (projectIds.has(project.id) || state.projects.length >= LIMITS.projects) continue
     projectIds.add(project.id)
@@ -4262,6 +4265,16 @@ function importStore(state, input) {
     frameIds.add(frame.id)
     state.frames.push(frame)
     imported.frames += 1
+  }
+  // 知识对象是 2.4 之后的主体，导入时漏掉它等于把对象层清空。
+  for (const node of incoming.nodes || []) {
+    if (nodeIds.has(node.id) || state.nodes.length >= LIMITS.nodes) {
+      imported.skipped += 1
+      continue
+    }
+    nodeIds.add(node.id)
+    state.nodes.push(node)
+    imported.nodes += 1
   }
   return { imported, mode }
 }
@@ -6363,6 +6376,52 @@ export function apply(ctx) {
         return sendJson(res, 200, { ok: true, storagePath: storageFile, ...serializeState(state), stats: stats() })
       }
       if (action === 'export') {
+        const wantedProjectId = input && typeof input.projectId === 'string' ? cleanLine(input.projectId, 64) : ''
+        if (wantedProjectId) {
+          const project = (state.projects || []).find((item) => item.id === wantedProjectId)
+          if (!project) throw httpError(404, 'project-not-found', '项目不存在：' + wantedProjectId)
+          const projectEntries = (state.entries || []).filter((entry) => entry.projectId === wantedProjectId)
+          const projectNodes = (state.nodes || []).filter((node) => node.projectId === wantedProjectId)
+          const keepIds = new Set()
+          for (const entry of projectEntries) keepIds.add(entry.id)
+          for (const node of projectNodes) keepIds.add(node.id)
+          const projectRelations = (state.relations || []).filter(
+            (relation) => keepIds.has(relation.sourceId) && keepIds.has(relation.targetId)
+          )
+          const projectCollections = (state.collections || []).filter(
+            (collection) =>
+              collection.projectId === wantedProjectId ||
+              (collection.memberIds || []).some((id) => keepIds.has(id))
+          )
+          const projectFrames = (state.frames || []).filter(
+            (frame) =>
+              frame.projectId === wantedProjectId ||
+              (frame.memberIds || []).some((id) => keepIds.has(id))
+          )
+          const positions = {}
+          const allPositions = (state.layout && state.layout.positions) || {}
+          for (const id of keepIds) if (allPositions[id]) positions[id] = allPositions[id]
+          const hidden = ((state.layout && state.layout.hidden) || []).filter((id) => keepIds.has(id))
+          return sendJson(res, 200, {
+            ok: true,
+            exportedAt: isoNow(),
+            scope: 'project',
+            projectId: wantedProjectId,
+            data: {
+              version: STORE_VERSION,
+              projects: [project],
+              entries: projectEntries,
+              nodes: projectNodes,
+              relations: projectRelations,
+              collections: projectCollections,
+              views: [],
+              proposals: [],
+              recalls: [],
+              frames: projectFrames,
+              layout: { positions: positions, hidden: hidden, updatedAt: (state.layout && state.layout.updatedAt) || '' }
+            }
+          })
+        }
         return sendJson(res, 200, {
           ok: true,
           exportedAt: isoNow(),
@@ -6370,6 +6429,7 @@ export function apply(ctx) {
             version: STORE_VERSION,
             projects: state.projects,
             entries: state.entries,
+            nodes: state.nodes || [],
             relations: state.relations,
             collections: state.collections,
             views: state.views,

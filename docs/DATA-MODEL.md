@@ -176,6 +176,12 @@
 
 读入时所有字段都过一遍规范化：超长截断、枚举越界回落默认值、指向不存在对象的引用被清掉。所以手改 JSON 也不会把界面弄崩，只会丢掉不合法的部分。
 
+## 附：导出格式
+
+整库导出是 `{ version, projects, entries, nodes, relations, collections, views, proposals, recalls, frames, layout }`；2.6.8 起 `nodes` 才真正写进来（之前漏了，导入也从不恢复对象）。
+
+按项目导出（`export` 带 `projectId`）额外带 `scope: "project"` 与 `projectId`，`projects` 只含该项目，`entries/nodes/relations/collections/frames/layout` 都裁到该项目的范围，`views/proposals/recalls` 为空数组。
+
 ## 八、版本迁移
 
 | 文件版本 | 变化 | 迁移动作 |

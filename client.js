@@ -130,12 +130,14 @@ window.__ModuleLoader__.load({
       'action.cancel': '取消',
       'action.delete': '删除',
       'action.rename': '重命名',
+    'action.exportProject': '导出这个项目',
       'project.namePlaceholder': '项目空间名称',
       'graph.saveLayout': '保存布局',
       'graph.layoutSaved': '已保存当前布局',
       'toast.projectSaved': '已保存项目',
       'toast.projectDeleted': '已删除项目',
       'toast.projectMoved': '已调整项目顺序',
+    'toast.projectExported': '项目已导出为 JSON 文件',
       'project.newTitle': '新建项目',
       'project.editTitle': '编辑项目',
       'project.name': '项目名称',
@@ -786,12 +788,14 @@ window.__ModuleLoader__.load({
       'action.cancel': 'Cancel',
       'action.delete': 'Delete',
       'action.rename': 'Rename',
+    'action.exportProject': 'Export this project',
       'project.namePlaceholder': 'Project space name',
       'graph.saveLayout': 'Save layout',
       'graph.layoutSaved': 'Layout saved',
       'toast.projectSaved': 'Project saved',
       'toast.projectDeleted': 'Project deleted',
       'toast.projectMoved': 'Project order updated',
+    'toast.projectExported': 'Project exported as a JSON file',
       'project.newTitle': 'New project',
       'project.editTitle': 'Edit project',
       'project.name': 'Project name',
@@ -13518,6 +13522,29 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
         [mutate, t]
       )
 
+      const exportProject = useCallback(async (project) => {
+        try {
+          const result = await request(API, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'export', projectId: project.id })
+          })
+          const payload = JSON.stringify(result && result.data ? result.data : result, null, 2)
+          const blob = new Blob([payload], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          const safeName = String(project.name || 'project').replace(/[\\/:*?"<>|\s]+/g, '-')
+          link.download = 'zhiwei-' + safeName + '-' + formatDay(new Date()) + '.json'
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          setTimeout(() => URL.revokeObjectURL(url), 4000)
+          notify(t('toast.projectExported'), 'ok')
+        } catch (err) {
+          notify(errorText(err, t('error.write')), 'error')
+        }
+      }, [t])
+
       const openProjectMenu = useCallback((project, x, y) => {
         setMenu({
           x: x,
@@ -13527,6 +13554,11 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
               label: t('action.rename'),
               icon: 'edit',
               onClick: () => setModal({ type: 'project', mode: 'edit', project: project })
+            },
+            {
+              label: t('action.exportProject'),
+              icon: 'box',
+              onClick: () => exportProject(project)
             },
             {
               label: t('action.delete'),

@@ -442,10 +442,10 @@ window.__ModuleLoader__.load({
       'graph.toolSelect': '选择',
       'graph.toolLink': '划线',
       'graph.toolBox': '圈选',
+      'graph.toolArea': '记忆区',
       'graph.linkNeedTarget': '把线拖到另一条记忆上才能建立关联',
       'graph.linkSelf': '不能连到自己',
       'graph.linkDone': '已建立关联',
-      'graph.boxEmpty': '框里没有记忆',
       'graph.filters': '筛选',
       'graph.byType': '按类型',
       'graph.byRelation': '按关系类型',
@@ -949,10 +949,10 @@ window.__ModuleLoader__.load({
       'graph.toolSelect': 'Select',
       'graph.toolLink': 'Link',
       'graph.toolBox': 'Box select',
+      'graph.toolArea': 'Memory area',
       'graph.linkNeedTarget': 'Drop the line on another memory to link it',
       'graph.linkSelf': 'Cannot link to itself',
       'graph.linkDone': 'Relation created',
-      'graph.boxEmpty': 'Nothing inside the box',
       'graph.filters': 'Filters',
       'graph.byType': 'By type',
       'graph.byRelation': 'By relation',
@@ -1366,15 +1366,16 @@ window.__ModuleLoader__.load({
     .zw-topbar {
       flex: 0 0 auto; padding: 14px 18px 0;
       display: flex; flex-direction: column; gap: 10px;
+      background: var(--zw-bg); position: relative; z-index: 3;
     }
-    .zw-titleRow { display: flex; align-items: center; gap: 12px; }
-    .zw-viewTitle { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; margin: 0; }
-    .zw-viewSub { font-size: 11.5px; color: var(--zw-text-3); margin: 1px 0 0; }
-    .zw-titleMain { min-width: 0; flex: 1; }
+    .zw-titleRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .zw-viewTitle { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .zw-viewSub { font-size: 11.5px; color: var(--zw-text-3); margin: 1px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .zw-titleMain { min-width: 132px; flex: 1 1 160px; }
     .zw-count { font-size: 11.5px; color: var(--zw-text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
     .zw-search {
-      flex: 1; max-width: 460px; min-width: 140px;
+      flex: 1 1 200px; max-width: 460px; min-width: 168px;
       display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px;
       border: 1px solid var(--zw-border); border-radius: 9px;
       background: var(--zw-bg); color: var(--zw-text-3);
@@ -2617,6 +2618,13 @@ window.__ModuleLoader__.load({
       fill: color-mix(in srgb, var(--zw-frame-color, var(--zw-accent)) 82%, var(--zw-text));
     }
     .zw-frameCount { font-size: 10.5px; fill: var(--zw-text-3); }
+    .zw-frameGroup { pointer-events: none; }
+    .zw-frameLabelBg,
+    .zw-frameLabel,
+    .zw-frameCount { pointer-events: none; }
+
+    .zw-frameHit { fill: transparent; stroke: none; cursor: move; pointer-events: all; }
+    .zw-frameHandle { fill: var(--zw-surface); stroke: var(--zw-accent); stroke-width: 1.4; pointer-events: all; cursor: nwse-resize; }
     .zw-frameLabelBg {
       fill: var(--zw-bg-soft);
       stroke: color-mix(in srgb, var(--zw-frame-color, var(--zw-accent)) 40%, transparent);
@@ -2636,10 +2644,10 @@ window.__ModuleLoader__.load({
     .zw-projectName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .zw-navGroupLabel { flex: 0 0 auto; }
     /* 顶栏加固：标题先让位，右侧按钮不被挤压 */
-    .zw-titleMain { min-width: 0; }
+    .zw-titleMain { min-width: 132px; }
     .zw-titleRow > .zw-iconBtn,
     .zw-titleRow > .zw-btn { flex: 0 0 auto; }
-    .zw-search { flex: 0 1 260px; min-width: 120px; }
+    .zw-search { flex: 1 1 200px; min-width: 168px; }
     .zw-projectRowDrag { opacity: 0.55; }
     .zw-projectRowOver { outline: 1px dashed var(--zw-accent); outline-offset: -1px; }
 
@@ -7884,6 +7892,8 @@ window.__ModuleLoader__.load({
       const [search, setSearch] = useState(seed.search || '')
       const [linkDraft, setLinkDraft] = useState(null)
       const [boxDraft, setBoxDraft] = useState(null)
+      const [activeFrame, setActiveFrame] = useState('')
+      const [frameDraftRect, setFrameDraftRect] = useState(null)
       const autoSaveRef = useRef(null)
       const [hoverEdge, setHoverEdge] = useState('')
       const [flash, setFlash] = useState('')
@@ -7909,6 +7919,26 @@ window.__ModuleLoader__.load({
         const timer = setTimeout(() => setFlash(''), 2400)
         return () => clearTimeout(timer)
       }, [flash])
+
+      // 选中一块记忆区后，Delete / Backspace 直接删掉它（记忆本身保留）。
+      useEffect(() => {
+        if (!activeFrame) return undefined
+        const onKeyDown = (event) => {
+          const key = event && event.key
+          if (key === 'Escape') {
+            setActiveFrame('')
+            return
+          }
+          if (key !== 'Delete' && key !== 'Backspace') return
+          const frame = (props.frames || []).find((item) => item.id === activeFrame)
+          if (!frame || !props.onDeleteFrame) return
+          if (event.preventDefault) event.preventDefault()
+          setActiveFrame('')
+          props.onDeleteFrame(frame)
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+      }, [activeFrame, props.frames, props.onDeleteFrame])
 
       useEffect(() => {
         if (typeof props.onState !== 'function') return
@@ -8230,21 +8260,45 @@ window.__ModuleLoader__.load({
         if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
       }
 
+      // 两个工具共用同一套拖框手势：框选只负责选中，记忆区负责建块。
       const startBox = (event) => {
         if (event.button !== 0) return
-        if (tool !== 'box') return
+        if (tool !== 'box' && tool !== 'area') return
         const point = localPoint(event)
         dragRef.current = {
           kind: 'box',
           pointerId: event.pointerId,
           start: point,
           moved: false,
-          // 按住 Shift 画框 = 多选；直接画框 = 归到一个记忆框里。
+          mode: tool === 'area' ? 'area' : 'box',
           multi: Boolean(event.shiftKey || event.metaKey)
         }
-        setBoxDraft({ from: point, to: point })
+        setBoxDraft({ from: point, to: point, mode: tool === 'area' ? 'area' : 'box' })
         if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
       }
+
+      // 记住一块已有记忆区：拖动 = 整体平移，四角小方块 = 缩放。
+      const startFrameDrag = (event, frame, handle) => {
+        if (event.button !== 0) return
+        if (event.stopPropagation) event.stopPropagation()
+        const rect = frameRectOf(frame) || { x: 0, y: 0, w: 120, h: 90 }
+        const point = localPoint(event)
+        const graphPoint = toGraph(point.x, point.y)
+        dragRef.current = {
+          kind: 'frame',
+          pointerId: event.pointerId,
+          id: frame.id,
+          frame: frame,
+          handle: handle || '',
+          rect: rect,
+          start: graphPoint,
+          moved: false
+        }
+        setActiveFrame(frame.id)
+        if (props.onSelectFrame) props.onSelectFrame(frame, false)
+        if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
+      }
+
 
       const onPointerMove = (event) => {
         const drag = dragRef.current
@@ -8275,7 +8329,40 @@ window.__ModuleLoader__.load({
         if (drag.kind === 'box') {
           const point = localPoint(event)
           if (Math.abs(point.x - drag.start.x) + Math.abs(point.y - drag.start.y) > 3) drag.moved = true
-          setBoxDraft({ from: drag.start, to: point })
+          setBoxDraft({ from: drag.start, to: point, mode: drag.mode })
+          return
+        }
+        if (drag.kind === 'frame') {
+          const point = localPoint(event)
+          const graphPoint = toGraph(point.x, point.y)
+          const dx = graphPoint.x - drag.start.x
+          const dy = graphPoint.y - drag.start.y
+          if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true
+          let next
+          if (!drag.handle) {
+            next = {
+              x: Math.round(drag.rect.x + dx),
+              y: Math.round(drag.rect.y + dy),
+              w: drag.rect.w,
+              h: drag.rect.h
+            }
+          } else {
+            let left = drag.rect.x
+            let top = drag.rect.y
+            let right = drag.rect.x + drag.rect.w
+            let bottom = drag.rect.y + drag.rect.h
+            if (drag.handle.indexOf('w') >= 0) left = Math.min(left + dx, right - 80)
+            if (drag.handle.indexOf('e') >= 0) right = Math.max(right + dx, left + 80)
+            if (drag.handle.indexOf('n') >= 0) top = Math.min(top + dy, bottom - 60)
+            if (drag.handle.indexOf('s') >= 0) bottom = Math.max(bottom + dy, top + 60)
+            next = {
+              x: Math.round(left),
+              y: Math.round(top),
+              w: Math.round(right - left),
+              h: Math.round(bottom - top)
+            }
+          }
+          setFrameDraftRect({ id: drag.id, rect: next })
         }
       }
 
@@ -8355,12 +8442,18 @@ window.__ModuleLoader__.load({
             w: Math.round(Math.max(56, (right - left) / current.k)),
             h: Math.round(Math.max(44, (bottom - top) / current.k))
           }
-          if (!picked.length && !props.onCreateFrame) setFlash(t('graph.boxEmpty'))
-          else if (drag.multi) props.onMultiSelect(picked)
-          else if (props.onCreateFrame) {
+          // 「框选」只负责选中；「记忆区」才落块。
+          if (drag.mode !== 'area') {
+            props.onMultiSelect(picked)
+            return
+          }
+          if (props.onCreateFrame) {
             props.onCreateFrame({ rect: rect, memberIds: picked })
             setFlash(t('graph.frameDrawn'))
-          } else if (props.onSaveFrame) {
+            setTool('select')
+            return
+          }
+          if (props.onSaveFrame) {
             const frames = props.frames || []
             props.onSaveFrame({
               name: t('graph.frameName') + ' ' + (frames.length + 1),
@@ -8369,8 +8462,21 @@ window.__ModuleLoader__.load({
               rect: rect
             })
             setFlash(t('graph.frameSaved'))
-          } else props.onMultiSelect(picked)
-          setTool('select')
+            setTool('select')
+          }
+          return
+        }
+        if (drag.kind === 'frame') {
+          const draft = frameDraftRect
+          setFrameDraftRect(null)
+          if (!drag.moved) return
+          const nextRect = draft && draft.id === drag.id ? draft.rect : drag.rect
+          // 框搬过家之后，把门牌重新贴到框上。
+          pinnedFrames.current.delete(drag.id)
+          if (props.onUpdateFrame) props.onUpdateFrame(drag.frame, nextRect)
+          else if (props.onSaveFrame) {
+            props.onSaveFrame({ id: drag.id, name: drag.frame.name, rect: nextRect })
+          }
           return
         }
         if (drag.kind === 'pan') {
@@ -8496,19 +8602,23 @@ window.__ModuleLoader__.load({
 
       // 记忆区：用户亲手画的空间容器。框内（rect 命中）的节点自动归属，
       // 所以拖动节点进出框，归属就会跟着变；保存布局后由 host 落库。
+      // 拖动 / 缩放中的框用草稿矩形显示，松手才落库。
+      const frameRectOf = (frame) =>
+        frameDraftRect && frameDraftRect.id === frame.id ? frameDraftRect.rect : frame.rect
+
       const frameRectMembers = (frame) => {
         const visibleSet = new Set(model.nodes.map((node) => node.id))
-        if (!frame.rect) return frame.memberIds.filter((id) => visibleSet.has(id))
-        const rect = frame.rect
+        const box = frameRectOf(frame)
+        if (!box) return frame.memberIds.filter((id) => visibleSet.has(id))
         return model.nodes
           .filter((node) => node.id !== frame.id)
           .filter((node) => {
             const point = positionOf(node.id)
             return (
-              point.x >= rect.x &&
-              point.x <= rect.x + rect.w &&
-              point.y >= rect.y &&
-              point.y <= rect.y + rect.h
+              point.x >= box.x &&
+              point.x <= box.x + box.w &&
+              point.y >= box.y &&
+              point.y <= box.y + box.h
             )
           })
           .map((node) => node.id)
@@ -8520,31 +8630,81 @@ window.__ModuleLoader__.load({
           const members = model.nodes.filter((node) => memberIds.includes(node.id))
           const color = collectionColor(frame.color)
           if (frame.rect) {
-            const rect = frame.rect
+            const rect = frameRectOf(frame) || frame.rect
+            const selected = activeFrame === frame.id
+            const labelWidth = Math.max(48, Math.round(String(frame.name).length * 12.6 + 34))
+            const handles = selected
+              ? [
+                  ['nw', rect.x, rect.y],
+                  ['ne', rect.x + rect.w, rect.y],
+                  ['sw', rect.x, rect.y + rect.h],
+                  ['se', rect.x + rect.w, rect.y + rect.h]
+                ].map((item) =>
+                  h('rect', {
+                    key: 'h-' + item[0],
+                    className: 'zw-frameHandle',
+                    x: item[1] - 5,
+                    y: item[2] - 5,
+                    width: 10,
+                    height: 10,
+                    rx: 2,
+                    onPointerDown: (event) => startFrameDrag(event, frame, item[0])
+                  })
+                )
+              : null
             return h(
               'g',
-              { key: frame.id, className: 'zw-frameBox' },
+              { key: frame.id, className: 'zw-frameGroup' },
               h('rect', {
-                className: 'zw-hullOutline',
+                className: selected ? 'zw-frameBox zw-frameBoxSel' : 'zw-frameBox',
                 x: rect.x,
                 y: rect.y,
                 width: rect.w,
                 height: rect.h,
                 rx: 16,
                 style: {
+                  '--zw-frame-color': color,
                   fill: 'color-mix(in srgb, ' + color + ' 5%, transparent)',
-                  stroke: 'color-mix(in srgb, ' + color + ' 52%, transparent)',
-                  strokeDasharray: '7 6'
+                  stroke: 'color-mix(in srgb, ' + color + (selected ? ' 88%, transparent)' : ' 52%, transparent)'),
+                  strokeDasharray: selected ? 'none' : '7 6'
                 }
+              }),
+              // 透明的可抓取层：拖它 = 整块搬家；四角小方块 = 缩放。
+              h('rect', {
+                className: 'zw-frameHit',
+                x: rect.x,
+                y: rect.y,
+                width: rect.w,
+                height: rect.h,
+                rx: 16,
+                onPointerDown: (event) => startFrameDrag(event, frame, ''),
+                onDoubleClick: () => {
+                  if (props.onRenameFrame) props.onRenameFrame(frame)
+                }
+              }),
+              handles,
+              h('rect', {
+                className: 'zw-frameLabelBg',
+                x: rect.x + 10,
+                y: rect.y - 21,
+                width: labelWidth,
+                height: 21,
+                rx: 6,
+                style: { '--zw-frame-color': color }
               }),
               h(
                 'text',
-                { className: 'zw-frameLabel', x: rect.x + 12, y: rect.y + 19, style: { fill: color } },
+                {
+                  className: 'zw-frameLabel',
+                  x: rect.x + 18,
+                  y: rect.y - 6,
+                  style: { fill: color, '--zw-frame-color': color }
+                },
                 frame.name,
                 h(
                   'tspan',
-                  { className: 'zw-frameCount', x: rect.x + 12, dy: 13 },
-                  members.length + ' ' + t('collections.memberCount')
+                  { className: 'zw-frameCount', x: rect.x + 18 + labelWidth - 26, dy: 0 },
+                  String(members.length)
                 )
               )
             )
@@ -8659,11 +8819,14 @@ window.__ModuleLoader__.load({
             ref: svgRef,
             'data-tool': tool,
             onPointerDown: (event) => {
-              if (tool === 'box') {
+              if (tool === 'box' || tool === 'area') {
                 startBox(event)
                 return
               }
-              if (event.target === svgRef.current) startPan(event)
+              if (event.target === svgRef.current) {
+                setActiveFrame('')
+                startPan(event)
+              }
             },
             onPointerMove: onPointerMove,
             onPointerUp: endDrag,
@@ -8964,6 +9127,7 @@ window.__ModuleLoader__.load({
           toolButton('select', 'select', t('graph.toolSelect')),
           toolButton('link', 'link', t('graph.toolLink')),
           toolButton('box', 'box', t('graph.toolBox')),
+          toolButton('area', 'frame', t('graph.toolArea')),
           h('span', { className: 'zw-toolSep' }),
           h(
             'button',
@@ -10953,6 +11117,7 @@ window.__ModuleLoader__.load({
               setSelectedId('')
             },
             onRenameFrame: (frame) => setModal({ type: 'frameName', frame: frame }),
+            onUpdateFrame: (frame, rect) => saveFrame({ id: frame.id, name: frame.name, rect: rect }),
             onSearchArea: (frame) => {
               setSelectedId('')
               setGraphSelection([])

@@ -1724,6 +1724,29 @@ async function runWorkspaceSuite() {
     'area membership drops memories that fall outside the rect'
   )
 
+  // 拖动整块记忆区走的是 frame-save：移动后成员要跟着新位置重算。
+  const moved = await api.post({
+    action: 'frame-save',
+    id: areaId,
+    rect: { x: 0, y: 0, w: 420, h: 320 }
+  })
+  check(moved.json.ok === true, 'frame-save accepts a moved rect')
+  state = (await api.get()).json
+  const movedArea = state.frames.find((item) => item.id === areaId)
+  check(
+    movedArea.memberIds.includes(inner.json.entry.id) && movedArea.rect.w === 420,
+    'moving an area rebuilds its membership'
+  )
+
+  // 删掉一块记忆区：区域没了，里面的记忆还在。
+  const areaGone = await api.post({ action: 'frame-delete', id: areaId })
+  check(areaGone.json.ok === true, 'frame-delete removes the area')
+  state = (await api.get()).json
+  check(
+    !state.frames.some((item) => item.id === areaId) && state.entries.some((item) => item.id === inner.json.entry.id),
+    'deleting an area keeps the memories inside it'
+  )
+
   console.log('WORKSPACE ' + workspaceChecks + ' checks · 0 failed')
   rm(dshHome, { recursive: true, force: true })
 }

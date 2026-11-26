@@ -231,6 +231,7 @@ class MutationObserver {
   disconnect() {}
 }
 let exported = null
+const windowListeners = { keydown: [] }
 const fakeWindow = {
   __ModuleLoader__: {
     load: (definition) => {
@@ -241,8 +242,15 @@ const fakeWindow = {
     }
   },
   matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }),
-  addEventListener() {},
-  removeEventListener() {}
+  addEventListener: (type, handler) => {
+    if (!windowListeners[type]) windowListeners[type] = []
+    windowListeners[type].push(handler)
+  },
+  removeEventListener: (type, handler) => {
+    const list = windowListeners[type] || []
+    const index = list.indexOf(handler)
+    if (index >= 0) list.splice(index, 1)
+  }
 }
 new Function('window', 'document', 'MutationObserver', fs.readFileSync(CLIENT, 'utf8'))(
   fakeWindow,
@@ -1415,8 +1423,9 @@ async function workspaceChecks() {
     }
 
     // 画一个新框 → 命名对话框 → 保存时带上 rect
-    const areaBtn = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolBox']))
+    const areaBtn = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolArea']))
     check(Boolean(areaBtn), 'area tool button available')
+    check(Boolean(byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolBox']))), 'box select tool still available')
     if (areaBtn) {
       click(areaBtn)
       await settle(8)
@@ -1454,6 +1463,44 @@ async function workspaceChecks() {
           check(Boolean(saved) && saved.name === '星云记忆区', 'drawn area keeps the name the user typed')
         }
       }
+    }
+
+    // 「框选」只选择，不建记忆区
+    const selectToolBtn = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolSelect']))
+    if (selectToolBtn) {
+      click(selectToolBtn)
+      await settle(6)
+    }
+    const boxToolBtn = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolBox']))
+    if (boxToolBtn) {
+      click(boxToolBtn)
+      await settle(6)
+      const beforeFrames = posts.filter((post) => post.action === 'frame-save').length
+      const svgForBox = byClass('zw-graphSvg')[0]
+      pointer(svgForBox, 'onPointerDown', { clientX: 10, clientY: 10 }, { pointerId: 51 })
+      await settle(3)
+      pointer(byClass('zw-graphSvg')[0], 'onPointerMove', { clientX: 300, clientY: 300 }, { pointerId: 51 })
+      await settle(3)
+      pointer(byClass('zw-graphSvg')[0], 'onPointerUp', { clientX: 300, clientY: 300 }, { pointerId: 51 })
+      await settle(8)
+      const afterFrames = posts.filter((post) => post.action === 'frame-save').length
+      check(afterFrames === beforeFrames, 'box select never creates an area')
+    }
+
+    // 选中一块已有记忆区后按 Delete：走 frame-delete
+    const frameHit = byClass('zw-frameHit')[0]
+    if (frameHit) {
+      pointer(frameHit, 'onPointerDown', { clientX: 20, clientY: 20 }, { pointerId: 61 })
+      await settle(3)
+      pointer(byClass('zw-graphSvg')[0], 'onPointerUp', { clientX: 20, clientY: 20 }, { pointerId: 61 })
+      await settle(6)
+      check(byClass('zw-frameHandle').length >= 4, 'selecting an area shows resize handles')
+      const beforeDelete = posts.filter((post) => post.action === 'frame-delete').length
+      const listeners = windowListeners.keydown.slice()
+      listeners.forEach((handler) => handler({ key: 'Delete', preventDefault() {} }))
+      await settle(8)
+      const afterDelete = posts.filter((post) => post.action === 'frame-delete').length
+      check(afterDelete === beforeDelete + 1, 'delete key removes the selected area')
     }
   }
 }

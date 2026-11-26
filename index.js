@@ -3135,6 +3135,8 @@ function saveFrame(store, input) {
     if (input && input.color !== undefined) existing.color = normalizeCollectionColor(input.color)
     if (input && input.note !== undefined) existing.note = cleanText(input.note, LIMITS.frameNote)
     existing.updatedAt = isoNow()
+    // 框挪了位置 / 改了大小，成员就要按新位置重算：框在哪，里面就属于谁。
+    if (existing.rect) rebuildFrameMembers(store)
     return { frame: existing, created: false }
   }
   if (store.frames.length >= LIMITS.frames) throw httpError(400, 'too-many-frames', '记忆框数量达到上限 ' + LIMITS.frames)

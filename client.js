@@ -128,6 +128,11 @@ window.__ModuleLoader__.load({
       'action.new': '新建记忆',
       'action.save': '保存',
       'action.cancel': '取消',
+      'nav.pickProjects': '批量选择项目',
+      'nav.pickedCount': '已选 {count} 个',
+      'nav.mergeTargetPlaceholder': '迁移到…',
+      'nav.mergeGo': '迁移并合并',
+      'toast.projectsMerged': '已合并项目，记忆和知识对象都迁过去了',
       'action.delete': '删除',
       'action.rename': '重命名',
     'action.exportProject': '导出这个项目',
@@ -789,6 +794,11 @@ window.__ModuleLoader__.load({
       'action.new': 'New memory',
       'action.save': 'Save',
       'action.cancel': 'Cancel',
+      'nav.pickProjects': 'Select projects',
+      'nav.pickedCount': '{count} selected',
+      'nav.mergeTargetPlaceholder': 'Move to…',
+      'nav.mergeGo': 'Move and merge',
+      'toast.projectsMerged': 'Projects merged: memories and knowledge objects moved',
       'action.delete': 'Delete',
       'action.rename': 'Rename',
     'action.exportProject': 'Export this project',
@@ -2122,6 +2132,7 @@ window.__ModuleLoader__.load({
     .zw-hull { opacity: 0.1; transition: opacity 200ms; }
     .zw-hullOn { opacity: 0.2; }
     .zw-hullOutline { fill: none; stroke-width: 1.2; opacity: 0.5; stroke-dasharray: 6 5; animation: zwHull 22s linear infinite; }
+    .zw-hullHit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; pointer-events: stroke; }
     .zw-hullLabel { font-size: 10.5px; font-weight: 650; font-family: var(--zw-font); cursor: pointer; }
     .zw-hullCount { font-size: 9px; fill: var(--zw-text-3); font-family: var(--zw-font); }
 
@@ -2980,6 +2991,55 @@ window.__ModuleLoader__.load({
     .zw-search { flex: 1 1 200px; min-width: 168px; }
     .zw-projectRowDrag { opacity: 0.55; }
     .zw-projectRowOver { outline: 1px dashed var(--zw-accent); outline-offset: -1px; }
+    .zw-navAddOn { color: var(--zw-accent); }
+    .zw-projectRow .zw-pickBox {
+      width: 13px;
+      height: 13px;
+      border-radius: 4px;
+      border: 1px solid var(--zw-border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+      color: #fff;
+    }
+    .zw-projectRow .zw-pickBoxOn { background: var(--zw-accent); border-color: var(--zw-accent); }
+    .zw-projectRowPicked { background: var(--zw-bg-sunken); }
+    .zw-projectPickBar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      margin: 2px 0 4px;
+      border-radius: 8px;
+      background: var(--zw-bg-sunken);
+      font-size: 11px;
+    }
+    .zw-projectPickBar .zw-pickCount { color: var(--zw-muted); }
+    .zw-projectPickBar .zw-pickTarget {
+      flex: 1 1 90px;
+      min-width: 70px;
+      border: 1px solid var(--zw-border);
+      border-radius: 6px;
+      background: var(--zw-bg);
+      color: var(--zw-text);
+      font-size: 11px;
+      padding: 2px 4px;
+    }
+    .zw-projectPickBar .zw-pickGo,
+    .zw-projectPickBar .zw-pickCancel {
+      border: 1px solid var(--zw-border);
+      border-radius: 6px;
+      background: var(--zw-bg);
+      color: var(--zw-text);
+      font-size: 11px;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+    .zw-projectPickBar .zw-pickGo { background: var(--zw-accent); border-color: var(--zw-accent); color: #fff; }
+    .zw-projectPickBar .zw-pickGo:disabled { opacity: 0.45; cursor: not-allowed; }
+    .zw-toolDanger { color: var(--zw-danger); }
 
     /* relation row: a frame (not a memory) on the other end */
     .zw-relFrameName {
@@ -4046,6 +4106,19 @@ window.__ModuleLoader__.load({
                     'button',
                     {
                       type: 'button',
+                      className: 'zw-navAdd' + (props.projectPick ? ' zw-navAddOn' : ''),
+                      title: t('nav.pickProjects'),
+                      onClick: (event) => {
+                        event.stopPropagation()
+                        props.onToggleProjectPick()
+                      }
+                    },
+                    h(Icon, { name: 'check', size: 12 })
+                  ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
                       className: 'zw-navAdd',
                       title: t('nav.newProject'),
                       onClick: (event) => {
@@ -4056,6 +4129,44 @@ window.__ModuleLoader__.load({
                     h(Icon, { name: 'plus', size: 12 })
                   )
                 ),
+                props.projectPick
+                  ? h(
+                      'div',
+                      { className: 'zw-projectPickBar' },
+                      h(
+                        'span',
+                        { className: 'zw-pickCount' },
+                        t('nav.pickedCount', { count: (props.pickedProjects || []).length })
+                      ),
+                      h(
+                        'select',
+                        {
+                          className: 'zw-pickTarget',
+                          value: props.mergeTarget || '',
+                          onChange: (event) => props.onPickMergeTarget(event.target.value)
+                        },
+                        h('option', { value: '' }, t('nav.mergeTargetPlaceholder')),
+                        props.projects
+                          .filter((project) => (props.pickedProjects || []).indexOf(project.id) < 0)
+                          .map((project) => h('option', { key: project.id, value: project.id }, project.name))
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-pickGo',
+                          disabled: !(props.pickedProjects || []).length || !props.mergeTarget,
+                          onClick: () => props.onMergeProjects(props.mergeTarget)
+                        },
+                        t('nav.mergeGo')
+                      ),
+                      h(
+                        'button',
+                        { type: 'button', className: 'zw-pickCancel', onClick: () => props.onCancelPick() },
+                        t('action.cancel')
+                      )
+                    )
+                  : null,
                 h(
                   'div',
                   { className: 'zw-projects zw-scroll' },
@@ -4067,10 +4178,14 @@ window.__ModuleLoader__.load({
                         type: 'button',
                         className:
                           'zw-projectRow' +
-                          (nav.kind === 'project' && nav.id === project.id ? ' zw-projectRowOn' : ''),
+                          (nav.kind === 'project' && nav.id === project.id ? ' zw-projectRowOn' : '') +
+                          ((props.pickedProjects || []).indexOf(project.id) >= 0 ? ' zw-projectRowPicked' : ''),
                         title: project.name,
                         draggable: true,
-                        onClick: () => props.onNav('project', project.id),
+                        onClick: () =>
+                          props.projectPick
+                            ? props.onPickProject(project.id)
+                            : props.onNav('project', project.id),
                         onContextMenu: (event) => {
                           event.preventDefault()
                           props.onProjectMenu(project, event.clientX, event.clientY)
@@ -4086,6 +4201,19 @@ window.__ModuleLoader__.load({
                           props.onProjectDrop(project.id)
                         }
                       },
+                      props.projectPick
+                        ? h(
+                            'span',
+                            {
+                              className:
+                                'zw-pickBox' +
+                                ((props.pickedProjects || []).indexOf(project.id) >= 0 ? ' zw-pickBoxOn' : '')
+                            },
+                            (props.pickedProjects || []).indexOf(project.id) >= 0
+                              ? h(Icon, { name: 'check', size: 10 })
+                              : null
+                          )
+                        : null,
                       h('span', {
                         className: 'zw-projectDot',
                         style: { background: project.color || 'var(--zw-accent)' }
@@ -8504,6 +8632,7 @@ function CollectionPicker(props) {
           if (activeFrame) {
             const frame = (props.frames || []).find((item) => item.id === activeFrame)
             setActiveFrame("")
+            if (props.onClearSelection) props.onClearSelection()
             if (frame && props.onDeleteFrame) props.onDeleteFrame(frame)
             return
           }
@@ -9013,6 +9142,8 @@ function CollectionPicker(props) {
           if (!drag.moved) {
             const additive = Boolean(event && (event.shiftKey || event.ctrlKey || event.metaKey))
             if (drag.node && drag.node.frameNode && props.onSelectFrame) {
+              // 点胶囊就算选中了这个记忆区，否则 Delete / 工具条上的删除都找不到目标。
+              setActiveFrame(drag.node.frame.id)
               props.onSelectFrame(drag.node.frame, additive)
             } else {
               props.onSelect(drag.id, additive)
@@ -9121,7 +9252,10 @@ function CollectionPicker(props) {
         }
         if (drag.kind === 'pan') {
           // 点空白的深色背景（没有拖动）= 退出选择并收起右侧详情栏。
-          if (!drag.moved && tool === 'select' && props.onClearSelection) props.onClearSelection()
+          if (!drag.moved && tool === 'select') {
+            setActiveFrame('')
+            if (props.onClearSelection) props.onClearSelection()
+          }
         }
       }
 
@@ -9363,7 +9497,19 @@ function CollectionPicker(props) {
             'g',
             { key: frame.id, className: selected ? 'zw-frameBox zw-frameBoxSel' : 'zw-frameBox' },
             h('path', {
+              className: 'zw-hullHit',
+              d: hullPath(points, 22),
+              onClick: () => {
+                setActiveFrame(frame.id)
+                if (props.onSelectFrame) props.onSelectFrame(frame, false)
+              },
+              onDoubleClick: () => {
+                if (props.onRenameFrame) props.onRenameFrame(frame)
+              }
+            }),
+            h('path', {
               className: 'zw-hullOutline',
+              pointerEvents: 'auto',
               d: hullPath(points, 22),
               style: {
                 fill: 'color-mix(in srgb, ' + color + ' 6%, transparent)',
@@ -9850,6 +9996,38 @@ function CollectionPicker(props) {
           toolButton('link', 'link', t('graph.toolLink')),
           toolButton('box', 'box', t('graph.toolBox')),
           toolButton('area', 'frame', t('graph.toolArea')),
+          activeFrame
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-toolBtn zw-toolDanger',
+                  title: t('graph.frameDelete'),
+                  onClick: () => {
+                    const frame = (props.frames || []).find((item) => item.id === activeFrame)
+                    setActiveFrame('')
+                    if (props.onClearSelection) props.onClearSelection()
+                    if (frame && props.onDeleteFrame) props.onDeleteFrame(frame)
+                  }
+                },
+                h(Icon, { name: 'trash', size: 14 })
+              )
+            : null,
+          activeFrame
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-toolBtn',
+                  title: t('graph.frameRenameTitle'),
+                  onClick: () => {
+                    const frame = (props.frames || []).find((item) => item.id === activeFrame)
+                    if (frame && props.onRenameFrame) props.onRenameFrame(frame)
+                  }
+                },
+                h(Icon, { name: 'edit', size: 14 })
+              )
+            : null,
           h('span', { className: 'zw-toolSep' }),
           h(
             'button',
@@ -12370,6 +12548,9 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
       const [tidyReport, setTidyReport] = useState(null)
       const [tidyBusy, setTidyBusy] = useState(false)
       const [showHidden, setShowHidden] = useState(false)
+      const [projectPick, setProjectPick] = useState(false)
+      const [pickedProjects, setPickedProjects] = useState([])
+      const [mergeTarget, setMergeTarget] = useState('')
       const [menu, setMenu] = useState(null)
       const dragProject = useRef('')
       const pendingProjects = useRef(null)
@@ -13608,6 +13789,44 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
         })
       }, [t])
 
+      const mergeProjects = useCallback(
+        (targetId) => {
+          if (!targetId) return
+          const sourceIds = pickedProjects.slice()
+          if (!sourceIds.length) return
+          mutate(
+            { action: 'project-merge', sourceIds: sourceIds, targetId: targetId },
+            t('toast.projectsMerged')
+          )
+          setProjectPick(false)
+          setPickedProjects([])
+          setMergeTarget('')
+        },
+        [mutate, pickedProjects, t]
+      )
+
+      const toggleProjectPick = useCallback(() => {
+        setProjectPick((prev) => {
+          if (prev) {
+            setPickedProjects([])
+            setMergeTarget('')
+          }
+          return !prev
+        })
+      }, [])
+
+      const pickProject = useCallback((id) => {
+        setPickedProjects((prev) =>
+          prev.indexOf(id) >= 0 ? prev.filter((item) => item !== id) : prev.concat([id])
+        )
+      }, [])
+
+      const closeProjectPick = useCallback(() => {
+        setProjectPick(false)
+        setPickedProjects([])
+        setMergeTarget('')
+      }, [])
+
       const reorderProjects = useCallback(
         (ids) => mutate({ action: 'project-reorder', ids: ids }, t('toast.projectMoved')),
         [mutate, t]
@@ -14002,6 +14221,15 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
             tidyCount: (stats.pendingProposals || 0) + (stats.suggestedRelations || 0) + (stats.inbox || 0),
             projects: projects,
             projectCounts: projectCounts,
+            projectPick: projectPick,
+            pickedProjects: pickedProjects,
+            mergeTarget: mergeTarget,
+            onNewProject: () => setModal({ type: 'project', mode: 'create' }),
+            onToggleProjectPick: toggleProjectPick,
+            onPickProject: pickProject,
+            onPickMergeTarget: setMergeTarget,
+            onMergeProjects: mergeProjects,
+            onCancelPick: closeProjectPick,
             views: data.views || [],
             onNav: setNavKind,
             onNew: () => setModal({ type: 'quick' }),
@@ -14308,7 +14536,7 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
               onClose: () => setMenu(null)
             })
           : null,
-        modal && modal.type === 'project'
+        modal && modal.type === 'project' && modal.mode !== 'create'
           ? h(ProjectDialog, {
               t: t,
               mode: modal.mode,
@@ -14571,7 +14799,7 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
               onClose: () => setModal(null)
             })
           : null,
-        modal && modal.type === 'project'
+        modal && modal.type === 'project' && modal.mode === 'create'
           ? h(NameDialog, {
               t: t,
               title: t('nav.newProject'),

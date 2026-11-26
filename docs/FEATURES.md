@@ -1,4 +1,4 @@
-# 知微 · 功能总览（v2.6.9）
+# 知微 · 功能总览（v2.7.0）
 
 > 面向评审：这份文档说明「现在能做什么、怎么用、边界在哪」。内部包名仍是 `@local/design-memory`，数据目录仍是 `%USERPROFILE%\.dsh\design-memory`，只有用户可见的名字叫「知微」。
 
@@ -199,8 +199,8 @@
 
 | 测试 | 结果 |
 | --- | --- |
-| host 单元/集成（临时 DSH_HOME + 真实 HTTP handler） | 102 tests · 102 passed；另有 WORKSPACE 55 checks |
-| 渲染冒烟（假 React + 假 DOM 跑真实 `client.js`，含交互断言） | 243 checks · 243 passed |
+| host 单元/集成（临时 DSH_HOME + 真实 HTTP handler） | 102 tests · 102 passed；另有 WORKSPACE 66 checks |
+| 渲染冒烟（假 React + 假 DOM 跑真实 `client.js`，含交互断言） | 255 checks · 255 passed |
 | 工具契约（复刻 DSH 的 schema/render 校验 + systemPrompt 注入 + 契约损坏时的容错） | 8 checks · 8 passed |
 | 迁移（真实线上库副本 → v6，含真实数据冒烟） | 16 checks · 16 passed；冒烟 8/8 |
 | 静态审计（i18n 键一致性、CSS 类双向一致） | 干净 |
@@ -233,6 +233,6 @@
 
 ---
 
-*文档版本：2.5.7 · 2026-11-26*
+*文档版本：2.7.0 · 2026-11-26*
 
 > 版本、全部测试结果、本地提交清单与人工待办汇总在 [FINAL-ACCEPTANCE.md](FINAL-ACCEPTANCE.md)。

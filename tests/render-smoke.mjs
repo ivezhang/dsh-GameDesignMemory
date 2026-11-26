@@ -282,6 +282,19 @@ const posts = []
 const postHeaders = []
 const live = JSON.parse(JSON.stringify(state))
 
+// 批量迁移用例至少要两个项目：真实库只剩一个时补一个只存在于测试里的项目。
+if (!Array.isArray(live.projects)) live.projects = []
+if (live.projects.length < 2) {
+  live.projects.push({
+    id: 'prj_smoke_extra',
+    name: '烟雾测试项目',
+    description: '只存在于渲染测试里',
+    color: 'teal',
+    order: 2000,
+    createdAt: new Date().toISOString()
+  })
+}
+
 // 知识对象层级：给知识网络测试准备一个父对象 + 一个子对象。
 live.nodes = (live.nodes || []).concat([
   {
@@ -536,6 +549,14 @@ function applyPost(input) {
     const order = input.ids || []
     live.projects.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
     return { projects: order }
+  }
+  if (input.action === 'project-merge') {
+    const sources = input.sourceIds || []
+    live.entries.forEach((entry) => {
+      if (sources.includes(entry.projectId)) entry.projectId = input.targetId
+    })
+    live.projects = live.projects.filter((project) => !sources.includes(project.id))
+    return { targetId: input.targetId, mergedFrom: sources }
   }
   if (input.action === 'models.list') {
     return {
@@ -957,7 +978,7 @@ function findAll(predicate) {
   return found
 }
 
-const classesOf = (node) => String(node.className || '').split(/\s+/).filter(Boolean)
+const classesOf = (node) => String((node && node.className) || '').split(/\s+/).filter(Boolean)
 const byClass = (name) => findAll((node) => classesOf(node).includes(name))
 const click = (node) =>
   node.props.onClick({ preventDefault() {}, stopPropagation() {} })
@@ -1499,12 +1520,69 @@ async function workspaceChecks() {
       check(byClass('zw-menu').length === 0, 'menu closes after choosing an item')
       const nameInput = findAll((node) => node.type === 'input' && node.props && node.props.value !== undefined)[0]
       check(Boolean(nameInput), 'project dialog opens with an editable name')
+      check(byClass('zw-modal').length === 1, 'the rename dialog does not stack a second dialog on top')
+      const renameSave = findAll(
+        (node) => node.type === 'button' && textOf(node).includes(ZH['action.save'])
+      )[0]
+      if (renameSave) {
+        click(renameSave)
+        await settle(8)
+        const saved = posts.filter((post) => post.action === 'project-save').pop()
+        check(Boolean(saved) && Boolean(saved.id), 'renaming posts project-save with the project id')
+      }
       const closeProject = findAll(
         (node) => node.type === 'button' && textOf(node).includes(ZH['action.cancel'])
       )[0]
       if (closeProject) {
         click(closeProject)
         await settle(4)
+      }
+    }
+  }
+
+  // 项目空间批量选择 + 迁移
+  const pickToggle = findAll(
+    (node) => node.type === 'button' && node.props && node.props.title === ZH['nav.pickProjects']
+  )[0]
+  check(Boolean(pickToggle), 'project group offers a batch pick toggle')
+  if (pickToggle) {
+    click(pickToggle)
+    await settle(6)
+    check(byClass('zw-projectPickBar').length === 1, 'batch pick bar appears')
+    const pickRows = byClass('zw-projectRow')
+    check(pickRows.length >= 2, 'at least two projects are available to pick')
+    if (pickRows.length >= 2) {
+      // 目标项目本身不能被勾选，所以勾选数最多留一个没被勾的当目标。
+      const pickCount = Math.min(2, pickRows.length - 1)
+      click(pickRows[0])
+      await settle(4)
+      if (pickCount > 1) {
+        click(pickRows[1])
+        await settle(4)
+      }
+      check(byClass('zw-pickBoxOn').length === pickCount, 'picked projects show their check marks')
+      const targetSelect = byClass('zw-pickTarget')[0]
+      check(Boolean(targetSelect), 'target project selector is rendered')
+      if (targetSelect && targetSelect.props.onChange) {
+        const options = []
+        walk(targetSelect, (node) => {
+          if (node !== targetSelect && node.type === 'option' && node.props && node.props.value) options.push(node.props.value)
+        })
+        check(options.length >= 1, 'unpicked projects are offered as merge targets')
+        targetSelect.props.onChange({ target: { value: options[0] } })
+        await settle(4)
+        const mergeBtn = byClass('zw-pickGo')[0]
+        check(Boolean(mergeBtn) && !mergeBtn.props.disabled, 'merge button turns on once a target is chosen')
+        if (mergeBtn) {
+          click(mergeBtn)
+          await settle(10)
+          const mergePost = posts.filter((post) => post.action === 'project-merge').pop()
+          check(
+            Boolean(mergePost) && mergePost.sourceIds.length === pickCount,
+            'merging posts project-merge with the picked sources'
+          )
+          check(byClass('zw-projectPickBar').length === 0, 'merging closes the pick bar')
+        }
       }
     }
   }
@@ -1569,6 +1647,12 @@ async function workspaceChecks() {
       if (frameSvg) pointer(frameSvg, 'onPointerUp', frameAt, { pointerId: 21 })
       await settle(8)
       check(byClass('zw-batchbar').length >= 1, 'clicking a frame selects its members')
+      check(
+        findAll(
+          (node) => node.type === 'button' && node.props && node.props.title === ZH['graph.frameDelete']
+        ).length >= 1,
+        'selecting a frame reveals the delete button in the graph toolbar'
+      )
       if (typeof frameNode.props.onDoubleClick === 'function') {
         frameNode.props.onDoubleClick({})
         await settle(6)

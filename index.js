@@ -4279,16 +4279,125 @@ function importStore(state, input) {
   return { imported, mode }
 }
 
+// 删项目时把它名下的东西全部搬到剩下的第一个项目，并且把代表这个项目的
+// project 知识对象连根清掉（它只属于这个项目，留着会变成孤立的空壳）。
+function projectNodeIdsOf(store, projectIds) {
+  const ids = new Set()
+  for (const node of store.nodes || []) {
+    if (node.nodeType !== 'project') continue
+    if (projectIds.has(node.projectId)) ids.add(node.id)
+  }
+  return ids
+}
+
+function dropNodesAndRelations(store, nodeIds) {
+  if (!nodeIds.size) return 0
+  const before = (store.relations || []).length
+  store.relations = (store.relations || []).filter((relation) => {
+    const ends = [
+      relation.sourceType === 'node' ? relation.sourceId : '',
+      relation.targetType === 'node' ? relation.targetId : ''
+    ]
+    return !ends.some((id) => id && nodeIds.has(id))
+  })
+  store.nodes = (store.nodes || []).filter((node) => !nodeIds.has(node.id))
+  return before - (store.relations || []).length
+}
+
 function deleteProject(store, input) {
-  const id = cleanLine(input.id, 64)
+  const id = cleanLine(input && (input.id || input.projectId), 64)
   if (store.projects.length <= 1) throw httpError(400, 'last-project', '至少保留一个项目')
   const project = store.projects.find((item) => item.id === id)
   if (!project) throw httpError(404, 'project-not-found', '项目不存在：' + id)
   store.projects = store.projects.filter((item) => item.id !== id)
   const fallback = store.projects[0].id
-  for (const entry of store.entries) if (entry.projectId === id) entry.projectId = fallback
-  for (const collection of store.collections) if (collection.projectId === id) collection.projectId = fallback
-  return { deleted: id, name: project.name, movedTo: fallback }
+  const moved = { entries: 0, nodes: 0, collections: 0, frames: 0, views: 0, relations: 0 }
+  for (const entry of store.entries) {
+    if (entry.projectId !== id) continue
+    entry.projectId = fallback
+    moved.entries += 1
+  }
+  for (const node of store.nodes || []) {
+    if (node.projectId !== id || node.nodeType === 'project') continue
+    node.projectId = fallback
+    moved.nodes += 1
+  }
+  for (const collection of store.collections) {
+    if (collection.projectId !== id) continue
+    collection.projectId = fallback
+    moved.collections += 1
+  }
+  for (const frame of store.frames || []) {
+    if (frame.projectId !== id) continue
+    frame.projectId = fallback
+    moved.frames += 1
+  }
+  for (const view of store.views || []) {
+    if (!view.filters || view.filters.projectId !== id) continue
+    view.filters.projectId = fallback
+    moved.views += 1
+  }
+  moved.relations = dropNodesAndRelations(store, projectNodeIdsOf(store, new Set([id])))
+  return { deleted: id, name: project.name, movedTo: fallback, moved: moved }
+}
+
+// 项目空间多选后批量迁移：把 sourceIds 里的项目并进 targetId。
+// 关系不搬（两端都还在），只改归属；源项目自己的 project 知识对象直接清掉。
+function mergeProjects(store, input) {
+  const targetId = cleanLine(input && input.targetId, 64)
+  const rawSources = Array.isArray(input && input.sourceIds) ? input.sourceIds : []
+  const sourceIds = []
+  const seenSource = new Set()
+  for (const raw of rawSources) {
+    const id = cleanLine(raw, 64)
+    if (!id || id === targetId || seenSource.has(id)) continue
+    seenSource.add(id)
+    sourceIds.push(id)
+  }
+  if (!targetId) throw httpError(400, 'empty-target', '需要指定要迁移到的项目')
+  if (!sourceIds.length) throw httpError(400, 'empty-source', '先选要迁移的项目')
+  const target = store.projects.find((project) => project.id === targetId)
+  if (!target) throw httpError(404, 'project-not-found', '项目不存在：' + targetId)
+  const sources = []
+  for (const id of sourceIds) {
+    const project = store.projects.find((item) => item.id === id)
+    if (project) sources.push(project)
+  }
+  if (!sources.length) throw httpError(404, 'project-not-found', '要迁移的项目都不存在')
+  if (store.projects.length - sources.length < 1) throw httpError(400, 'last-project', '至少保留一个项目')
+  const sourceSet = new Set(sources.map((project) => project.id))
+  const moved = { entries: 0, nodes: 0, collections: 0, frames: 0, views: 0, relations: 0 }
+  for (const entry of store.entries) {
+    if (!sourceSet.has(entry.projectId)) continue
+    entry.projectId = targetId
+    moved.entries += 1
+  }
+  for (const node of store.nodes || []) {
+    if (!sourceSet.has(node.projectId) || node.nodeType === 'project') continue
+    node.projectId = targetId
+    moved.nodes += 1
+  }
+  for (const collection of store.collections) {
+    if (!sourceSet.has(collection.projectId)) continue
+    collection.projectId = targetId
+    moved.collections += 1
+  }
+  for (const frame of store.frames || []) {
+    if (!sourceSet.has(frame.projectId)) continue
+    frame.projectId = targetId
+    moved.frames += 1
+  }
+  for (const view of store.views || []) {
+    if (!view.filters || !sourceSet.has(view.filters.projectId)) continue
+    view.filters.projectId = targetId
+    moved.views += 1
+  }
+  moved.relations = dropNodesAndRelations(store, projectNodeIdsOf(store, sourceSet))
+  store.projects = store.projects.filter((project) => !sourceSet.has(project.id))
+  store.projects.forEach((project, index) => {
+    project.order = index * 10
+  })
+  return { targetId: targetId, targetName: target.name, mergedFrom: sources.map((item) => item.name), moved: moved }
 }
 
 function saveView(store, input) {
@@ -5279,6 +5388,7 @@ function writeParameters() {
           'collection-split',
           'project-save',
           'project-delete',
+          'project-merge',
           'project-reorder',
           'frame-save',
           'frame-delete',
@@ -5295,7 +5405,7 @@ function writeParameters() {
           'import'
         ],
         description:
-          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间；project-reorder 调整项目顺序（传 ids 数组）；frame-save / frame-delete 管理关系图上的记忆框（框住一组记忆，方便阅读）；layout-save 保存关系图的手动布局（positions: {记忆id: {x, y}}）；layout-clear 清空手动布局；import 导入外部 JSON（mode: merge / replace）；node-save 新建或更新知识对象（nodeType: project/system/subsystem/concept/workflow/preference/principle/method）；node-delete 归档或删除知识对象（mode: hard 才真删）；node-archive / node-restore；node-merge 合并重复对象（targetId 保留、sourceId 并入）；node-link-memory / node-unlink-memory 关联或解除关联记忆。'
+          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间；project-merge 把 sourceIds 里的几个项目并进 targetId（记忆、知识对象、记忆区、视图一起迁走）；project-reorder 调整项目顺序（传 ids 数组）；frame-save / frame-delete 管理关系图上的记忆框（框住一组记忆，方便阅读）；layout-save 保存关系图的手动布局（positions: {记忆id: {x, y}}）；layout-clear 清空手动布局；import 导入外部 JSON（mode: merge / replace）；node-save 新建或更新知识对象（nodeType: project/system/subsystem/concept/workflow/preference/principle/method）；node-delete 归档或删除知识对象（mode: hard 才真删）；node-archive / node-restore；node-merge 合并重复对象（targetId 保留、sourceId 并入）；node-link-memory / node-unlink-memory 关联或解除关联记忆。'
       },
       id: { type: 'string', description: '记忆 / 集合 / 关联 / 项目的 id（更新时必填）' },
       title: { type: 'string', description: '记忆标题，一句话说清是什么' },
@@ -5545,6 +5655,8 @@ function applyAction(state, input) {
       return saveProject(state, input)
     case 'project-delete':
       return deleteProject(state, input)
+    case 'project-merge':
+      return mergeProjects(state, input)
     case 'view-save':
       return saveView(state, input)
     case 'view-delete':
@@ -5983,7 +6095,7 @@ export function apply(ctx) {
     'relation-create', 'relation-update', 'relation-decide', 'relation-delete',
     'collection-save', 'collection-delete', 'collection-members',
     'collection-merge', 'collection-split', 'collection-restore',
-    'project-save', 'project-delete', 'project-reorder',
+    'project-save', 'project-delete', 'project-merge', 'project-reorder',
     'frame-save', 'frame-delete', 'frame-sync',
     'node-save', 'node-delete', 'node-archive', 'node-restore', 'node-merge',
     'node-link-memory', 'node-unlink-memory', 'node-version-restore',

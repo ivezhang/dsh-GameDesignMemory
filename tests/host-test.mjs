@@ -1710,6 +1710,47 @@ async function runWorkspaceSuite() {
   state = (await api.get()).json
   check(state.projects[0].id === ids[0], 'project order is persisted')
 
+  // 删项目 / 合并项目都要把对象层一起搬走，不能留下挂着已删项目 id 的孤儿。
+  const doomedProject = (await api.post({ action: 'project-save', name: '待删对象项目' })).json.project
+  await api.post({ action: 'node-save', title: '删项目前建的对象', nodeType: 'concept', projectId: doomedProject.id })
+  const deletedProject = await api.post({ action: 'project-delete', id: doomedProject.id })
+  check(deletedProject.json.ok === true, 'project-delete succeeds with knowledge objects inside')
+  state = (await api.get()).json
+  check(
+    state.nodes.some((node) => node.title === '删项目前建的对象' && node.projectId !== doomedProject.id),
+    'deleting a project moves its knowledge objects instead of orphaning them'
+  )
+
+  await api.post({ action: 'node-save', title: '迁移用对象', nodeType: 'concept', projectId: ids[1] })
+  const mergedProject = await api.post({ action: 'project-merge', sourceIds: [ids[1]], targetId: ids[0] })
+  check(mergedProject.json.ok === true, 'project-merge accepts a source list and a target')
+  check(Array.isArray(mergedProject.json.mergedFrom) && mergedProject.json.mergedFrom.length === 1, 'project-merge reports what it merged')
+  state = (await api.get()).json
+  check(!state.projects.some((project) => project.id === ids[1]), 'the merged project disappears')
+  check(
+    state.nodes.some((node) => node.title === '迁移用对象' && node.projectId === ids[0]),
+    'knowledge objects move to the target project'
+  )
+  check(
+    state.entries.every((entry) => entry.projectId !== ids[1]),
+    'no memory keeps the merged project id'
+  )
+  check(
+    state.nodes.filter((node) => node.nodeType === 'project').every((node) => node.projectId !== ids[1]),
+    'the merged project node is gone instead of dangling'
+  )
+  check(
+    state.relations.every((relation) => {
+      const ends = [relation.sourceType === 'node' ? relation.sourceId : '', relation.targetType === 'node' ? relation.targetId : '']
+      return !ends.some((id) => id && !state.nodes.some((node) => node.id === id))
+    }),
+    'no relation is left pointing at a dropped project node'
+  )
+  const selfMerge = await api.post({ action: 'project-merge', sourceIds: [ids[0]], targetId: ids[0] })
+  check(selfMerge.status === 400, 'project-merge rejects merging a project into itself')
+  const emptyMerge = await api.post({ action: 'project-merge', sourceIds: [], targetId: ids[0] })
+  check(emptyMerge.status === 400, 'project-merge rejects an empty source list')
+
   const exported = await api.post({ action: 'export' })
   check(exported.json.data && exported.json.data.entries.length === 2, 'export returns a full snapshot')
   check(Array.isArray(exported.json.data.frames), 'export includes frames')

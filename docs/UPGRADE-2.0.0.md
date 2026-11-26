@@ -30,7 +30,7 @@
 ## 出问题怎么办
 
 - 迁移后条数不对：先看 `%DSH_HOME%/design-memory/memories.json.bak`，那是迁移前的原文件，直接改名回 `memories.json` 再重启即可回到升级前。
-- 面板空白 / 接口 404：多半是只刷新了页面没重启 DSH，重启进程后再刷新。
+- 面板空白 / 接口 404：先确认已经是 2.0.1。2.0.0 有个已知问题：工具注册缺少输出声明，插件启动到一半就失败，路由没挂上，重启后仍然 404。2.0.1 已修复，重新安装/覆盖后重启 DSH 即可。若仍是 404，多半是只刷新了页面没重启 DSH 进程。
 - 解析失败：插件会把坏文件改名成 `memories.json.corrupt-<时间戳>` 并重置为空库，不会静默丢数据；把 `.bak` 拷回去即可恢复。
 
 ## 命令行自检
@@ -40,4 +40,5 @@ node tests/host-test.mjs        # host 全量行为测试
 node tests/render-smoke.mjs     # 前端渲染冒烟
 node tests/migrate-live.mjs     # 真实数据结构迁移校验（记忆数、关系数、备份）
 node tests/static-audit.mjs     # i18n 与样式类名一致性
+node tests/dsh-contract.mjs     # 复刻 DSH 工具/路由注册契约，提前抓启动失败
 ```

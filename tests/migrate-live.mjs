@@ -113,12 +113,19 @@ async function boot(dshDir) {
   throw new Error('plugin did not become ready')
 }
 
-const usingLive = existsSync(LIVE_STORE)
+const liveExists = existsSync(LIVE_STORE)
+const live = liveExists ? JSON.parse(await readFile(LIVE_STORE, 'utf8')) : null
+// 这个测试要验证的是「v1 → v3 迁移不丢数据」。live store 一旦被 DSH 正式启动
+// 迁移过（version 3），再拿它当源就测不到迁移路径了，因此回落到 v1 fixture。
+const useLiveSource = Boolean(live) && Number(live.version || 1) < 3
 let original = null
-if (usingLive) {
-  original = JSON.parse(await readFile(LIVE_STORE, 'utf8'))
+let sourceKind = ''
+if (useLiveSource) {
+  original = live
+  sourceKind = 'live store (v1)'
 } else if (existsSync(FALLBACK_STORE)) {
   original = JSON.parse(await readFile(FALLBACK_STORE, 'utf8'))
+  sourceKind = 'fixture-v1.json' + (liveExists ? ' — live store already migrated to v' + (live && live.version) : '')
 } else {
   original = {
     version: 1,
@@ -228,6 +235,12 @@ const backups = (await readdir(storeDir)).filter((name) => name.includes('.bak')
 check(backups.length >= 1, 'a .bak backup was written before rewriting: ' + backups.join(', '))
 const onDisk = JSON.parse(await readFile(storeFile, 'utf8'))
 check(onDisk.version === 3, 'file on disk is version 3')
+if (live) {
+  check(
+    Number(live.version) === 3 && Array.isArray(live.entries) && live.entries.length > 0,
+    'live store is readable on disk: v' + live.version + ' · ' + (live.entries || []).length + ' memories'
+  )
+}
 
 // read paths still work against migrated data
 const firstId = snapshot.entries[0].id
@@ -241,7 +254,7 @@ for (const item of results) console.log((item.ok ? 'PASS  ' : 'FAIL  ') + item.m
 console.log('')
 console.log(
   'SUMMARY  ' + results.length + ' checks · ' + (results.length - failed.length) + ' passed · ' + failed.length + ' failed' +
-    '  (source: ' + (usingLive ? 'live store' : 'fixture') + ')'
+    '  (source: ' + sourceKind + ')'
 )
 await rm(dshDir, { recursive: true, force: true })
 if (failed.length) process.exit(1)

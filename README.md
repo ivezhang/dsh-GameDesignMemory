@@ -2,7 +2,7 @@
 
 > 一个 DSH 插件：把策划的设计结论、规则、假设、问题、方案、参考、数值和复盘，整理成**有类型、有状态、有来源、有语义关系**的记忆，用主题集合自动归纳，用三栏工作台和可探索的知识图谱随时找回来。
 
-之前的名字是「策划记忆」（1.x）。2.0.0 起叫**知微**，内部包名与数据目录保持不变，旧数据自动迁移。
+之前的名字是「策划记忆」（1.x）。2.0.0 起叫**知微**，内部包名与数据目录保持不变，旧数据自动迁移。当前版本 **2.0.1**（修掉了 2.0.0 重启后面板 404 的问题，见 [CHANGELOG](docs/CHANGELOG.md)）。
 
 ## 它解决什么问题
 
@@ -65,14 +65,14 @@ dsh plugin add github:ivezhang/dsh-GameDesignMemory
 ## 目录结构
 
 ```
-index.js            host：存储、迁移、分析引擎、三个 AI 工具、HTTP 接口
+index.js            host：存储、迁移、分析引擎、四个工具、HTTP 接口
 client.js           前端：三栏工作台、列表、详情、编辑器、关系图、AI 面板
 cordis.patch.yml    插件挂载补丁
 locale/             插件元信息（中文 / 英文）
 docs/DETAIL.md      详细说明：数据模型、关系、集合、AI 规则
 docs/CHANGELOG.md   更新记录
 docs/UPGRADE-2.0.0.md  从 1.x 升级的注意事项
-tests/              行为测试、渲染冒烟、迁移校验、静态一致性审计
+tests/              行为测试、渲染冒烟、迁移校验、静态审计、DSH 契约探针
 ```
 
 ## 测试
@@ -82,6 +82,7 @@ node tests/host-test.mjs       # host 行为（迁移、CRUD、关系、集合�
 node tests/render-smoke.mjs    # 前端渲染与交互冒烟
 node tests/migrate-live.mjs    # 真实数据结构迁移校验
 node tests/static-audit.mjs    # i18n 与样式类名一致性
+node tests/dsh-contract.mjs    # 复刻 DSH 工具/路由注册契约（改 host 后先跑）
 ```
 
 ## 兼容性与限制

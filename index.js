@@ -2476,6 +2476,13 @@ export function apply(ctx) {
 
   const ready = load()
 
+  // 当前 DSH 的工具契约要求每个工具声明输出：schema + render（可选 presentationMeta）。
+  // 知微的四个工具都直接产出给人和模型读的中文文本，因此统一按 string 输出渲染。
+  const TEXT_OUTPUT = {
+    schema: { type: 'string' },
+    render: (_args, value) => [{ type: 'text', text: typeof value === 'string' ? value : String(value === undefined || value === null ? '' : value) }]
+  }
+
   function stats() {
     return computeStats(state)
   }
@@ -2502,6 +2509,7 @@ export function apply(ctx) {
       },
       additionalProperties: false
     },
+    output: TEXT_OUTPUT,
     async execute(params) {
       await ready
       const id = cleanLine(params && params.id, 64)
@@ -2531,6 +2539,7 @@ export function apply(ctx) {
       '新建集合传 name + memberIds；改集合只传要变的字段。'
     ].join('\n'),
     parameters: writeParameters(),
+    output: TEXT_OUTPUT,
     async execute(params) {
       await ready
       const result = await persist((current) => applyAction(current, params))
@@ -2559,6 +2568,7 @@ export function apply(ctx) {
       required: ['action'],
       additionalProperties: false
     },
+    output: TEXT_OUTPUT,
     async execute(params) {
       await ready
       const action = cleanLine(params && params.action, 20)
@@ -2644,6 +2654,7 @@ export function apply(ctx) {
       required: ['action'],
       additionalProperties: false
     },
+    output: TEXT_OUTPUT,
     async execute(params) {
       await ready
       const result = runAssist(params, state)

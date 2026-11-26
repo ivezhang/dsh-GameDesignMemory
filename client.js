@@ -1141,6 +1141,13 @@ window.__ModuleLoader__.load({
     .zw-rail[data-collapsed='true'] .zw-projectCount,
     .zw-rail[data-collapsed='true'] .zw-brandBadge { display: none; }
     .zw-rail[data-collapsed='true'] .zw-brand { justify-content: center; padding-left: 0; padding-right: 0; }
+    .zw-rail[data-collapsed='true'] .zw-navItem,
+    .zw-rail[data-collapsed='true'] .zw-projectRow { justify-content: center; padding: 0; gap: 0; }
+    .zw-rail[data-collapsed='true'] .zw-railToggle { justify-content: center; padding: 0; }
+    .zw-rail[data-collapsed='true'] .zw-railToggleLabel,
+    .zw-rail[data-collapsed='true'] .zw-savedLabel { display: none; }
+    .zw-rail[data-collapsed='true'] .zw-railFoot { align-items: stretch; }
+    .zw-rail[data-collapsed='true'] .zw-savedView { justify-content: center; padding: 0; gap: 0; }
 
     .zw-newBtn {
       display: flex; align-items: center; justify-content: center; gap: 7px;
@@ -1196,9 +1203,13 @@ window.__ModuleLoader__.load({
     .zw-projectName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .zw-projectCount { font-size: 10.5px; color: var(--zw-text-3); font-variant-numeric: tabular-nums; }
 
-    .zw-railSpacer { flex: 1; min-height: 8px; }
+    .zw-navScroll {
+      flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+      display: flex; flex-direction: column; gap: 2px;
+      padding-right: 2px; margin-right: -2px;
+    }
     .zw-railFoot {
-      border-top: 1px solid var(--zw-border); padding-top: 8px; margin-top: 4px;
+      margin-top: auto; border-top: 1px solid var(--zw-border); padding-top: 8px; margin-top: 4px;
       display: flex; flex-direction: column; gap: 2px;
     }
     .zw-savedView {
@@ -1207,6 +1218,8 @@ window.__ModuleLoader__.load({
       color: var(--zw-text-2); font-size: 12px; text-align: left;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    .zw-savedLabel,
+    .zw-railToggleLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .zw-savedView:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
     .zw-savedEmpty { padding: 4px 8px 6px; font-size: 11px; color: var(--zw-text-3); line-height: 1.45; }
     .zw-railToggle {
@@ -2912,6 +2925,27 @@ window.__ModuleLoader__.load({
       return 'light'
     }
 
+    // 界面上一些「展开 / 收起」的记忆，跨会话保留，但永远不是数据的一部分，
+    // 存不进也读不崩：localStorage 不可用时直接退回默认值。
+    function readFlag(key, fallback) {
+      try {
+        const raw = window.localStorage.getItem('zhiwei:' + key)
+        if (raw === '1') return true
+        if (raw === '0') return false
+      } catch (error) {
+        /* 隐私模式或没有 localStorage */
+      }
+      return fallback
+    }
+
+    function writeFlag(key, value) {
+      try {
+        window.localStorage.setItem('zhiwei:' + key, value ? '1' : '0')
+      } catch (error) {
+        /* 忽略：只是界面偏好 */
+      }
+    }
+
     function useThemeMode() {
       const [mode, setMode] = useState(readThemeMode)
       useEffect(() => {
@@ -3284,57 +3318,60 @@ window.__ModuleLoader__.load({
         ),
         h(
           'div',
-          { className: 'zw-navGroup' },
-          item('overview', t('nav.overview'), 'home'),
-          item('all', t('nav.all'), 'book', stats.entries),
-          item('inbox', t('nav.inbox'), 'inbox', stats.inbox),
-          item('tidy', t('nav.tidy'), 'broom', tidyCount),
-          item('collections', t('nav.collections'), 'folder', stats.collections),
-          item('favorites', t('nav.favorites'), 'star', stats.favorites),
-          item('recent', t('nav.recent'), 'clock'),
-          item('recall', t('nav.recall'), 'history', stats.recalls)
-        ),
-        props.projects.length
-          ? h(
-              'div',
-              { className: 'zw-navGroup' },
-              h('div', { className: 'zw-navGroupLabel' }, t('nav.projects')),
-              h(
+          { className: 'zw-navScroll zw-scroll' },
+          h(
+            'div',
+            { className: 'zw-navGroup' },
+            item('overview', t('nav.overview'), 'home'),
+            item('all', t('nav.all'), 'book', stats.entries),
+            item('inbox', t('nav.inbox'), 'inbox', stats.inbox),
+            item('tidy', t('nav.tidy'), 'broom', tidyCount),
+            item('collections', t('nav.collections'), 'folder', stats.collections),
+            item('favorites', t('nav.favorites'), 'star', stats.favorites),
+            item('recent', t('nav.recent'), 'clock'),
+            item('recall', t('nav.recall'), 'history', stats.recalls)
+          ),
+          props.projects.length
+            ? h(
                 'div',
-                { className: 'zw-projects zw-scroll' },
-                props.projects.map((project) =>
-                  h(
-                    'button',
-                    {
-                      key: project.id,
-                      type: 'button',
-                      className:
-                        'zw-projectRow' +
-                        (nav.kind === 'project' && nav.id === project.id ? ' zw-projectRowOn' : ''),
-                      title: project.name,
-                      onClick: () => props.onNav('project', project.id)
-                    },
-                    h('span', {
-                      className: 'zw-projectDot',
-                      style: { background: project.color || 'var(--zw-accent)' }
-                    }),
-                    h('span', { className: 'zw-projectName' }, project.name),
+                { className: 'zw-navGroup' },
+                h('div', { className: 'zw-navGroupLabel' }, t('nav.projects')),
+                h(
+                  'div',
+                  { className: 'zw-projects zw-scroll' },
+                  props.projects.map((project) =>
                     h(
-                      'span',
-                      { className: 'zw-projectCount' },
-                      props.projectCounts[project.id] || 0
+                      'button',
+                      {
+                        key: project.id,
+                        type: 'button',
+                        className:
+                          'zw-projectRow' +
+                          (nav.kind === 'project' && nav.id === project.id ? ' zw-projectRowOn' : ''),
+                        title: project.name,
+                        onClick: () => props.onNav('project', project.id)
+                      },
+                      h('span', {
+                        className: 'zw-projectDot',
+                        style: { background: project.color || 'var(--zw-accent)' }
+                      }),
+                      h('span', { className: 'zw-projectName' }, project.name),
+                      h(
+                        'span',
+                        { className: 'zw-projectCount' },
+                        props.projectCounts[project.id] || 0
+                      )
                     )
                   )
                 )
               )
-            )
-          : null,
-        h(
-          'div',
-          { className: 'zw-navGroup' },
-          item('graph', t('nav.graph'), 'graph', stats.relations)
+            : null,
+          h(
+            'div',
+            { className: 'zw-navGroup' },
+            item('graph', t('nav.graph'), 'graph', stats.relations)
+          )
         ),
-        h('div', { className: 'zw-railSpacer' }),
         h(
           'div',
           { className: 'zw-railFoot' },
@@ -3351,7 +3388,7 @@ window.__ModuleLoader__.load({
                     onClick: () => props.onOpenView(view)
                   },
                   h(Icon, { name: 'target', size: 12 }),
-                  view.name
+                  h('span', { className: 'zw-savedLabel' }, view.name)
                 )
               )
             : h('div', { className: 'zw-savedEmpty' }, t('nav.savedViewsEmpty')),
@@ -3364,7 +3401,7 @@ window.__ModuleLoader__.load({
               onClick: props.onToggleCollapsed
             },
             h(Icon, { name: collapsed ? 'expand' : 'collapse', size: 13 }),
-            h('span', null, collapsed ? t('nav.expand') : t('nav.collapse'))
+            h('span', { className: 'zw-railToggleLabel' }, collapsed ? t('nav.expand') : t('nav.collapse'))
           )
         )
       )
@@ -8825,8 +8862,9 @@ window.__ModuleLoader__.load({
       const [selectedId, setSelectedId] = useState('')
       const [checked, setChecked] = useState([])
       const [graphSelection, setGraphSelection] = useState([])
-      const [railCollapsed, setRailCollapsed] = useState(false)
-      const [detailCollapsed, setDetailCollapsed] = useState(false)
+      // 左栏默认收起成图标条：用户要的是「记忆列表」占满宽度，导航按需展开。
+      const [railCollapsed, setRailCollapsed] = useState(() => readFlag('railCollapsed', true))
+      const [detailCollapsed, setDetailCollapsed] = useState(() => readFlag('detailCollapsed', false))
       const [toasts, setToasts] = useState([])
       const [busy, setBusy] = useState('')
       const [modal, setModal] = useState(null)
@@ -9796,7 +9834,11 @@ window.__ModuleLoader__.load({
             views: data.views || [],
             onNav: setNavKind,
             onNew: () => setModal({ type: 'quick' }),
-            onToggleCollapsed: () => setRailCollapsed(!railCollapsed),
+            onToggleCollapsed: () => {
+              const next = !railCollapsed
+              setRailCollapsed(next)
+              writeFlag('railCollapsed', next)
+            },
             onOpenView: restoreView,
             onCreateProject: () => setModal({ type: 'project' }),
             onRefresh: load
@@ -9933,7 +9975,8 @@ window.__ModuleLoader__.load({
               ? h('div', { className: 'zw-loadingBar' }, h('div', { className: 'zw-loadingFill' }))
               : null
           ),
-          h(DetailRail, {
+          selectedEntry
+            ? h(DetailRail, {
             t: t,
             meta: meta,
             entry: selectedEntry,
@@ -9976,7 +10019,7 @@ window.__ModuleLoader__.load({
               setChecked(ids.slice())
               setNav({ kind: 'all', id: '' })
             }
-          })
+          }) : null
         ),
         h(ToastHost, { toasts: toasts }),
         modal && modal.type === 'observe'

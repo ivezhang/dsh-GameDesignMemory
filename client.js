@@ -128,6 +128,57 @@ window.__ModuleLoader__.load({
       'action.save': '保存',
       'action.cancel': '取消',
       'action.delete': '删除',
+      'action.rename': '重命名',
+      'project.namePlaceholder': '项目空间名称',
+      'settings.title': '设置',
+      'graph.saveLayout': '保存布局',
+      'graph.layoutSaved': '已保存当前布局',
+      'toast.projectSaved': '已保存项目',
+      'toast.projectDeleted': '已删除项目',
+      'toast.projectMoved': '已调整项目顺序',
+      'project.newTitle': '新建项目',
+      'project.editTitle': '编辑项目',
+      'project.name': '项目名称',
+      'project.namePlaceholder': '例如：N2 · 猎星者',
+      'project.description': '项目说明',
+      'project.descriptionPlaceholder': '这个项目的背景、约束或目标（可留空）',
+      'project.needName': '项目名称不能为空',
+      'project.deleteTitle': '删除项目',
+      'project.deleteText': '删除后，项目里的记忆与集合会移动到第一个项目，记忆本身不会丢。',
+      'project.deleteConfirm': '确认删除',
+
+      'settings.modelTitle': '整理用的模型',
+      'settings.modelHint': '选定后，AI 整理、摘要与归类会先走这个模型；模型不可用时自动回退到本地启发式整理。',
+      'settings.modelUnavailable': '当前环境没有可用的模型服务，只能使用本地整理。',
+      'settings.modelProvider': '服务商',
+      'settings.modelName': '模型',
+      'settings.modelEnable': '使用模型来整理',
+      'settings.modelSaved': '已保存模型设置',
+      'settings.modelNone': '不指定（只用本地整理）',
+      'settings.storage': '存储位置',
+      'settings.counts': '当前数据',
+      'settings.entriesUnit': '条记忆',
+      'settings.relationsUnit': '条关系',
+      'settings.collectionsUnit': '个集合',
+      'settings.switchTitle': '切换记忆存储区域',
+      'settings.switchHint': '填一个目录或 .json 文件路径，知微会把当前记忆写到那里并从那儿读取。原位置的数据会保留一份备份，随时可以切回来。',
+      'settings.switchPlaceholder': 'D:\\我的记忆库\\memories.json',
+      'settings.switchApply': '切换到这里',
+      'settings.exportTitle': '导出',
+      'settings.exportHint': '导出为 JSON 文件，包含记忆、关系、集合、记忆框与布局，可用于备份或迁移到另一台电脑。',
+      'settings.export': '导出 JSON',
+      'settings.importTitle': '导入',
+      'settings.importHint': '选择之前导出的 JSON：合并只补充缺失的记忆，覆盖会用文件内容替换当前库。',
+      'settings.importMerge': '合并（只补充）',
+      'settings.importReplace': '覆盖（替换现有库）',
+      'settings.importApply': '开始导入',
+      'settings.switched': '已切换存储位置',
+      'settings.imported': '已导入',
+      'settings.exported': '已导出',
+      'graph.saveLayout': '保存布局',
+      'graph.layoutSaved': '已保存当前布局',
+      'graph.frameName': '记忆框',
+      'graph.frameSaved': '已把这个范围归到一个框里',
       'action.edit': '编辑',
       'action.close': '关闭',
       'action.confirm': '确认',
@@ -573,6 +624,57 @@ window.__ModuleLoader__.load({
       'action.save': 'Save',
       'action.cancel': 'Cancel',
       'action.delete': 'Delete',
+      'action.rename': 'Rename',
+      'project.namePlaceholder': 'Project space name',
+      'settings.title': 'Settings',
+      'graph.saveLayout': 'Save layout',
+      'graph.layoutSaved': 'Layout saved',
+      'toast.projectSaved': 'Project saved',
+      'toast.projectDeleted': 'Project deleted',
+      'toast.projectMoved': 'Project order updated',
+      'project.newTitle': 'New project',
+      'project.editTitle': 'Edit project',
+      'project.name': 'Project name',
+      'project.namePlaceholder': 'e.g. N2 · Starhunter',
+      'project.description': 'Description',
+      'project.descriptionPlaceholder': 'Background, constraints or goals (optional)',
+      'project.needName': 'Project name is required',
+      'project.deleteTitle': 'Delete project',
+      'project.deleteText': 'Memories and collections in this project move to the first project; nothing is lost.',
+      'project.deleteConfirm': 'Delete',
+
+      'settings.modelTitle': 'Model for organizing',
+      'settings.modelHint': 'Once picked, AI organize, summaries and grouping go through this model first; if it fails, Zhiwei falls back to local heuristics.',
+      'settings.modelUnavailable': 'No model service is available here, so only local organizing works.',
+      'settings.modelProvider': 'Provider',
+      'settings.modelName': 'Model',
+      'settings.modelEnable': 'Use the model to organize',
+      'settings.modelSaved': 'Model settings saved',
+      'settings.modelNone': 'None (local only)',
+      'settings.storage': 'Storage',
+      'settings.counts': 'Current data',
+      'settings.entriesUnit': 'memories',
+      'settings.relationsUnit': 'relations',
+      'settings.collectionsUnit': 'collections',
+      'settings.switchTitle': 'Switch memory storage',
+      'settings.switchHint': 'Point at a folder or a .json file; Zhiwei will write there and read from there. The previous location keeps a backup, so you can switch back anytime.',
+      'settings.switchPlaceholder': 'D:\\my-memory\\memories.json',
+      'settings.switchApply': 'Switch here',
+      'settings.exportTitle': 'Export',
+      'settings.exportHint': 'Export a JSON file with memories, relations, collections, frames and layout — for backup or moving to another machine.',
+      'settings.export': 'Export JSON',
+      'settings.importTitle': 'Import',
+      'settings.importHint': 'Pick a JSON exported earlier: merge only adds missing memories, replace overwrites the current store.',
+      'settings.importMerge': 'Merge (add only)',
+      'settings.importReplace': 'Replace (overwrite)',
+      'settings.importApply': 'Start import',
+      'settings.switched': 'Storage switched',
+      'settings.imported': 'Imported',
+      'settings.exported': 'Exported',
+      'graph.saveLayout': 'Save layout',
+      'graph.layoutSaved': 'Layout saved',
+      'graph.frameName': 'Frame',
+      'graph.frameSaved': 'Grouped this area into a frame',
       'action.edit': 'Edit',
       'action.close': 'Close',
       'action.confirm': 'Confirm',
@@ -2409,6 +2511,86 @@ window.__ModuleLoader__.load({
       stroke-width: 2;
     }
 
+    .zw-navAdd {
+      width: 18px; height: 18px; margin-left: auto; display: grid; place-items: center;
+      border: 0; border-radius: 6px; background: transparent; color: var(--zw-text-3); cursor: pointer;
+    }
+    .zw-navAdd:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-navGroupLabel { display: flex; align-items: center; gap: 6px; }
+    .zw-projectRow[draggable='true'] { cursor: grab; }
+    .zw-projectRowDrag { opacity: 0.45; }
+    .zw-projectRowOver { box-shadow: inset 0 2px 0 var(--zw-accent); }
+
+    .zw-menuMask { position: fixed; inset: 0; z-index: 60; }
+    .zw-menu {
+      position: fixed; z-index: 61; min-width: 168px; padding: 5px;
+      display: flex; flex-direction: column; gap: 2px;
+      border: 1px solid var(--zw-border); border-radius: 10px;
+      background: var(--zw-surface); box-shadow: var(--zw-shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.28));
+      animation: zwRise 120ms ease;
+    }
+    .zw-menuItem {
+      display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 9px;
+      border: 0; border-radius: 7px; background: transparent; color: var(--zw-text);
+      font-size: 12.5px; text-align: left; cursor: pointer;
+    }
+    .zw-menuItem:hover { background: var(--zw-bg-sunken); }
+    .zw-menuItemDanger { color: var(--zw-danger); }
+    .zw-menuSep { height: 1px; margin: 4px 6px; background: var(--zw-border); }
+
+    .zw-settings { display: flex; flex-direction: column; gap: 14px; }
+    .zw-settingsRow { display: flex; align-items: baseline; gap: 10px; font-size: 12.5px; }
+    .zw-settingsKey { flex: 0 0 auto; color: var(--zw-text-3); }
+    .zw-settingsPath {
+      flex: 1; min-width: 0; padding: 3px 8px; border-radius: 6px;
+      background: var(--zw-bg-sunken); color: var(--zw-text-2);
+      font-size: 11.5px; overflow-wrap: anywhere;
+    }
+    .zw-settingsBlock { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--zw-border); }
+    .zw-settingsTitle { font-size: 13px; font-weight: 600; }
+    .zw-settingsHint { font-size: 12px; color: var(--zw-text-3); line-height: 1.55; }
+    .zw-settingsForm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .zw-settingsForm .zw-input { flex: 1; min-width: 220px; }
+    .zw-fileInput { flex: 1; min-width: 200px; font-size: 12px; color: var(--zw-text-2); }
+
+    .zw-frameLayer { pointer-events: none; }
+    .zw-frameBox {
+      fill: color-mix(in srgb, var(--zw-frame-color, var(--zw-accent)) 8%, transparent);
+      stroke: color-mix(in srgb, var(--zw-frame-color, var(--zw-accent)) 46%, transparent);
+      stroke-width: 1.4; stroke-dasharray: 7 6; rx: 18; ry: 18;
+    }
+    .zw-frameBoxSel { stroke-width: 2.2; stroke-dasharray: none; }
+    .zw-frameLabel {
+      pointer-events: auto; cursor: pointer; user-select: none;
+      font-size: 12px; font-weight: 600;
+      fill: color-mix(in srgb, var(--zw-frame-color, var(--zw-accent)) 82%, var(--zw-text));
+    }
+    .zw-frameCount { font-size: 10.5px; fill: var(--zw-text-3); }
+    .zw-frameLabelBg {
+      fill: var(--zw-bg-soft);
+      stroke: color-mix(in srgb, var(--zw-frame-color, var(--zw-accent)) 40%, transparent);
+      stroke-width: 1;
+    }
+
+    /* 左栏几何加固：品牌区、新建按钮、分组标题各自占位，窄窗口下不会互相压住 */
+    .zw-rail { overflow: hidden; }
+    .zw-brand,
+    .zw-newBtn,
+    .zw-navGroup,
+    .zw-projects,
+    .zw-railFoot { flex: 0 0 auto; }
+    .zw-navScroll { margin-right: 0; padding-right: 0; }
+    .zw-brandText { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .zw-brandName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-projectName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-navGroupLabel { flex: 0 0 auto; }
+    /* 顶栏加固：标题先让位，右侧按钮不被挤压 */
+    .zw-titleMain { min-width: 0; }
+    .zw-titleRow > .zw-iconBtn,
+    .zw-titleRow > .zw-btn { flex: 0 0 auto; }
+    .zw-search { flex: 0 1 260px; min-width: 120px; }
+    .zw-projectRowDrag { opacity: 0.55; }
+    .zw-projectRowOver { outline: 1px dashed var(--zw-accent); outline-offset: -1px; }
     `
 
     const ICONS = {
@@ -2833,9 +3015,16 @@ window.__ModuleLoader__.load({
     }
 
     async function request(url, options) {
+      // 带 body 的请求统一补 JSON 头，避免调用处漏写 content-type 被服务端 415 拒绝。
+      const init = Object.assign({}, options || {})
+      if (init.body !== undefined && init.body !== null) {
+        const headers = Object.assign({ accept: 'application/json' }, init.headers || {})
+        if (!headers['content-type']) headers['content-type'] = 'application/json'
+        init.headers = headers
+      }
       let response
       try {
-        response = await fetch(url, options)
+        response = await fetch(url, init)
       } catch (error) {
         const wrapped = new Error((error && error.message) || String(error))
         wrapped.offline = true
@@ -3344,7 +3533,24 @@ window.__ModuleLoader__.load({
             ? h(
                 'div',
                 { className: 'zw-navGroup' },
-                h('div', { className: 'zw-navGroupLabel' }, t('nav.projects')),
+                h(
+                  'div',
+                  { className: 'zw-navGroupLabel' },
+                  h('span', null, t('nav.projects')),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-navAdd',
+                      title: t('nav.newProject'),
+                      onClick: (event) => {
+                        event.stopPropagation()
+                        props.onNewProject()
+                      }
+                    },
+                    h(Icon, { name: 'plus', size: 12 })
+                  )
+                ),
                 h(
                   'div',
                   { className: 'zw-projects zw-scroll' },
@@ -3358,7 +3564,22 @@ window.__ModuleLoader__.load({
                           'zw-projectRow' +
                           (nav.kind === 'project' && nav.id === project.id ? ' zw-projectRowOn' : ''),
                         title: project.name,
-                        onClick: () => props.onNav('project', project.id)
+                        draggable: true,
+                        onClick: () => props.onNav('project', project.id),
+                        onContextMenu: (event) => {
+                          event.preventDefault()
+                          props.onProjectMenu(project, event.clientX, event.clientY)
+                        },
+                        onDragStart: () => props.onProjectDragStart(project.id),
+                        onDragEnd: () => props.onProjectDragEnd(),
+                        onDragOver: (event) => {
+                          event.preventDefault()
+                          props.onProjectDragOver(project.id)
+                        },
+                        onDrop: (event) => {
+                          event.preventDefault()
+                          props.onProjectDrop(project.id)
+                        }
                       },
                       h('span', {
                         className: 'zw-projectDot',
@@ -6512,6 +6733,238 @@ window.__ModuleLoader__.load({
         )
       )
     }
+    function ContextMenu(props) {
+      const items = props.items || []
+      return h(
+        'div',
+        {
+          className: 'zw-menuMask',
+          onPointerDown: props.onClose,
+          onContextMenu: (event) => {
+            event.preventDefault()
+            props.onClose()
+          }
+        },
+        h(
+          'div',
+          {
+            className: 'zw-menu',
+            style: { left: Math.max(8, props.x || 8) + 'px', top: Math.max(8, props.y || 8) + 'px' },
+            onPointerDown: (event) => event.stopPropagation()
+          },
+          items.map((item, index) =>
+            h(
+              'button',
+              {
+                key: (item.label || 'item') + index,
+                type: 'button',
+                className: 'zw-menuItem' + (item.danger ? ' zw-menuItemDanger' : ''),
+                onClick: () => {
+                  props.onClose()
+                  if (item.onClick) item.onClick()
+                }
+              },
+              item.icon ? h(Icon, { name: item.icon, size: 13 }) : null,
+              h('span', null, item.label)
+            )
+          )
+        )
+      )
+    }
+
+    function SettingsDialog(props) {
+      const t = props.t
+      const settings = props.settings || {}
+      const stats = props.stats || {}
+      const [target, setTarget] = useState('')
+      const [mode, setMode] = useState('merge')
+      const [importNote, setImportNote] = useState('')
+      const switching = Boolean(props.busy)
+
+      function pickFile(event) {
+        const file = event && event.target && event.target.files && event.target.files[0]
+        if (!file) return
+        const reader = new FileReader()
+        reader.onload = () => {
+          setImportNote(String(reader.result || ''))
+        }
+        reader.readAsText(file)
+      }
+
+      return h(
+        Modal,
+        {
+          title: t('settings.title'),
+          icon: 'settings',
+          onClose: props.onClose,
+          wide: true,
+          closeLabel: t('action.close'),
+          footer: h('button', { type: 'button', className: 'zw-btn', onClick: props.onClose }, t('action.close'))
+        },
+        h(
+          'div',
+          { className: 'zw-settings' },
+          h('div', { className: 'zw-settingsRow' }, h('span', { className: 'zw-settingsKey' }, t('settings.storage')), h('code', { className: 'zw-settingsPath' }, props.storagePath || '-')),
+          h('div', { className: 'zw-settingsRow' }, h('span', { className: 'zw-settingsKey' }, t('settings.counts')), h('span', null, (stats.entries || 0) + ' ' + t('settings.entriesUnit') + ' · ' + (stats.relations || 0) + ' ' + t('settings.relationsUnit') + ' · ' + (stats.collections || 0) + ' ' + t('settings.collectionsUnit'))),
+          h(
+            'div',
+            { className: 'zw-settingsBlock' },
+            h('div', { className: 'zw-settingsTitle' }, t('settings.modelTitle')),
+            h('div', { className: 'zw-settingsHint' }, t('settings.modelHint')),
+            props.modelChoices && props.modelChoices.available === false
+              ? h('div', { className: 'zw-settingsHint' }, t('settings.modelUnavailable'))
+              : null,
+            h(
+              'div',
+              { className: 'zw-settingsForm' },
+              h(Select, {
+                value: (props.model && props.model.provider) || '',
+                label: t('settings.modelProvider'),
+                placeholder: t('settings.modelNone'),
+                options: [{ id: '', label: t('settings.modelNone') }].concat(
+                  ((props.modelChoices && props.modelChoices.providers) || []).map((item) => ({ id: item.id, label: item.name }))
+                ),
+                onChange: (value) => props.onPickModel(value, '', false)
+              }),
+              h(Select, {
+                value: (props.model && props.model.model) || '',
+                label: t('settings.modelName'),
+                placeholder: t('settings.modelNone'),
+                options: [{ id: '', label: t('settings.modelNone') }].concat(
+                  ((props.modelChoices && props.modelChoices.models) || [])
+                    .filter((item) => !props.model || !props.model.provider || item.provider === props.model.provider)
+                    .map((item) => ({ id: item.id, label: item.name }))
+                ),
+                onChange: (value) => props.onPickModel((props.model && props.model.provider) || '', value, Boolean(value))
+              }),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-segBtn' + (props.model && props.model.enabled ? ' zw-segBtnOn' : ''),
+                  disabled: switching,
+                  onClick: () => props.onPickModel((props.model && props.model.provider) || '', (props.model && props.model.model) || '', !(props.model && props.model.enabled))
+                },
+                t('settings.modelEnable')
+              )
+            )
+          ),
+          h('div', { className: 'zw-settingsBlock' },
+            h('div', { className: 'zw-settingsTitle' }, t('settings.switchTitle')),
+            h('div', { className: 'zw-settingsHint' }, t('settings.switchHint')),
+            h('div', { className: 'zw-settingsForm' },
+              h('input', {
+                className: 'zw-input',
+                value: target,
+                placeholder: t('settings.switchPlaceholder'),
+                onChange: (event) => setTarget(event.target.value)
+              }),
+              h('button', {
+                type: 'button',
+                className: 'zw-btn zw-btnPrimary',
+                disabled: switching || !target.trim(),
+                onClick: () => props.onSwitch(target.trim())
+              }, t('settings.switchApply'))
+            )
+          ),
+          h('div', { className: 'zw-settingsBlock' },
+            h('div', { className: 'zw-settingsTitle' }, t('settings.exportTitle')),
+            h('div', { className: 'zw-settingsHint' }, t('settings.exportHint')),
+            h('button', { type: 'button', className: 'zw-btn', onClick: props.onExport }, h(Icon, { name: 'bookmark', size: 13 }), t('settings.export'))
+          ),
+          h('div', { className: 'zw-settingsBlock' },
+            h('div', { className: 'zw-settingsTitle' }, t('settings.importTitle')),
+            h('div', { className: 'zw-settingsHint' }, t('settings.importHint')),
+            h('div', { className: 'zw-settingsForm' },
+              h('input', { className: 'zw-fileInput', type: 'file', accept: '.json,application/json', onChange: pickFile }),
+              h(Select, {
+                value: mode,
+                onChange: setMode,
+                options: [{ id: 'merge', label: t('settings.importMerge') }, { id: 'replace', label: t('settings.importReplace') }]
+              }),
+              h('button', {
+                type: 'button',
+                className: 'zw-btn zw-btnPrimary',
+                disabled: switching || !importNote,
+                onClick: () => props.onImport(importNote, mode)
+              }, t('settings.importApply'))
+            )
+          )
+        )
+      )
+    }
+
+    function ProjectDialog(props) {
+      const project = props.project || null
+      const deleting = props.mode === 'delete'
+      const [name, setName] = useState(project ? project.name : '')
+      const [description, setDescription] = useState(project ? project.description : '')
+      const [error, setError] = useState('')
+      const t = props.t
+      const submit = () => {
+        if (!name.trim()) {
+          setError(t('project.needName'))
+          return
+        }
+        props.onSave(name.trim(), description.trim())
+      }
+      return h(
+        Modal,
+        {
+          title: deleting ? t('project.deleteTitle') : project ? t('project.editTitle') : t('project.newTitle'),
+          icon: 'home',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            'div',
+            { className: 'zw-modalFoot' },
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h('button', { type: 'button', className: 'zw-btn zw-btnGhost', onClick: props.onClose }, t('action.cancel')),
+            deleting
+              ? h(
+                  ConfirmButton,
+                  {
+                    label: t('project.deleteConfirm'),
+                    confirmLabel: t('action.deleteConfirm'),
+                    className: 'zw-btn zw-btnDanger',
+                    onConfirm: () => props.onDelete(project)
+                  }
+                )
+              : h('button', { type: 'button', className: 'zw-btn zw-btnPrimary', onClick: submit }, t('action.save'))
+          )
+        },
+        deleting
+          ? h('div', { className: 'zw-hint' }, t('project.deleteText'), ' ', project ? '「' + project.name + '」' : '')
+          : h(
+              'div',
+              { className: 'zw-form' },
+              h(
+                Field,
+                { label: t('project.name') },
+                h('input', {
+                  className: 'zw-input',
+                  value: name,
+                  placeholder: t('project.namePlaceholder'),
+                  onChange: (event) => {
+                    setName(event.target.value)
+                    setError('')
+                  }
+                })
+              ),
+              h(
+                Field,
+                { label: t('project.description') },
+                h('textarea', {
+                  className: 'zw-textarea',
+                  value: description,
+                  placeholder: t('project.descriptionPlaceholder'),
+                  onChange: (event) => setDescription(event.target.value)
+                })
+              ),
+              error ? h('div', { className: 'zw-error' }, error) : null
+            )
+      )
+    }
     // ---------------------------------------------------------------------
     // AI assist panel
     //
@@ -7517,7 +7970,17 @@ window.__ModuleLoader__.load({
         .join('|')
 
       useEffect(() => {
-        positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, positionsRef.current, 300)
+        // 先用手动保存过的布局做种子，再跑本地松弛：打开关系图时保持用户调好的样子。
+        const saved = (props.layout && props.layout.positions) || {}
+        const seeded = new Map(positionsRef.current)
+        model.nodes.forEach((node) => {
+          if (seeded.has(node.id)) return
+          const point = saved[node.id]
+          if (point && Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y))) {
+            seeded.set(node.id, { x: Number(point.x), y: Number(point.y) })
+          }
+        })
+        positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, seeded, 300)
         fitToWindow()
         setTick((value) => value + 1)
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -7651,7 +8114,9 @@ window.__ModuleLoader__.load({
           kind: 'box',
           pointerId: event.pointerId,
           start: point,
-          moved: false
+          moved: false,
+          // 按住 Shift 画框 = 多选；直接画框 = 归到一个记忆框里。
+          multi: Boolean(event.shiftKey || event.metaKey)
         }
         setBoxDraft({ from: point, to: point })
         if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
@@ -7744,7 +8209,16 @@ window.__ModuleLoader__.load({
             if (screenX >= left && screenX <= right && screenY >= top && screenY <= bottom) picked.push(node.id)
           })
           if (!picked.length) setFlash(t('graph.boxEmpty'))
-          else props.onMultiSelect(picked)
+          else if (drag.multi) props.onMultiSelect(picked)
+          else if (props.onSaveFrame) {
+            const frames = props.frames || []
+            props.onSaveFrame({
+              name: t('graph.frameName') + ' ' + (frames.length + 1),
+              color: COLLECTION_COLORS[frames.length % COLLECTION_COLORS.length],
+              memberIds: picked
+            })
+            setFlash(t('graph.frameSaved'))
+          } else props.onMultiSelect(picked)
           setTool('select')
           return
         }
@@ -7869,6 +8343,56 @@ window.__ModuleLoader__.load({
         })
         .filter(Boolean)
 
+      // 记忆框：用户手动框出来的阅读单元，跟自动集合是两回事，所以单独画一层。
+      const frameShapes = (props.frames || [])
+        .map((frame) => {
+          const members = model.nodes.filter((node) => frame.memberIds.includes(node.id))
+          if (members.length < 2) return null
+          const points = members.map((node) => positionOf(node.id))
+          const center = points.reduce(
+            (acc, point) => ({ x: acc.x + point.x / points.length, y: acc.y + point.y / points.length }),
+            { x: 0, y: 0 }
+          )
+          let topY = Infinity
+          points.forEach((point) => {
+            topY = Math.min(topY, point.y)
+          })
+          return h(
+            'g',
+            { key: frame.id, className: 'zw-frameBox' },
+            h('path', {
+              className: 'zw-hullOutline',
+              d: hullPath(points, 22),
+              style: {
+                fill: 'color-mix(in srgb, ' + collectionColor(frame.color) + ' 6%, transparent)',
+                stroke: 'color-mix(in srgb, ' + collectionColor(frame.color) + ' 55%, transparent)',
+                strokeDasharray: '6 5'
+              }
+            }),
+            h(
+              'text',
+              { className: 'zw-frameLabel', x: center.x, y: topY - 26, style: { fill: collectionColor(frame.color) } },
+              frame.name,
+              h(
+                'tspan',
+                { className: 'zw-frameCount', x: center.x, dy: 13 },
+                members.length + ' ' + t('collections.memberCount')
+              )
+            )
+          )
+        })
+        .filter(Boolean)
+
+      const saveLayoutNow = () => {
+        if (!props.onSaveLayout) return
+        const positions = {}
+        positionsRef.current.forEach((point, id) => {
+          positions[id] = { x: Math.round(point.x), y: Math.round(point.y) }
+        })
+        props.onSaveLayout(positions)
+        setFlash(t('graph.layoutSaved'))
+      }
+
       const toggleCollapse = (clusterId) => {
         setCollapsed((prev) =>
           prev.includes(clusterId) ? prev.filter((item) => item !== clusterId) : prev.concat([clusterId])
@@ -7959,6 +8483,7 @@ window.__ModuleLoader__.load({
           h(
             'g',
             { transform: 'translate(' + view.x + ',' + view.y + ') scale(' + view.k + ')' },
+            h('g', { className: 'zw-frameLayer' }, frameShapes),
             h('g', { className: 'zw-hullLayer' }, clusterShapes),
             h(
               'g',
@@ -8172,6 +8697,17 @@ window.__ModuleLoader__.load({
           toolButton('link', 'link', t('graph.toolLink')),
           toolButton('box', 'box', t('graph.toolBox')),
           h('span', { className: 'zw-toolSep' }),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-toolBtn',
+              title: t('graph.saveLayout'),
+              onClick: saveLayoutNow
+            },
+            h(Icon, { name: 'frame', size: 14 }),
+            h('span', { className: 'zw-toolLabel' }, t('graph.saveLayout'))
+          ),
           h(
             'button',
             {
@@ -8906,6 +9442,8 @@ window.__ModuleLoader__.load({
         collections: [],
         projects: [],
         views: [],
+        frames: [],
+        layout: { positions: {}, updatedAt: '' },
         stats: {},
         storagePath: '',
         error: null
@@ -8928,6 +9466,11 @@ window.__ModuleLoader__.load({
       const [assist, setAssist] = useState({ entryId: '', action: '', result: null, error: '', busy: false })
       const [tidyReport, setTidyReport] = useState(null)
       const [tidyBusy, setTidyBusy] = useState(false)
+      const [settings, setSettings] = useState(null)
+      const [modelChoices, setModelChoices] = useState({ available: true, providers: [], models: [] })
+      const [menu, setMenu] = useState(null)
+      const dragProject = useRef('')
+      const pendingProjects = useRef(null)
 
       const notify = useCallback((text, tone, action) => {
         const id = 'toast_' + Date.now() + '_' + Math.round(Math.random() * 999)
@@ -8948,6 +9491,8 @@ window.__ModuleLoader__.load({
           views: payload.views || [],
           proposals: payload.proposals || [],
           recalls: payload.recalls || [],
+          frames: payload.frames || [],
+          layout: payload.layout || { positions: {}, updatedAt: '' },
           stats: payload.stats || {},
           storagePath: payload.storagePath || '',
           error: null
@@ -9687,6 +10232,124 @@ window.__ModuleLoader__.load({
         setGraphView(state)
       }, [])
 
+      const openSettings = useCallback(async () => {
+        setModal({ type: 'settings' })
+        try {
+          const [choice, info] = await Promise.all([request(API, { body: JSON.stringify({ action: 'models.list' }) }), request(API, { body: JSON.stringify({ action: 'settings.get' }) })])
+          setModelChoices({
+            available: choice && choice.available !== false,
+            providers: (choice && choice.providers) || [],
+            models: (choice && choice.models) || []
+          })
+          setSettings((info && info.settings) || null)
+        } catch (err) {
+          setModelChoices({ available: false, providers: [], models: [] })
+          notify(errorText(err), 'error')
+        }
+      }, [notify])
+
+      const switchStorage = useCallback(
+        async (target) => {
+          try {
+            setBusy('storage')
+            const info = await request(API, { body: JSON.stringify({ action: 'settings.storage', storagePath: target }) })
+            setSettings((info && info.settings) || null)
+            await load()
+            notify(t('settings.switched'))
+          } catch (err) {
+            notify(errorText(err), 'error')
+          } finally {
+            setBusy('')
+          }
+        },
+        [load, notify, t]
+      )
+
+      const exportData = useCallback(async () => {
+        try {
+          const result = await request(API, { body: JSON.stringify({ action: 'export' }) })
+          const text = JSON.stringify(result.data || result, null, 2)
+          const blob = new Blob([text], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = 'zhiwei-' + new Date().toISOString().slice(0, 10) + '.json'
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          setTimeout(() => URL.revokeObjectURL(url), 2000)
+          notify(t('settings.exported'))
+        } catch (err) {
+          notify(errorText(err), 'error')
+        }
+      }, [notify, t])
+
+      const importData = useCallback(
+        async (text, mode) => {
+          try {
+            setBusy('import')
+            const data = JSON.parse(text)
+            await mutate({ action: 'import', mode: mode, data: data }, t('settings.imported'))
+          } catch (err) {
+            notify(errorText(err), 'error')
+          } finally {
+            setBusy('')
+          }
+        },
+        [mutate, notify, t]
+      )
+
+      const pickModel = useCallback(
+        async (provider, model, enabled) => {
+          try {
+            const result = await request(API, {
+              body: JSON.stringify({ action: 'settings.model', provider: provider, model: model, enabled: Boolean(enabled) })
+            })
+            setSettings((prev) => Object.assign({}, prev || {}, { model: result.model }))
+            notify(t('settings.modelSaved'))
+          } catch (err) {
+            notify(errorText(err), 'error')
+          }
+        },
+        [notify, t]
+      )
+
+      const saveFrame = useCallback(
+        (payload) => mutate({ action: 'frame-save', name: payload.name, memberIds: payload.memberIds, color: payload.color }, t('graph.frameSaved')),
+        [mutate, t]
+      )
+
+      const saveLayout = useCallback(
+        (positions) => mutate({ action: 'layout-save', positions: positions }, t('graph.layoutSaved')),
+        [mutate, t]
+      )
+
+      const openProjectMenu = useCallback((project, x, y) => {
+        setMenu({
+          x: x,
+          y: y,
+          items: [
+            {
+              label: t('action.rename'),
+              icon: 'edit',
+              onClick: () => setModal({ type: 'project', mode: 'edit', project: project })
+            },
+            {
+              label: t('action.delete'),
+              icon: 'trash',
+              danger: true,
+              onClick: () =>
+                setModal({ type: 'project', mode: 'delete', project: project, dialog: 'delete' })
+            }
+          ]
+        })
+      }, [t])
+
+      const reorderProjects = useCallback(
+        (ids) => mutate({ action: 'project-reorder', ids: ids }, t('toast.projectMoved')),
+        [mutate, t]
+      )
+
       const counts = useMemo(
         () => ({
           type: entries.reduce((acc, entry) => {
@@ -9857,6 +10520,10 @@ window.__ModuleLoader__.load({
             onDecideRelation: decideRelation,
             onSaveView: () => setModal({ type: 'saveView' }),
             onOpenTidy: () => setNav({ kind: 'tidy', id: '' }),
+            frames: data.frames || [],
+            layout: data.layout || { positions: {}, updatedAt: '' },
+            onSaveFrame: saveFrame,
+            onSaveLayout: saveLayout,
             onBatchAction: batchAction,
             onState: onGraphState
           })
@@ -9917,7 +10584,26 @@ window.__ModuleLoader__.load({
               writeFlag('railCollapsed', next)
             },
             onOpenView: restoreView,
-            onCreateProject: () => setModal({ type: 'project' }),
+            onCreateProject: () => setModal({ type: 'project', mode: 'create' }),
+            onProjectMenu: openProjectMenu,
+            onProjectDragStart: (id) => {
+              dragProject.current = id
+            },
+            onProjectDragOver: (id) => {
+              if (!id || !dragProject.current || id === dragProject.current) return
+              const ids = projects.map((item) => item.id)
+              const from = ids.indexOf(dragProject.current)
+              const to = ids.indexOf(id)
+              if (from < 0 || to < 0 || from === to) return
+              ids.splice(to, 0, ids.splice(from, 1)[0])
+              pendingProjects.current = ids
+            },
+            onProjectDrop: () => {
+              const ids = pendingProjects.current
+              pendingProjects.current = null
+              dragProject.current = ''
+              if (ids) reorderProjects(ids)
+            },
             onRefresh: load
           }),
           h(
@@ -9972,6 +10658,11 @@ window.__ModuleLoader__.load({
                     onClick: () => setModal({ type: 'observe', result: null })
                   },
                   h(Icon, { name: 'sparkle', size: 14 })
+                ),
+                h(
+                  'button',
+                  { type: 'button', className: 'zw-iconBtn', title: t('settings.title'), onClick: openSettings },
+                  h(Icon, { name: 'settings', size: 14 })
                 ),
                 h(
                   'button',
@@ -10099,6 +10790,48 @@ window.__ModuleLoader__.load({
           }) : null
         ),
         h(ToastHost, { toasts: toasts }),
+        menu
+          ? h(ContextMenu, {
+              x: menu.x,
+              y: menu.y,
+              items: menu.items,
+              onClose: () => setMenu(null)
+            })
+          : null,
+        modal && modal.type === 'settings'
+          ? h(SettingsDialog, {
+              t: t,
+              settings: settings,
+              modelChoices: modelChoices,
+              model: (settings && settings.model) || null,
+              busy: busy === 'storage',
+              onSwitchStorage: switchStorage,
+              onExport: exportData,
+              onImport: importData,
+              onPickModel: pickModel,
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'project'
+          ? h(ProjectDialog, {
+              t: t,
+              mode: modal.mode,
+              project: modal.project,
+              saving: busy === 'project',
+              onSave: (name, description) => {
+                setModal(null)
+                mutate(
+                  { action: 'project-save', id: modal.project ? modal.project.id : undefined, name: name, description: description },
+                  t('toast.projectSaved')
+                )
+              },
+              onDelete: (project) => {
+                setModal(null)
+                mutate({ action: 'project-delete', id: project.id }, t('toast.projectDeleted'))
+              },
+              onClose: () => setModal(null)
+            })
+          : null,
         modal && modal.type === 'observe'
           ? h(ObserveDialog, {
               t: t,

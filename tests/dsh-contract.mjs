@@ -151,7 +151,7 @@ check('GET /design-memory/api returns v4 payload', async () => {
   await routeHandler({ method: 'GET', url: '/design-memory/api', headers: { host: '127.0.0.1:1', origin: 'http://127.0.0.1:1' } }, res)
   if (res.statusCode !== 200) throw new Error('status ' + res.statusCode + ' body ' + res.body.slice(0, 200))
   const payload = JSON.parse(res.body)
-  if (payload.version !== 4) throw new Error('version ' + payload.version)
+  if (Number(payload.version) < 4) throw new Error('version ' + payload.version)
   if (!Array.isArray(payload.entries) || !Array.isArray(payload.relations) || !Array.isArray(payload.collections)) {
     throw new Error('payload missing collections arrays')
   }

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Zhiwei",
-    "description": "A long-term AI memory for game designers: automatic observation and consolidation, ratcheted evolution with versions, evidence and proposals, protected conventions the AI may never edit on its own, a relation network that grows by itself, and task-scoped recall with a real usage log — all browsable in a three-pane workbench, a tidy center and an explorable knowledge graph.",
+    "description": "A long-term AI memory for game designers: automatic observation and consolidation, ratcheted evolution with versions, evidence and proposals, protected conventions the AI may never edit on its own, a relation network that grows by itself, and task-scoped recall with a real usage log — all browsable in a three-pane workbench, a tidy center and an explorable knowledge graph. Now with project spaces, graph frames and saved layouts, a switchable storage location, import/export, and a model picker for organizing.",
     "detail": "docs/DETAIL.md"
   }
 }

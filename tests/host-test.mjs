@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const PLUGIN_PATH = path.resolve(HERE, '..', 'index.js')
 const ROUTE = '/design-memory/api'
-const STORE_VERSION = 4
+const STORE_VERSION = 5
 
 const ENTRY_TYPES = ['decision', 'rule', 'assumption', 'question', 'proposal', 'reference', 'metric', 'retro', 'process']
 const RELATION_TYPES = ['belongs_to', 'depends_on', 'affects', 'derived_from', 'references', 'conflicts_with', 'supersedes', 'refines']
@@ -35,6 +35,12 @@ const COLLECTION_COLORS = ['violet', 'blue', 'teal', 'amber', 'rose', 'lime']
 
 function fail(message) {
   throw new Error(message)
+}
+
+let workspaceChecks = 0
+function check(condition, message) {
+  workspaceChecks += 1
+  ok(condition, message)
 }
 
 function ok(condition, message) {
@@ -343,7 +349,7 @@ async function runFreshSuite() {
     ok(section.text.includes('固有约定'), 'prompt should explain protected memories')
   })
 
-  await test('fresh store: GET returns ok/version 4/full envelope', async () => {
+  await test('fresh store: GET returns ok/version 5/full envelope', async () => {
     const body = await getBody()
     eq(body.ok, true, 'ok')
     eq(body.version, STORE_VERSION, 'version')
@@ -361,7 +367,7 @@ async function runFreshSuite() {
     isArray(body.meta.entryTypes, 'meta.entryTypes')
   })
 
-  await test('fresh store: memories.json created on disk with version 4', async () => {
+  await test('fresh store: memories.json created on disk with version 5', async () => {
     ok(existsSync(storeFile), 'store file was not created at ' + storeFile)
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'on-disk version')
@@ -982,7 +988,7 @@ async function runFreshSuite() {
     ok(relationsText.length > 0, 'suggest relations returned empty string')
   })
 
-  await test('durability: on-disk JSON parses as version 4 and matches the API', async () => {
+  await test('durability: on-disk JSON parses as version 5 and matches the API', async () => {
     const state = await getBody()
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'disk version')
@@ -1203,7 +1209,7 @@ async function runLegacySuite() {
     eq(collection.memberIds, ['mem_a', 'mem_b'], 'memberIds')
   })
 
-  await test('legacy migration: file rewritten as version 4', async () => {
+  await test('legacy migration: file rewritten as version 5', async () => {
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'on-disk version')
     eq(disk.entries.length, 4, 'on-disk entries')
@@ -1518,6 +1524,7 @@ async function main() {
   await runFreshSuite()
   await runLegacySuite()
   await runEvolutionSuite()
+  await runWorkspaceSuite()
 
   const total = passed + failed
   console.log('')
@@ -1541,6 +1548,75 @@ main()
     }
   })
 
+// ---------------------------------------------------------------------------
+// 2.2.0 workspace suite: frames, layout, project order, import, settings, model
+// ---------------------------------------------------------------------------
 
+async function runWorkspaceSuite() {
+  const dshHome = await makeHome('workspace')
+  const app = await boot(dshHome)
+  const api = app.api
 
+  await api.post({ action: 'entry-save', title: '第一条', content: '战斗数值：暴击率 12%。', status: 'active' })
+  await api.post({ action: 'entry-save', title: '第二条', content: '战斗数值：暴击率 15%。', status: 'active' })
+  let state = (await api.get()).json
+  const idA = state.entries[0].id
+  const idB = state.entries[1].id
 
+  const frame = await api.post({ action: 'frame-save', name: '战斗框', memberIds: [idA, idB], color: 'teal' })
+  check(frame.json.ok === true, 'frame-save creates a frame')
+  check(frame.json.frame.memberIds.length === 2, 'frame keeps its members')
+  state = (await api.get()).json
+  check(state.frames.length === 1, 'frames are serialized to the client')
+
+  const renamed = await api.post({ action: 'frame-save', id: state.frames[0].id, name: '战斗框（改）' })
+  check(renamed.json.frame.name === '战斗框（改）', 'frame-save can rename an existing frame')
+
+  const removed = await api.post({ action: 'frame-delete', id: state.frames[0].id })
+  check(removed.json.ok === true, 'frame-delete removes the frame')
+  state = (await api.get()).json
+  check(state.frames.length === 0, 'deleted frame is gone')
+
+  const layout = await api.post({ action: 'layout-save', positions: { [idA]: { x: 120, y: 80 }, [idB]: { x: -40, y: 33 }, ghost: { x: 1, y: 2 } } })
+  check(layout.json.ok === true, 'layout-save accepts positions')
+  state = (await api.get()).json
+  check(Boolean(state.layout.positions[idA]), 'saved layout keeps a real entry')
+  check(!state.layout.positions.ghost, 'layout drops positions for unknown entries')
+
+  const cleared = await api.post({ action: 'layout-clear' })
+  check(cleared.json.ok === true, 'layout-clear resets the layout')
+  state = (await api.get()).json
+  check(Object.keys(state.layout.positions).length === 0, 'layout is empty after clearing')
+
+  const second = await api.post({ action: 'project-save', name: '第二项目' })
+  const third = await api.post({ action: 'project-save', name: '第三项目' })
+  const ids = [third.json.project.id, second.json.project.id, state.projects[0].id]
+  const reordered = await api.post({ action: 'project-reorder', ids: ids })
+  check(reordered.json.ok === true, 'project-reorder accepts an id list')
+  state = (await api.get()).json
+  check(state.projects[0].id === ids[0], 'project order is persisted')
+
+  const exported = await api.post({ action: 'export' })
+  check(exported.json.data && exported.json.data.entries.length === 2, 'export returns a full snapshot')
+  check(Array.isArray(exported.json.data.frames), 'export includes frames')
+
+  const merged = await api.post({ action: 'import', mode: 'merge', data: { entries: [{ id: 'mem_imported', title: '导入的', content: '导入内容', type: 'rule' }], projects: [], collections: [] } })
+  check(merged.json.ok === true, 'import merge works')
+  state = (await api.get()).json
+  check(state.entries.some((entry) => entry.id === 'mem_imported'), 'import merge adds missing memories')
+
+  const info = await api.post({ action: 'settings.get' })
+  check(Boolean(info.json.settings && info.json.settings.storagePath), 'settings.get reveals the storage path')
+  check(info.json.settings.model && info.json.settings.model.enabled === false, 'settings.get exposes the model route')
+
+  const models = await api.post({ action: 'models.list' })
+  check(models.json.ok === true, 'models.list answers without throwing')
+  check(typeof models.json.available === 'boolean', 'models.list reports availability')
+
+  const picked = await api.post({ action: 'settings.model', provider: 'demo', model: 'demo-1', enabled: true })
+  check(picked.json.model.enabled === true, 'settings.model stores the choice')
+  check(picked.json.model.provider === 'demo', 'settings.model keeps the provider')
+
+  console.log('WORKSPACE ' + workspaceChecks + ' checks · 0 failed')
+  rm(dshHome, { recursive: true, force: true })
+}

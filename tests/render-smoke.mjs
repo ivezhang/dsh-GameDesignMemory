@@ -92,6 +92,18 @@ else if (fs.existsSync(FALLBACK_STORE)) fs.copyFileSync(FALLBACK_STORE, path.joi
 
 const fixture = await makeFixture()
 const state = fixture.snapshot
+// 预置一个记忆框，验证关系图会把用户框好的范围画出来。
+state.frames = [
+  {
+    id: 'frm_smoke',
+    name: '战斗记忆框',
+    color: 'teal',
+    note: '',
+    memberIds: (state.entries || []).slice(0, 3).map((item) => item.id),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+]
 const { meta, entries, relations, collections, projects, views, stats } = state
 
 // ---------------------------------------------------------------- 2. fake env
@@ -241,8 +253,10 @@ new Function('window', 'document', 'MutationObserver', fs.readFileSync(CLIENT, '
 // -------------------------------------------------------------- 3. fake fetch
 let fetchCalls = 0
 const posts = []
+const postHeaders = []
 const live = JSON.parse(JSON.stringify(state))
 let nextId = 1000
+let lastModel = { enabled: false, provider: '', model: '', available: true }
 let lastRestore = null
 const deepCopy = (value) => JSON.parse(JSON.stringify(value))
 
@@ -256,12 +270,97 @@ function payload() {
     relations: live.relations,
     collections: live.collections,
     views: live.views,
+    proposals: live.proposals || [],
+    recalls: live.recalls || [],
+    frames: live.frames || [],
+    layout: live.layout || { positions: {}, updatedAt: '' },
     stats: live.stats,
     storagePath: 'C:\\fake\\memories.json'
   })
 }
 
 function applyPost(input) {
+  if (input.action === 'frame-save') {
+    live.frames = live.frames || []
+    const existing = input.id ? live.frames.find((item) => item.id === input.id) : null
+    if (existing) {
+      Object.assign(existing, input, { id: existing.id })
+      return { frame: existing, created: false }
+    }
+    const created = {
+      id: 'frm_smoke_' + nextId++,
+      name: input.name || '记忆框',
+      color: input.color || 'violet',
+      note: input.note || '',
+      memberIds: input.memberIds || [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    live.frames.push(created)
+    return { frame: created, created: true }
+  }
+  if (input.action === 'frame-delete') {
+    live.frames = (live.frames || []).filter((item) => item.id !== input.id)
+    return { deleted: input.id }
+  }
+  if (input.action === 'layout-save') {
+    live.layout = { positions: input.positions || {}, updatedAt: new Date().toISOString() }
+    return { layout: live.layout, saved: true }
+  }
+  if (input.action === 'layout-clear') {
+    live.layout = { positions: {}, updatedAt: new Date().toISOString() }
+    return { layout: live.layout, saved: true }
+  }
+  if (input.action === 'project-save') {
+    const existing = input.id ? live.projects.find((item) => item.id === input.id) : null
+    if (existing) {
+      Object.assign(existing, input, { id: existing.id })
+      return { project: existing, created: false }
+    }
+    const created = {
+      id: 'prj_smoke_' + nextId++,
+      name: input.name || '新项目',
+      description: input.description || '',
+      color: 'violet',
+      order: (live.projects.length + 1) * 10,
+      createdAt: new Date().toISOString()
+    }
+    live.projects.push(created)
+    return { project: created, created: true }
+  }
+  if (input.action === 'project-reorder') {
+    const order = input.ids || []
+    live.projects.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
+    return { projects: order }
+  }
+  if (input.action === 'models.list') {
+    return {
+      model: { enabled: false, provider: '', model: '', available: true },
+      available: true,
+      providers: [{ id: 'demo', name: 'Demo' }],
+      models: [{ provider: 'demo', id: 'demo-1', name: 'Demo 1' }]
+    }
+  }
+  if (input.action === 'settings.get') {
+    return {
+      settings: {
+        storagePath: 'C:/fake/memories.json',
+        defaultPath: 'C:/fake/default.json',
+        exists: true,
+        model: { enabled: false, provider: '', model: '', available: true }
+      }
+    }
+  }
+  if (input.action === 'settings.model') {
+    lastModel = { enabled: input.enabled === true, provider: input.provider || '', model: input.model || '', available: true }
+    return { model: lastModel }
+  }
+  if (input.action === 'settings.storage') {
+    return { settings: { storagePath: input.storagePath, defaultPath: input.storagePath, exists: true, model: lastModel } }
+  }
+  if (input.action === 'export') {
+    return { exportedAt: new Date().toISOString(), data: { version: live.version, entries: live.entries } }
+  }
   const withMembers = (entry) => {
     entry.relatedCollectionIds = live.collections
       .filter((collection) => collection.memberIds.includes(entry.id))
@@ -517,6 +616,8 @@ globalThis.fetch = async (url, options) => {
   const input = options && options.body ? JSON.parse(options.body) : null
   if (input) {
     posts.push(input)
+    const sent = (options && options.headers) || {}
+    postHeaders.push(String(sent['content-type'] || sent['Content-Type'] || ''))
     if (input.action === 'entry-restore' || input.action === 'collection-restore') {
       applyPost(input)
       return {
@@ -651,7 +752,7 @@ function walkText(root, needle) {
 check(Boolean(mainSlot), 'main slot registered')
 check(slots.some((slot) => slot.options && slot.options.name === 'sidebar.panellist'), 'sidebar entry registered')
 check(entries.length > 0, 'fixture has ' + entries.length + ' memories')
-check(state.version === 4, 'store migrated to version 4')
+check(state.version >= 4, 'store migrated to schema v4+')
 
 const passes = await settle()
 check(passes < 40, 'render settled in ' + passes + ' pass(es)')
@@ -1087,6 +1188,107 @@ if (observeBtn) {
     await settle(4)
   }
 }
+
+// ------------------------------------------------- 5b. workspace upgrade checks
+async function workspaceChecks() {
+  const badHeaders = postHeaders.filter((value) => !String(value).includes('application/json'))
+  if (badHeaders.length) console.log('DEBUG bad headers: ' + JSON.stringify(badHeaders))
+  check(
+    postHeaders.length > 0 && badHeaders.length === 0,
+    'every write request carries content-type: application/json'
+  )
+
+  // 设置弹窗
+  const gear = findAll(
+    (node) => node.type === 'button' && node.props && node.props.title === ZH['settings.title']
+  )[0]
+  check(Boolean(gear), 'settings button in the top bar')
+  if (gear) {
+    click(gear)
+    await settle(10)
+    check(byClass('zw-settingsBlock').length >= 3, 'settings dialog shows model / storage / transfer blocks')
+    check(posts.some((post) => post.action === 'models.list'), 'settings asks for the model list')
+    const modelSelect = findAll(
+      (node) => node.type === 'select' && node.props && (node.props.value === '' || node.props.value === undefined)
+    )
+    check(modelSelect.length >= 2, 'model provider and model pickers rendered')
+    const modelPicker = modelSelect[1]
+    if (modelPicker) {
+      modelPicker.props.onChange({ target: { value: 'demo-1' } })
+      await settle(8)
+      check(posts.some((post) => post.action === 'settings.model'), 'picking a model posts settings.model')
+    }
+    const closeSettings = findAll(
+      (node) => node.type === 'button' && textOf(node).includes(ZH['action.close'])
+    )[0]
+    if (closeSettings) {
+      click(closeSettings)
+      await settle(4)
+    }
+  }
+
+  // 项目右键菜单
+  const projectRow = byClass('zw-projectRow')[0]
+  check(Boolean(projectRow), 'project rows rendered')
+  if (projectRow && projectRow.props.onContextMenu) {
+    projectRow.props.onContextMenu({ clientX: 20, clientY: 30, preventDefault() {} })
+    await settle(6)
+    check(byClass('zw-menu').length >= 1, 'right click opens the project menu')
+    const renameItem = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['action.rename']))[0]
+    check(Boolean(renameItem), 'project menu offers rename')
+    if (renameItem) {
+      click(renameItem)
+      await settle(6)
+      check(byClass('zw-menu').length === 0, 'menu closes after choosing an item')
+      const nameInput = findAll((node) => node.type === 'input' && node.props && node.props.value !== undefined)[0]
+      check(Boolean(nameInput), 'project dialog opens with an editable name')
+      const closeProject = findAll(
+        (node) => node.type === 'button' && textOf(node).includes(ZH['action.cancel'])
+      )[0]
+      if (closeProject) {
+        click(closeProject)
+        await settle(4)
+      }
+    }
+  }
+
+  // 关系图：记忆框与保存布局
+  live.frames = [
+    {
+      id: 'frm_smoke',
+      name: '战斗记忆框',
+      color: 'teal',
+      note: '',
+      memberIds: live.entries.slice(0, 3).map((item) => item.id),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ]
+  const graphNav = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['nav.graph']))[0]
+  check(Boolean(graphNav), 'graph nav available for frame checks')
+  if (graphNav) {
+    click(graphNav)
+    await settle(12)
+    const svg = byClass('zw-graphSvg')[0]
+    check(Boolean(svg), 'graph reopened for frame checks')
+    check(byClass('zw-frameBox').length >= 1, 'saved frames are drawn on the graph')
+    check(
+      findAll((node) => node.type === 'text' && textOf(node).includes('战斗记忆框')).length >= 1,
+      'frame label rendered'
+    )
+    const saveLayoutBtn = findAll(
+      (node) => node.type === 'button' && node.props && node.props.title === ZH['graph.saveLayout']
+    )[0]
+    check(Boolean(saveLayoutBtn), 'save-layout button in the graph toolbar')
+    if (saveLayoutBtn) {
+      click(saveLayoutBtn)
+      await settle(6)
+      check(posts.some((post) => post.action === 'layout-save'), 'saving the layout posts layout-save')
+    }
+  }
+}
+
+await workspaceChecks()
 
 // ---------------------------------------------------------------- 6. summary
 const failed = results.filter((item) => !item.ok)

@@ -10,7 +10,7 @@ export const name = 'design-memory'
 export const inject = ['tools']
 
 const ROUTE_PATH = '/design-memory'
-const STORE_VERSION = 4
+const STORE_VERSION = 5
 const MAX_BODY_BYTES = 2 * 1024 * 1024
 
 const ENTRY_TYPES = [
@@ -264,7 +264,13 @@ const LIMITS = {
   recallNote: 1600,
   mergeIds: 60,
   observeText: 20000,
-  observeCandidates: 12
+  observeCandidates: 12,
+  frames: 60,
+  frameName: 60,
+  frameNote: 600,
+  frameMembers: 400,
+  frameHue: 24,
+  entries: 4000
 }
 
 const DEFAULT_PROJECT_ID = 'prj_default'
@@ -285,6 +291,7 @@ const META = {
   evidenceTypes: EVIDENCE_TYPES.map((id) => ({ id, label: EVIDENCE_LABEL[id] })),
   collectionColors: COLLECTION_COLORS,
   collectionStatuses: COLLECTION_STATUS,
+  frameColors: COLLECTION_COLORS,
   limits: LIMITS
 }
 
@@ -435,6 +442,10 @@ function newProjectId() {
 
 function newViewId() {
   return 'view_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
+}
+
+function newFrameId() {
+  return 'frm_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
 }
 
 function newVersionId() {
@@ -590,7 +601,51 @@ function normalizeProject(raw, fallbackId) {
     name,
     description: cleanText(raw.description, 600),
     color: cleanLine(raw.color, 24) || 'blue',
+    order: Number.isFinite(Number(raw.order)) ? Number(raw.order) : 0,
     createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : isoNow()
+  }
+}
+
+function normalizeFrame(raw, entryIds, now) {
+  if (!raw || typeof raw !== 'object') return null
+  const name = cleanLine(raw.name, LIMITS.frameName)
+  if (!name) return null
+  const seen = new Set()
+  const memberIds = []
+  for (const id of Array.isArray(raw.memberIds) ? raw.memberIds : []) {
+    const key = cleanLine(id, 64)
+    if (!key || seen.has(key) || !entryIds.has(key)) continue
+    seen.add(key)
+    memberIds.push(key)
+    if (memberIds.length >= LIMITS.frameMembers) break
+  }
+  return {
+    id: cleanLine(raw.id, 64) || 'frm_' + Math.random().toString(36).slice(2, 8),
+    name,
+    note: cleanText(raw.note, LIMITS.frameNote),
+    color: normalizeCollectionColor(raw.color),
+    memberIds,
+    createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now,
+    updatedAt: isIsoDate(raw.updatedAt) ? raw.updatedAt : isIsoDate(raw.createdAt) ? raw.createdAt : now
+  }
+}
+
+function normalizeLayout(raw, entryIds) {
+  const source = raw && typeof raw === 'object' ? raw.positions || raw : {}
+  const positions = {}
+  let count = 0
+  for (const key of Object.keys(source || {})) {
+    if (!entryIds.has(key) || count >= 4000) continue
+    const point = source[key]
+    const x = Number(point && point.x)
+    const y = Number(point && point.y)
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+    positions[key] = { x: Math.round(x), y: Math.round(y) }
+    count += 1
+  }
+  return {
+    positions,
+    updatedAt: raw && isIsoDate(raw.updatedAt) ? raw.updatedAt : ''
   }
 }
 
@@ -911,7 +966,24 @@ function migrateStore(parsed) {
     if (recalls.length >= LIMITS.recalls) break
   }
 
-  return { version: STORE_VERSION, projects, entries, relations, collections, views, proposals, recalls }
+  projects.sort((left, right) => (left.order || 0) - (right.order || 0) || String(left.createdAt).localeCompare(String(right.createdAt)))
+  projects.forEach((project, index) => {
+    project.order = index * 10
+  })
+
+  const frames = []
+  const frameIds = new Set()
+  for (const item of Array.isArray(parsed.frames) ? parsed.frames : []) {
+    const frame = normalizeFrame(item, entryIds, now)
+    if (!frame || frameIds.has(frame.id)) continue
+    frameIds.add(frame.id)
+    frames.push(frame)
+    if (frames.length >= LIMITS.frames) break
+  }
+
+  const layout = normalizeLayout(parsed.layout, entryIds)
+
+  return { version: STORE_VERSION, projects, entries, relations, collections, views, proposals, recalls, frames, layout }
 }
 
 function pruneStore(store) {
@@ -937,6 +1009,18 @@ function pruneStore(store) {
       recall.ids = recall.ids.filter((id) => entryIds.has(id))
     }
     store.recalls = store.recalls.filter((recall) => recall.ids.length > 0 || recall.outcome !== 'served')
+  }
+  if (Array.isArray(store.frames)) {
+    for (const frame of store.frames) {
+      frame.memberIds = frame.memberIds.filter((id) => entryIds.has(id))
+    }
+  }
+  if (store.layout && store.layout.positions) {
+    const next = {}
+    for (const key of Object.keys(store.layout.positions)) {
+      if (entryIds.has(key)) next[key] = store.layout.positions[key]
+    }
+    store.layout.positions = next
   }
   return store
 }
@@ -2603,6 +2687,12 @@ function deleteEntry(store, id) {
   for (const collection of store.collections) {
     collection.memberIds = collection.memberIds.filter((memberId) => memberId !== entry.id)
   }
+  if (Array.isArray(store.frames)) {
+    for (const frame of store.frames) {
+      frame.memberIds = frame.memberIds.filter((memberId) => memberId !== entry.id)
+    }
+  }
+  if (store.layout && store.layout.positions) delete store.layout.positions[entry.id]
   return { deleted: entry.id, title: entry.title }
 }
 
@@ -2878,15 +2968,181 @@ function saveProject(store, input) {
       name,
       description: cleanText(input.description, 600),
       color: cleanLine(input.color, 24) || 'blue',
+      order: store.projects.length * 10,
       createdAt: isoNow()
     }
+    if (Number.isFinite(Number(input.order))) project.order = Number(input.order)
     store.projects.push(project)
+    store.projects.sort((left, right) => (left.order || 0) - (right.order || 0))
     return { project, created: true }
   }
   if (input.name !== undefined) existing.name = cleanLine(input.name, LIMITS.projectName) || existing.name
   if (input.description !== undefined) existing.description = cleanText(input.description, 600)
   if (input.color !== undefined) existing.color = cleanLine(input.color, 24) || existing.color
+  if (input.order !== undefined && Number.isFinite(Number(input.order))) {
+    existing.order = Number(input.order)
+    store.projects.sort((left, right) => (left.order || 0) - (right.order || 0))
+  }
   return { project: existing, created: false }
+}
+
+function reorderProjects(store, input) {
+  const ids = Array.isArray(input && input.ids) ? input.ids.map((id) => cleanLine(id, 64)).filter(Boolean) : []
+  if (!ids.length) throw httpError(400, 'empty-order', '需要提供项目顺序')
+  const known = new Map(store.projects.map((project) => [project.id, project]))
+  const next = []
+  for (const id of ids) {
+    const project = known.get(id)
+    if (!project) continue
+    known.delete(id)
+    next.push(project)
+  }
+  for (const project of known.values()) next.push(project)
+  next.forEach((project, index) => {
+    project.order = index * 10
+  })
+  store.projects = next
+  return { projects: store.projects.map((project) => project.id) }
+}
+
+function saveFrame(store, input) {
+  const entryIds = new Set(store.entries.map((entry) => entry.id))
+  const id = cleanLine(input && input.id, 64)
+  const existing = id ? store.frames.find((frame) => frame.id === id) : null
+  const name = cleanLine(input && input.name, LIMITS.frameName)
+  let memberIds = null
+  if (Array.isArray(input && input.memberIds)) {
+    const seen = new Set()
+    memberIds = []
+    for (const raw of input.memberIds) {
+      const key = cleanLine(raw, 64)
+      if (!key || seen.has(key) || !entryIds.has(key)) continue
+      seen.add(key)
+      memberIds.push(key)
+      if (memberIds.length >= LIMITS.frameMembers) break
+    }
+  }
+  if (existing) {
+    if (name) existing.name = name
+    if (memberIds) existing.memberIds = memberIds
+    if (input && input.color !== undefined) existing.color = normalizeCollectionColor(input.color)
+    if (input && input.note !== undefined) existing.note = cleanText(input.note, LIMITS.frameNote)
+    existing.updatedAt = isoNow()
+    return { frame: existing, created: false }
+  }
+  if (store.frames.length >= LIMITS.frames) throw httpError(400, 'too-many-frames', '记忆框数量达到上限 ' + LIMITS.frames)
+  if (!name) throw httpError(400, 'empty-name', '记忆框名称不能为空')
+  const frame = {
+    id: id || newFrameId(),
+    name,
+    note: cleanText(input && input.note, LIMITS.frameNote),
+    color: normalizeCollectionColor(input && input.color),
+    memberIds: memberIds || [],
+    createdAt: isoNow(),
+    updatedAt: isoNow()
+  }
+  store.frames.push(frame)
+  return { frame, created: true }
+}
+
+function deleteFrame(store, input) {
+  const id = cleanLine(input && input.id, 64)
+  const frame = store.frames.find((item) => item.id === id)
+  if (!frame) throw httpError(404, 'frame-not-found', '记忆框不存在：' + id)
+  store.frames = store.frames.filter((item) => item.id !== id)
+  return { deleted: id, name: frame.name }
+}
+
+function saveLayout(store, input) {
+  const entryIds = new Set(store.entries.map((entry) => entry.id))
+  const source = (input && input.positions) || {}
+  const positions = {}
+  for (const key of Object.keys(source)) {
+    if (!entryIds.has(key)) continue
+    const point = source[key]
+    const x = Number(point && point.x)
+    const y = Number(point && point.y)
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+    positions[key] = { x: Math.round(x), y: Math.round(y) }
+  }
+  store.layout = { positions, updatedAt: isoNow() }
+  return { layout: store.layout, saved: Object.keys(positions).length }
+}
+
+function clearLayout(store) {
+  store.layout = { positions: {}, updatedAt: '' }
+  return { cleared: true }
+}
+
+function importStore(state, input) {
+  const data = input && (input.data || input.payload)
+  if (!data || typeof data !== 'object') throw httpError(400, 'empty-import', '导入内容为空')
+  const mode = input && input.mode === 'replace' ? 'replace' : 'merge'
+  let incoming = null
+  try {
+    incoming = migrateStore(data)
+  } catch (error) {
+    throw httpError(400, 'bad-import', '导入文件不是有效的知微数据：' + (error && error.message))
+  }
+  if (!incoming.entries.length) throw httpError(400, 'empty-import', '导入文件里没有记忆')
+  const imported = { entries: 0, relations: 0, collections: 0, projects: 0, frames: 0, skipped: 0 }
+  if (mode === 'replace') {
+    state.projects = incoming.projects
+    state.entries = incoming.entries
+    state.relations = incoming.relations
+    state.collections = incoming.collections
+    state.views = incoming.views
+    state.proposals = incoming.proposals || []
+    state.recalls = incoming.recalls || []
+    state.frames = incoming.frames || []
+    state.layout = incoming.layout || { positions: {}, updatedAt: '' }
+    imported.entries = incoming.entries.length
+    imported.relations = incoming.relations.length
+    imported.collections = incoming.collections.length
+    imported.projects = incoming.projects.length
+    imported.frames = (incoming.frames || []).length
+    return { imported, mode }
+  }
+  const projectIds = new Set(state.projects.map((project) => project.id))
+  const entryIds = new Set(state.entries.map((entry) => entry.id))
+  const relationKeys = new Set(state.relations.map((relation) => relation.sourceMemoryId + '\u0000' + relation.targetMemoryId + '\u0000' + relation.relationType))
+  const collectionIds = new Set(state.collections.map((collection) => collection.id))
+  const frameIds = new Set(state.frames.map((frame) => frame.id))
+  for (const project of incoming.projects) {
+    if (projectIds.has(project.id) || state.projects.length >= LIMITS.projects) continue
+    projectIds.add(project.id)
+    state.projects.push(project)
+    imported.projects += 1
+  }
+  for (const entry of incoming.entries) {
+    if (entryIds.has(entry.id) || state.entries.length >= LIMITS.entries) {
+      imported.skipped += 1
+      continue
+    }
+    entryIds.add(entry.id)
+    state.entries.push(entry)
+    imported.entries += 1
+  }
+  for (const relation of incoming.relations) {
+    const key = relation.sourceMemoryId + '\u0000' + relation.targetMemoryId + '\u0000' + relation.relationType
+    if (relationKeys.has(key)) continue
+    relationKeys.add(key)
+    state.relations.push(relation)
+    imported.relations += 1
+  }
+  for (const collection of incoming.collections) {
+    if (collectionIds.has(collection.id)) continue
+    collectionIds.add(collection.id)
+    state.collections.push(collection)
+    imported.collections += 1
+  }
+  for (const frame of incoming.frames || []) {
+    if (frameIds.has(frame.id)) continue
+    frameIds.add(frame.id)
+    state.frames.push(frame)
+    imported.frames += 1
+  }
+  return { imported, mode }
 }
 
 function deleteProject(store, input) {
@@ -2953,7 +3209,9 @@ function serializeState(state) {
     collections: state.collections,
     views: state.views,
     proposals: pending.concat(decided),
-    recalls: state.recalls.slice(0, 30)
+    recalls: state.recalls.slice(0, 30),
+    frames: state.frames || [],
+    layout: state.layout || { positions: {}, updatedAt: '' }
   }
 }
 
@@ -2983,6 +3241,7 @@ function computeStats(state) {
     confirmed: state.entries.filter((entry) => entry.protectionLevel === 'confirmed').length,
     recalls: state.recalls.length,
     lastRecallAt: state.recalls.length ? state.recalls[0].at : '',
+    frames: (state.frames || []).length,
     byType,
     byStatus,
     byDomain
@@ -3299,10 +3558,16 @@ function writeParameters() {
           'collection-merge',
           'collection-split',
           'project-save',
-          'project-delete'
+          'project-delete',
+          'project-reorder',
+          'frame-save',
+          'frame-delete',
+          'layout-save',
+          'layout-clear',
+          'import'
         ],
         description:
-          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间。'
+          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间；project-reorder 调整项目顺序（传 ids 数组）；frame-save / frame-delete 管理关系图上的记忆框（框住一组记忆，方便阅读）；layout-save 保存关系图的手动布局（positions: {记忆id: {x, y}}）；layout-clear 清空手动布局；import 导入外部 JSON（mode: merge / replace）。'
       },
       id: { type: 'string', description: '记忆 / 集合 / 关联 / 项目的 id（更新时必填）' },
       title: { type: 'string', description: '记忆标题，一句话说清是什么' },
@@ -3365,7 +3630,15 @@ function writeParameters() {
       relationStatus: { type: 'string', enum: RELATION_STATUS, description: '关系状态' },
       name: { type: 'string', description: '集合或项目名称' },
       color: { type: 'string', description: '集合或项目的颜色标识' },
-      memberIds: { type: 'array', items: { type: 'string' }, description: '集合成员记忆 id' },
+      memberIds: { type: 'array', items: { type: 'string' }, description: '集合成员记忆 id / 记忆框成员记忆 id' },
+      positions: {
+        type: 'object',
+        description: 'layout-save: 手动布局，键是记忆 id，值是 {x, y}',
+        additionalProperties: true
+      },
+      data: { type: 'object', description: 'import: 要导入的知微 JSON 数据', additionalProperties: true },
+      mode: { type: 'string', enum: ['merge', 'replace'], description: 'import: merge 按 id 合并（默认）/ replace 覆盖现有库' },
+      order: { type: 'number', description: 'project-save: 项目排序值（越小越靠前）' },
       add: { type: 'array', items: { type: 'string' }, description: 'collection-members: 要加入的记忆 id' },
       remove: { type: 'array', items: { type: 'string' }, description: 'collection-members: 要移出的记忆 id' },
       intoId: { type: 'string', description: 'collection-merge: 合并进哪个集合 id' },
@@ -3399,6 +3672,28 @@ function writeParameters() {
     required: ['action'],
     additionalProperties: false
   }
+}
+
+function parseModelJson(raw) {
+  const text = String(raw || '').trim()
+  if (!text) return null
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start < 0 || end <= start) return null
+  let parsed = null
+  try {
+    parsed = JSON.parse(text.slice(start, end + 1))
+  } catch (error) {
+    return null
+  }
+  if (!parsed || typeof parsed !== 'object') return null
+  const out = {}
+  if (typeof parsed.title === 'string' && parsed.title.trim()) out.title = cleanLine(parsed.title, LIMITS.title)
+  if (typeof parsed.summary === 'string' && parsed.summary.trim()) out.summary = cleanText(parsed.summary, LIMITS.summary)
+  if (parsed.type && ENTRY_TYPES.includes(parsed.type)) out.type = parsed.type
+  if (Array.isArray(parsed.domains)) out.domains = normalizeDomains(parsed.domains)
+  if (Array.isArray(parsed.tags)) out.tags = normalizeTags(parsed.tags)
+  return Object.keys(out).length ? out : null
 }
 
 function applyAction(state, input) {
@@ -3476,6 +3771,18 @@ function applyAction(state, input) {
       return saveView(state, input)
     case 'view-delete':
       return deleteView(state, input)
+    case 'project-reorder':
+      return reorderProjects(state, input)
+    case 'frame-save':
+      return saveFrame(state, input)
+    case 'frame-delete':
+      return deleteFrame(state, input)
+    case 'layout-save':
+      return saveLayout(state, input)
+    case 'layout-clear':
+      return clearLayout(state)
+    case 'import':
+      return importStore(state, input)
     default:
       throw httpError(400, 'unknown-action', '未知操作：' + action)
   }
@@ -3615,8 +3922,10 @@ function isLoopbackOrigin(value) {
 
 export function apply(ctx) {
   const home = process.env.DSH_HOME || path.join(homedir(), '.dsh')
-  const storageDir = path.join(home, 'design-memory')
-  const storageFile = path.join(storageDir, 'memories.json')
+  const defaultDir = path.join(home, 'design-memory')
+  const configFile = path.join(defaultDir, 'config.json')
+  let storageDir = defaultDir
+  let storageFile = path.join(storageDir, 'memories.json')
   const state = {
     version: STORE_VERSION,
     projects: [],
@@ -3625,11 +3934,129 @@ export function apply(ctx) {
     collections: [],
     views: [],
     proposals: [],
-    recalls: []
+    recalls: [],
+    frames: [],
+    layout: { positions: {}, updatedAt: '' }
   }
   let chain = Promise.resolve()
+  // 用户选择的整理模型：provider + model。留空表示只用本地启发式整理。
+  let modelRoute = { provider: '', model: '', enabled: false }
+
+  async function readConfig() {
+    try {
+      const raw = await readFile(configFile, 'utf8')
+      const parsed = JSON.parse(raw)
+      const custom = parsed && typeof parsed.storageFile === 'string' ? parsed.storageFile.trim() : ''
+      if (custom && path.isAbsolute(custom)) {
+        storageFile = custom
+        storageDir = path.dirname(custom)
+      }
+      if (parsed && parsed.model && typeof parsed.model === 'object') {
+        modelRoute = {
+          provider: cleanLine(parsed.model.provider, 80),
+          model: cleanLine(parsed.model.model, 120),
+          enabled: parsed.model.enabled === true
+        }
+      }
+    } catch (error) {
+      // 没有配置文件就用默认位置
+    }
+  }
+
+  async function writeConfig() {
+    try {
+      await mkdir(defaultDir, { recursive: true })
+      await writeFile(
+        configFile,
+        JSON.stringify({ storageFile, model: modelRoute }, null, 2),
+        'utf8'
+      )
+    } catch (error) {
+      console.warn('[design-memory] 写入配置失败：', error && error.message)
+    }
+  }
+
+  // 只有宿主真的注册了 llm 服务时才可用；没有就老老实实用本地启发式。
+  function llmService() {
+    try {
+      const llm = ctx.llm
+      return llm && typeof llm.stream === 'function' ? llm : null
+    } catch (error) {
+      return null
+    }
+  }
+
+  async function listModelChoices() {
+    const llm = llmService()
+    if (!llm) return { available: false, providers: [], models: [] }
+    const providers = []
+    const models = []
+    try {
+      const routes = await llm.listProviders()
+      for (const route of routes || []) {
+        providers.push({ id: route.id, name: route.name || route.displayName || route.id })
+        try {
+          const list = await llm.listModels(route)
+          for (const item of list || []) {
+            models.push({ provider: route.id, id: item.id, name: item.name || item.id })
+          }
+        } catch (error) {
+          // 某个 provider 查不到模型就跳过
+        }
+      }
+    } catch (error) {
+      return { available: false, providers: [], models: [] }
+    }
+    return { available: models.length > 0, providers, models }
+  }
+
+  // 用宿主模型跑一次文本生成；拿不到模型或出错都返回空字符串，由调用方回退。
+  async function askModel(systemText, userText, maxTokens) {
+    const llm = llmService()
+    if (!llm || !modelRoute.enabled || !modelRoute.provider || !modelRoute.model) return ''
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 45000)
+    try {
+      const stream = llm.stream({
+        provider: modelRoute.provider,
+        model: modelRoute.model,
+        sessionId: 'design-memory',
+        purpose: 'zhiwei-organize',
+        maxTokens: maxTokens || 1200,
+        signal: controller.signal,
+        system: systemText,
+        messages: [
+          { id: 'zw-' + Date.now().toString(36), role: 'user', content: [{ type: 'text', text: userText }] }
+        ]
+      })
+      let text = ''
+      for await (const chunk of stream) {
+        const delta = chunk && (chunk.text || chunk.delta || (chunk.content && chunk.content.text))
+        if (typeof delta === 'string') text += delta
+        else if (chunk && Array.isArray(chunk.content)) {
+          for (const part of chunk.content) if (part && part.type === 'text' && typeof part.text === 'string') text += part.text
+        }
+      }
+      clearTimeout(timer)
+      return text.trim()
+    } catch (error) {
+      clearTimeout(timer)
+      console.warn('[design-memory] 模型整理失败，回退本地启发式：', error && error.message)
+      return ''
+    }
+  }
+
+  function modelStatus() {
+    return {
+      enabled: modelRoute.enabled,
+      provider: modelRoute.provider,
+      model: modelRoute.model,
+      available: Boolean(llmService())
+    }
+  }
 
   async function load() {
+    await readConfig()
     let parsed = null
     try {
       const raw = await readFile(storageFile, 'utf8')
@@ -3659,6 +4086,8 @@ export function apply(ctx) {
     state.views = migrated.views
     state.proposals = migrated.proposals || []
     state.recalls = migrated.recalls || []
+    state.frames = migrated.frames || []
+    state.layout = migrated.layout || { positions: {}, updatedAt: '' }
     pruneStore(state)
     if (!parsed || parsed.version !== STORE_VERSION) {
       await save()
@@ -3997,11 +4426,95 @@ export function apply(ctx) {
       if (action === 'suggest.collections') {
         return sendJson(res, 200, { ok: true, suggestions: suggestCollections(state, cleanLine(input.projectId, 64)) })
       }
+      if (action === 'models.list' || action === 'models') {
+        const choices = await listModelChoices()
+        return sendJson(res, 200, { ok: true, model: modelStatus(), available: choices.available, providers: choices.providers, models: choices.models })
+      }
+      if (action === 'settings.model') {
+        modelRoute = {
+          provider: cleanLine(input.provider, 80),
+          model: cleanLine(input.model, 120),
+          enabled: input.enabled === true
+        }
+        await writeConfig()
+        return sendJson(res, 200, { ok: true, model: modelStatus() })
+      }
       if (action === 'ai.analyze') {
-        return sendJson(res, 200, { ok: true, result: runAssist(input, state) })
+        const result = runAssist(input, state)
+        const kind = cleanLine(input.analysis || input.kind, 24)
+        if (result && (kind === 'organize' || kind === 'organize' === String(result.kind))) {
+          const entry = findEntry(state, cleanLine(input.id, 64))
+          if (entry) {
+            const prompt = [
+              '标题：' + entry.title,
+              '正文：' + entry.content,
+              '现有标签：' + entry.tags.join('、')
+            ].join('\n')
+            const raw = await askModel(
+              '你是游戏策划知识库的整理助手。请只输出 JSON，字段：title(不超过40字)、summary(一句话摘要)、type(decision/rule/assumption/question/proposal/reference/metric/retro/process/habit/convention/context/task 之一)、domains(从 combat/growth/economy/level/event/uiux/monetization/social/operation/tech 里多选)、tags(3-6个短词)。不要输出解释。',
+              prompt,
+              900
+            )
+            const parsed = raw ? parseModelJson(raw) : null
+            if (parsed) {
+              result.model = parsed
+              result.mode = 'model'
+            } else {
+              result.mode = 'heuristic'
+              result.note = '模型没有返回可用结果，已使用本地整理'
+            }
+          }
+        }
+        return sendJson(res, 200, { ok: true, result })
       }
       if (action === 'memory-tidy' || action === 'tidy') {
         return sendJson(res, 200, { ok: true, report: tidyReport(state) })
+      }
+      if (action === 'settings.get' || action === 'settings') {
+        return sendJson(res, 200, {
+          ok: true,
+          settings: {
+            storagePath: storageFile,
+            defaultPath: path.join(defaultDir, 'memories.json'),
+            exists: existsSync(storageFile),
+            model: modelStatus()
+          },
+          counts: stats()
+        })
+      }
+      if (action === 'settings.storage') {
+        const target = cleanLine(input.path, 400)
+        if (!target) throw httpError(400, 'empty-path', '请填写存储文件路径')
+        if (!path.isAbsolute(target)) throw httpError(400, 'bad-path', '请填写绝对路径')
+        const file = /\.json$/i.test(target) ? target : path.join(target, 'memories.json')
+        const dir = path.dirname(file)
+        await mkdir(dir, { recursive: true })
+        if (existsSync(file) && path.resolve(file) !== path.resolve(storageFile)) {
+          await copyFile(file, file + '.before-switch')
+        }
+        storageFile = file
+        storageDir = dir
+        await persist(async () => ({}))
+        await writeConfig()
+        return sendJson(res, 200, { ok: true, storagePath: storageFile, ...serializeState(state), stats: stats() })
+      }
+      if (action === 'export') {
+        return sendJson(res, 200, {
+          ok: true,
+          exportedAt: isoNow(),
+          data: {
+            version: STORE_VERSION,
+            projects: state.projects,
+            entries: state.entries,
+            relations: state.relations,
+            collections: state.collections,
+            views: state.views,
+            proposals: state.proposals,
+            recalls: state.recalls,
+            frames: state.frames,
+            layout: state.layout
+          }
+        })
       }
       const result = await persist((current) => applyAction(current, input))
       return sendJson(res, 200, { ok: true, ...result, ...serializeState(state), stats: stats(), storagePath: storageFile })

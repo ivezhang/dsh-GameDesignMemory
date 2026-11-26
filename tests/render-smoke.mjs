@@ -371,6 +371,34 @@ live.nodes.push({
   "createdAt": "2026-11-26T14:15:57.459Z",
   "updatedAt": "2026-11-26T14:15:57.459Z"
 })
+live.nodes.push({
+  id: 'knd_pref_smoke',
+  title: '偏好：少用装饰性图标',
+  description: '界面别堆装饰性图标，优先把功能说清楚。',
+  nodeType: 'preference',
+  scope: 'global',
+  projectId: 'prj_default',
+  parentNodeId: '',
+  attributes: [],
+  tags: ['偏好'],
+  aliases: ['图标'],
+  status: 'active',
+  confidence: 0.8,
+  importance: 0.6,
+  sourceMemoryIds: [],
+  relatedMemoryIds: [],
+  steps: [],
+  versions: [{
+    id: 'ver_pref_1',
+    version: 1,
+    title: '偏好：少用装饰性图标',
+    changeType: 'create',
+    createdAt: '2026-11-26T14:15:57.459Z'
+  }],
+  currentVersion: 1,
+  createdAt: '2026-11-26T14:15:57.459Z',
+  updatedAt: '2026-11-26T14:15:57.459Z'
+})
 live.recalls = [
   {
     id: 'rcl_smoke',
@@ -1738,6 +1766,7 @@ await workspaceChecks()
 await knowledgeChecks()
 await searchChecks()
 await interactionChecks()
+await preferenceChecks()
 
 // ---------------------------------------------- 5d. shortcuts + recall nodes
 async function searchChecks() {
@@ -1953,6 +1982,63 @@ async function interactionChecks() {
   }
 }
 
+async function preferenceChecks() {
+  const navItems = byClass('zw-navItem')
+  const knowledgeNav = navItems.find((node) => textOf(node).indexOf(ZH['nav.knowledge']) >= 0)
+  check(Boolean(knowledgeNav), 'knowledge nav available for preference checks')
+  if (knowledgeNav) {
+    await click(knowledgeNav)
+    await settle(10)
+  }
+
+  const prefTab = byClass('zw-knTab').find((node) => textOf(node).trim() === ZH['kn.tab.preference'])
+  check(Boolean(prefTab), 'the preference tab is available')
+  if (prefTab) {
+    await click(prefTab)
+    await settle(10)
+  }
+
+  const prefNode = byClass('zw-gnode').filter((node) => textOf(node).indexOf('偏好') >= 0)[0] || null
+  check(Boolean(prefNode), 'preference node is on the canvas')
+  if (!prefNode) return
+
+  const svg = byClass('zw-graphSvg')[0]
+  const rect = prefNode.getBoundingClientRect()
+  pointer(prefNode, 'onPointerDown', { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, pointerId: 41, button: 0 })
+  pointer(svg, 'onPointerUp', { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, pointerId: 41, button: 0 })
+  await settle(10)
+
+  const detail = byClass('zw-detail')[0] || null
+  check(Boolean(detail) && textOf(detail).indexOf('偏好') >= 0, 'preference detail opens on the right')
+  check(Boolean(detail) && textOf(detail).indexOf(ZH['kn.correct']) >= 0, 'preference detail offers the correction entry')
+
+  const correctBtn = findAll((node) => node.type === 'button' && node.props.title === ZH['kn.correct'])[0] || null
+  check(Boolean(correctBtn), 'correction button is rendered for preferences')
+  if (!correctBtn) return
+  correctBtn.props.onClick()
+  await settle(8)
+
+  const dialog = byClass('zw-modal')[0] || null
+  check(Boolean(dialog) && textOf(dialog).indexOf(ZH['kn.correctHint']) >= 0, 'correction dialog explains what happens')
+  if (!dialog) return
+
+  const narrow = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['kn.narrow'])[0]
+  check(Boolean(narrow), 'the narrow-scope option is offered')
+  if (!narrow) return
+  narrow.props.onClick({})
+  await settle(6)
+
+  const saveBtn = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.save']).pop()
+  check(Boolean(saveBtn), 'the correction can be saved')
+  if (!saveBtn) return
+  await saveBtn.props.onClick()
+  await settle(10)
+
+  const saved = posts.filter((item) => item.action === 'node-save' && item.id === 'knd_pref_smoke').pop()
+  check(Boolean(saved), 'correction posts a node-save for the preference')
+  check(Boolean(saved) && saved.scope === 'project', 'narrowing the scope writes scope=project')
+  check(Boolean(saved) && Array.isArray(saved.attributes) && saved.attributes.some((item) => String(item.label) === ZH['kn.correct']), 'the correction is recorded on the object as an attribute')
+}
 // ---------------------------------------------------------------- 6. summary
   // 批量操作条：归档 / 加标签 / 删除，以及搜索里的集合与项目分组
   {

@@ -2222,4 +2222,25 @@ async function runKnowledgeSuite() {
     const listed = (report.candidateNodes || []).some((item) => item.id === node.id)
     ok(listed, 'the workflow candidate shows up in the tidy center')
   })
+
+  await test('a later observation merges new steps into the same workflow', async () => {
+    const extended = [
+      '先打开活动配置表，找到「星云勘测」这一行。',
+      '然后把掉落权重从 10 调到 25，保存。',
+      '接着在客户端确认掉落预览。',
+      '最后把截图发到群里并登记版本号。',
+      '再把改动补进迭代日志，注明影响的关卡。',
+      '最后请主策复核一次权重表。'
+    ].join('\n')
+    const digest = await postOk({ action: 'memory-observe', text: extended, conversationId: 'c-workflow' }, 'observe workflow extension')
+    const merged = digest.workflowCandidate
+    ok(merged && merged.merged === true, 'the extra steps are merged into the existing workflow')
+    eq(merged.addedSteps, 2, 'two new steps are appended')
+    const snapshot = await api.get()
+    const workflows = (snapshot.json.nodes || []).filter((item) => item.nodeType === 'workflow')
+    eq(workflows.length, 1, 'still a single workflow node')
+    eq(workflows[0].steps.length, merged.stepCount, 'stored steps match the merged count')
+    ok(workflows[0].steps.length >= 6, 'all six steps are stored')
+    ok((workflows[0].versions || []).length >= 2, 'the merge is recorded in the version history')
+  })
 }

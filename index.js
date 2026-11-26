@@ -1092,6 +1092,8 @@ function normalizeNodeVersions(raw, node, now) {
       description: cleanText(item.description, LIMITS.nodeDescription),
       nodeType: KNOWLEDGE_NODE_TYPES.indexOf(item.nodeType) >= 0 ? item.nodeType : node.nodeType,
       status: NODE_STATUSES.indexOf(item.status) >= 0 ? item.status : node.status,
+      stepTitles: Array.isArray(item.steps) ? item.steps.map((step) => cleanLine(step && step.title, LIMITS.stepTitle)).filter(Boolean).join('\u0000') : cleanLine(item.stepTitles, 2000),
+      steps: normalizeNodeSteps(item.steps),
       changeType: cleanLine(item.changeType, 24) || 'edit',
       changeReason: cleanText(item.changeReason, LIMITS.versionNote),
       createdAt: isIsoDate(item.createdAt) ? item.createdAt : now,
@@ -2765,7 +2767,11 @@ function suggestWorkflowNode(state, text, projectId) {
     const shared = stepTitles.filter((stepTitle) => own.indexOf(stepTitle) >= 0)
     return shared.length >= 2
   })
-  if (existing) return { existing }
+  if (existing) {
+    const own = (existing.steps || []).map((step) => step.title)
+    const extraSteps = steps.filter((step) => own.indexOf(step.title) < 0)
+    return { existing, extraSteps }
+  }
   return { title, description, steps, tags, projectId }
 }
 
@@ -2929,7 +2935,30 @@ function observeMemories(state, input) {
   const observedText = (Array.isArray(input && input.messages) ? input.messages.join('\n') : (input && input.text) || '')
   const workflow = suggestWorkflowNode(state, observedText, (input && input.projectId) || (result.created[0] || {}).projectId)
   if (workflow && workflow.existing) {
-    result.workflowCandidate = { skipped: true, nodeId: workflow.existing.id, nodeTitle: workflow.existing.title, reason: '已经有相似的流程对象，没有再建' }
+    const extra = workflow.extraSteps || []
+    // 同一串流程在多次对话里被逐步说全时，把新步骤并进同一个流程对象，而不是另建一个。
+    if (!extra.length) {
+      result.workflowCandidate = { skipped: true, nodeId: workflow.existing.id, nodeTitle: workflow.existing.title, reason: '已经有相似的流程对象，没有再建' }
+    } else if (workflow.existing.protectionLevel === 'protected') {
+      result.workflowCandidate = { skipped: true, nodeId: workflow.existing.id, nodeTitle: workflow.existing.title, reason: '这个流程对象是固有约定，需要你手动补步骤' }
+    } else {
+      const target = workflow.existing
+      const mergedSteps = (target.steps || [])
+        .map((step) => ({ id: step.id, title: step.title, note: step.note || '' }))
+        .concat(extra)
+      const saved = saveKnowledgeNode(state, { id: target.id, steps: mergedSteps, changeReason: '观察对话时补了 ' + extra.length + ' 个步骤' }, {})
+      if (saved && saved.node) {
+        result.workflowCandidate = { merged: true, nodeId: saved.node.id, nodeTitle: saved.node.title, addedSteps: extra.length, stepCount: mergedSteps.length }
+        result.nodeCandidates.push({
+          nodeId: saved.node.id,
+          nodeTitle: saved.node.title,
+          nodeType: 'workflow',
+          kind: 'workflow-merge',
+          stepCount: mergedSteps.length,
+          reason: '这次观察又补了 ' + extra.length + ' 个步骤，已并进同一个流程对象'
+        })
+      }
+    }
   } else if (workflow) {
     const saved = saveKnowledgeNode(
       state,
@@ -4682,13 +4711,15 @@ function saveKnowledgeNode(store, input, options) {
     syncNodeMemoryLinks(store, node)
     return { node, created: true, duplicate: [] }
   }
+  const stepSignature = (node) => (node.steps || []).map((step) => step.title).join('\u0000')
   const before = {
     title: existing.title,
     description: existing.description,
     status: existing.status,
     nodeType: existing.nodeType,
     parentNodeId: existing.parentNodeId,
-    scope: existing.scope
+    scope: existing.scope,
+    stepSignature: stepSignature(existing)
   }
   if (input.title !== undefined) existing.title = title
   if (input.description !== undefined) existing.description = cleanText(input.description, LIMITS.nodeDescription)
@@ -4742,7 +4773,8 @@ function saveKnowledgeNode(store, input, options) {
     before.title !== existing.title ||
     before.description !== existing.description ||
     before.status !== existing.status ||
-    before.nodeType !== existing.nodeType
+    before.nodeType !== existing.nodeType ||
+    before.stepSignature !== stepSignature(existing)
   if (contentChanged) {
     const changeType =
       before.nodeType !== existing.nodeType
@@ -4765,12 +4797,14 @@ function pushNodeVersion(store, node, changeType, reason, createdBy) {
   const now = isoNow()
   if (!Array.isArray(node.versions)) node.versions = []
   const last = node.versions.length ? node.versions[node.versions.length - 1] : null
+  const stepTitles = (node.steps || []).map((step) => step.title).join('\u0000')
   if (
     last &&
     last.title === node.title &&
     last.description === node.description &&
     last.nodeType === node.nodeType &&
-    last.status === node.status
+    last.status === node.status &&
+    (last.stepTitles || '') === stepTitles
   ) {
     return null
   }
@@ -4781,6 +4815,8 @@ function pushNodeVersion(store, node, changeType, reason, createdBy) {
     description: node.description,
     nodeType: node.nodeType,
     status: node.status,
+    stepTitles,
+    steps: (node.steps || []).map((step) => ({ title: step.title, note: step.note || '' })),
     changeType: changeType || 'edit',
     changeReason: cleanText(reason || '', LIMITS.versionNote),
     createdAt: now,
@@ -4802,6 +4838,7 @@ function restoreNodeVersion(store, input) {
   if (!target) throw httpError(404, 'version-not-found', '版本不存在：' + versionId)
   node.title = target.title
   node.description = target.description
+  if (Array.isArray(target.steps)) node.steps = normalizeNodeSteps(target.steps)
   if (KNOWLEDGE_NODE_TYPES.indexOf(target.nodeType) >= 0) node.nodeType = target.nodeType
   const version = pushNodeVersion(store, node, 'restore', (input && input.changeReason) || '回滚到第 ' + target.version + ' 版', 'user')
   return { node, version, restored: true }

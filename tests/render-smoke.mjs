@@ -102,6 +102,16 @@ state.frames = [
     memberIds: (state.entries || []).slice(0, 3).map((item) => item.id),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
+  },
+  // 老版本画的框没有 rect（只有显式成员），要能点选、改名、删除。
+  {
+    id: 'frm_legacy',
+    name: '老记忆框',
+    color: 'violet',
+    note: '',
+    memberIds: (state.entries || []).slice(0, 2).map((item) => item.id),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ]
 const { meta, entries, relations, collections, projects, views, stats } = state
@@ -1501,6 +1511,20 @@ async function workspaceChecks() {
       await settle(8)
       const afterDelete = posts.filter((post) => post.action === 'frame-delete').length
       check(afterDelete === beforeDelete + 1, 'delete key removes the selected area')
+    }
+
+    // 老数据：没有 rect 的框也要能点选、能删（之前只有隐形成员，没法操作）。
+    const legacyHull = byClass('zw-hullOutline').find((node) => node.props && String(node.props.d || '').length > 40)
+    if (legacyHull) {
+      const beforeLegacy = posts.filter((post) => post.action === 'frame-delete').length
+      if (legacyHull.props.onClick) legacyHull.props.onClick({ stopPropagation() {} })
+      await settle(6)
+      check(byClass('zw-batchbar').length > 0, 'clicking a legacy area selects its members')
+      const listeners2 = windowListeners.keydown.slice()
+      listeners2.forEach((handler) => handler({ key: 'Delete', preventDefault() {} }))
+      await settle(8)
+      const afterLegacy = posts.filter((post) => post.action === 'frame-delete').length
+      check(afterLegacy === beforeLegacy + 1, 'legacy area can be deleted with the delete key')
     }
   }
 }

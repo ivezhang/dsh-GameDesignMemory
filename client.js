@@ -1631,6 +1631,10 @@ window.__ModuleLoader__.load({
     }
     .zw-regionChip:hover { background: var(--zw-accent-soft); color: var(--zw-accent-text); }
 
+    /* 关系列表容器：之前误用了 .zw-relLine（14px 宽的图例短线）当容器，会把整块内容压成一条并溢出 */
+    .zw-relList { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .zw-relList .zw-relRow { width: 100%; }
+    .zw-frameBox .zw-hullOutline:hover { fill-opacity: 0.9; }
     .zw-relGroup { display: flex; flex-direction: column; gap: 2px; }
     .zw-relGroupTitle {
       display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--zw-text-3);
@@ -2662,7 +2666,24 @@ window.__ModuleLoader__.load({
 .zw-framePick { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
 .zw-framePick:hover { text-decoration: underline; }
 .zw-frameEdit { border: 0; background: none; padding: 0 2px; cursor: pointer; color: var(--zw-text-3); display: inline-flex; align-items: center; }
-.zw-frameEdit:hover { color: var(--zw-text); }`
+.zw-frameEdit:hover { color: var(--zw-text); }
+    /* ================= 窄面板 / 详情栏适配加固 ================= */
+    .zw-blockHead { flex-wrap: wrap; row-gap: 3px; }
+    .zw-relRow { flex-wrap: wrap; }
+    .zw-relActions { margin-left: auto; }
+    .zw-toastWrap { max-width: min(560px, calc(100% - 20px)); }
+    .zw-toast { max-width: 100%; }
+    .zw-detailActions { flex-wrap: wrap; justify-content: flex-end; }
+
+    @media (max-width: 620px) {
+      .zw-detail { width: 100vw; max-width: 100vw; }
+      .zw-detailHead { padding-left: 14px; padding-right: 14px; }
+      .zw-detailScroll { padding-left: 14px; padding-right: 14px; }
+      .zw-factGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .zw-detailTitle { font-size: 14px; }
+      .zw-assistBar { gap: 5px; }
+      .zw-assistAction { font-size: 11.5px; padding: 5px 8px; }
+    }`
 
     const ICONS = {
       search: [
@@ -5515,7 +5536,7 @@ window.__ModuleLoader__.load({
                         ),
                         h(
                           'div',
-                          { className: 'zw-relLine' },
+                          { className: 'zw-relList' },
                           group.items.map((item) =>
                             h(RelationRow, {
                               key: item.relation.id,
@@ -8629,9 +8650,9 @@ window.__ModuleLoader__.load({
           const memberIds = frameRectMembers(frame)
           const members = model.nodes.filter((node) => memberIds.includes(node.id))
           const color = collectionColor(frame.color)
+          const selected = activeFrame === frame.id
           if (frame.rect) {
             const rect = frameRectOf(frame) || frame.rect
-            const selected = activeFrame === frame.id
             const labelWidth = Math.max(48, Math.round(String(frame.name).length * 12.6 + 34))
             const handles = selected
               ? [
@@ -8721,14 +8742,22 @@ window.__ModuleLoader__.load({
           })
           return h(
             'g',
-            { key: frame.id, className: 'zw-frameBox' },
+            { key: frame.id, className: selected ? 'zw-frameBox zw-frameBoxSel' : 'zw-frameBox' },
             h('path', {
               className: 'zw-hullOutline',
               d: hullPath(points, 22),
               style: {
                 fill: 'color-mix(in srgb, ' + color + ' 6%, transparent)',
-                stroke: 'color-mix(in srgb, ' + color + ' 55%, transparent)',
-                strokeDasharray: '6 5'
+                stroke: 'color-mix(in srgb, ' + color + ' ' + (selected ? '88%' : '55%') + ', transparent)',
+                strokeDasharray: '6 5',
+                cursor: 'pointer'
+              },
+              onClick: () => {
+                setActiveFrame(frame.id)
+                if (props.onSelectFrame) props.onSelectFrame(frame, false)
+              },
+              onDoubleClick: () => {
+                if (props.onRenameFrame) props.onRenameFrame(frame)
               }
             }),
             h(

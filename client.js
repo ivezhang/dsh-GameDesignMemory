@@ -282,6 +282,9 @@ window.__ModuleLoader__.load({
       'collections.color': '颜色',
       'collections.members': '成员',
       'collections.memberCount': '条记忆',
+      'collections.newName': '新集合名称',
+      'collections.createAndPick': '新建并加入',
+      'collections.created': '已新建集合',
       'collections.empty': '还没有集合',
       'collections.emptyHint': '可以手动新建，也可以让 AI 从现有记忆里聚类',
       'collections.suggestAi': '让 AI 找主题',
@@ -724,6 +727,9 @@ window.__ModuleLoader__.load({
       'collections.color': 'Color',
       'collections.members': 'Members',
       'collections.memberCount': 'memories',
+      'collections.newName': 'New collection name',
+      'collections.createAndPick': 'Create & add',
+      'collections.created': 'Collection created',
       'collections.empty': 'No collections yet',
       'collections.emptyHint': 'Create one, or let the AI cluster your memories',
       'collections.suggestAi': 'Find themes with AI',
@@ -1585,6 +1591,9 @@ window.__ModuleLoader__.load({
     .zw-factRow > .zw-input:first-child { flex: 0 0 38%; }
     .zw-factRow > .zw-input:nth-child(2) { flex: 1; }
 
+    .zw-quickCreate { display: flex; gap: 6px; align-items: center; padding-bottom: 8px; border-bottom: 1px dashed var(--zw-border); margin-bottom: 8px; }
+    .zw-quickCreate .zw-input { flex: 1; min-width: 0; }
+    .zw-quickCreate .zw-btn { flex: none; white-space: nowrap; }
     .zw-pickList { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
     .zw-pickRow {
       display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid transparent;
@@ -6238,8 +6247,19 @@ window.__ModuleLoader__.load({
     function CollectionPicker(props) {
       const t = props.t
       const [picked, setPicked] = useState(() => unique((props.value || []).slice()))
+      const [newName, setNewName] = useState('')
       const toggle = (id) =>
         setPicked((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat([id])))
+      const canCreate = Boolean(props.onCreate) && newName.trim().length > 0 && !props.saving
+      const createNow = () => {
+        if (!canCreate) return
+        const name = newName.trim()
+        Promise.resolve(props.onCreate(name)).then((collection) => {
+          if (!collection) return
+          setPicked((prev) => (prev.includes(collection.id) ? prev : prev.concat([collection.id])))
+          setNewName('')
+        })
+      }
       return h(
         Modal,
         {
@@ -6272,6 +6292,37 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { className: 'zw-form' },
+          props.onCreate
+            ? h(
+                'div',
+                { className: 'zw-quickCreate' },
+                h('input', {
+                  className: 'zw-input',
+                  value: newName,
+                  placeholder: t('collections.newName'),
+                  'aria-label': t('collections.newName'),
+                  onChange: (event) => setNewName(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      createNow()
+                    }
+                  }
+                }),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm zw-btnPrimary',
+                    disabled: !canCreate,
+                    title: t('collections.createAndPick'),
+                    onClick: createNow
+                  },
+                  h(Icon, { name: 'plus', size: 13 }),
+                  t('collections.createAndPick')
+                )
+              )
+            : null,
           props.collections.length
             ? h(
                 'div',
@@ -9497,6 +9548,15 @@ window.__ModuleLoader__.load({
         [mutate, t]
       )
 
+      // 「加入集合」弹窗里直接新建：建好就勾上，用户不用关弹窗再重开。
+      const createCollectionInline = useCallback(
+        async (name) => {
+          const result = await mutate({ action: 'collection-save', name: name }, t('collections.created'))
+          return result && result.collection ? result.collection : null
+        },
+        [mutate, t]
+      )
+
       const updateCollection = useCallback(
         async (payload) => {
           await mutate(Object.assign({ action: 'collection-save' }, payload), t('toast.saved'))
@@ -10134,6 +10194,7 @@ window.__ModuleLoader__.load({
           ? h(CollectionPicker, {
               t: t,
               collections: collections.filter((collection) => collection.status !== 'suggested'),
+              onCreate: createCollectionInline,
               title: t('batch.pickCollection'),
               saving: busy === 'entry-bulk',
               onApply: async (ids) => {
@@ -10156,6 +10217,7 @@ window.__ModuleLoader__.load({
           ? h(CollectionPicker, {
               t: t,
               collections: collections.filter((collection) => collection.status !== 'suggested'),
+              onCreate: createCollectionInline,
               title: t('detail.collections'),
               value: collectionsOf(modal.id).map((collection) => collection.id),
               saving: busy === 'entry-collections',

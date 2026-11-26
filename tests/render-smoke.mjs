@@ -297,6 +297,29 @@ function applyPost(input) {
     }
     live.stats.entries = live.entries.length
   }
+  if (input.action === 'collection-save') {
+    const existing = input.id ? live.collections.find((item) => item.id === input.id) : null
+    if (existing) {
+      Object.assign(existing, input, { id: existing.id })
+      return { collection: existing, created: false }
+    }
+    const created = {
+      id: 'col_smoke_' + nextId++,
+      name: input.name || '新集合',
+      description: input.description || '',
+      projectId: live.projects[0].id,
+      tags: input.tags || [],
+      memberIds: input.memberIds || [],
+      color: input.color || 'violet',
+      source: 'manual',
+      status: 'confirmed',
+      reasons: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    live.collections.push(created)
+    return { collection: created, created: true }
+  }
   if (input.action === 'entry-collections') {
     const entry = live.entries.find((item) => item.id === input.id)
     for (const id of input.add || []) {
@@ -505,7 +528,12 @@ globalThis.fetch = async (url, options) => {
     if (input.action === 'ai.analyze') {
       return { ok: true, status: 200, json: async () => ({ ok: true, result: assistantResult(input) }) }
     }
-    return { ok: true, status: 200, json: async () => applyPost(input) }
+    const result = applyPost(input)
+    return {
+      ok: true,
+      status: 200,
+      json: async () => Object.assign({ ok: true }, result || {}, payload())
+    }
   }
   return { ok: true, status: 200, json: async () => payload() }
 }
@@ -817,6 +845,38 @@ await settle()
 click(byClass('zw-row')[0])
 await settle()
 check(byClass('zw-detail').length === 1, 'detail rail reopens after picking a memory again')
+
+// 「加入集合」弹窗里要能直接新建集合，不用关掉弹窗再重开。
+const collectionsEdit = byClass('zw-panelLink').find((node) => textOf(node).trim() === ZH['action.edit'])
+check(Boolean(collectionsEdit), 'detail rail offers an edit-collections link')
+if (collectionsEdit) {
+  click(collectionsEdit)
+  await settle()
+  check(byClass('zw-quickCreate').length === 1, 'collection picker shows an inline create row')
+  const quickRow = byClass('zw-quickCreate')[0]
+  const withinQuick = []
+  if (quickRow) walk(quickRow, (node) => withinQuick.push(node))
+  const quickInput = withinQuick.find((node) => node.type === 'input')
+  check(Boolean(quickInput), 'inline create row has a name input')
+  if (quickInput) {
+    quickInput.props.onChange({ target: { value: '冒烟新集合' } })
+    await settle()
+    const quickRow2 = byClass('zw-quickCreate')[0]
+    const nodes2 = []
+    if (quickRow2) walk(quickRow2, (node) => nodes2.push(node))
+    const createBtn = nodes2.find((node) => node.type === 'button')
+    check(Boolean(createBtn) && createBtn.props.disabled !== true, 'inline create button enables once a name is typed')
+    const beforeCreate = posts.length
+    click(createBtn)
+    await settle()
+    const created = posts.slice(beforeCreate).find((post) => post.action === 'collection-save')
+    check(Boolean(created) && created.name === '冒烟新集合', 'inline create posts collection-save with the typed name')
+    check(byClass('zw-pickRow').length >= 1, 'collection picker still lists collections after inline create')
+    const confirmBtn = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.confirm'])[0]
+    if (confirmBtn) click(confirmBtn)
+    await settle()
+  }
+}
 
 const organizeChip = byClass('zw-assistAction').find((node) => textOf(node).includes(ZH['assist.organize']))
 check(Boolean(organizeChip), 'assist actions are offered in the detail rail')

@@ -1285,6 +1285,80 @@ async function workspaceChecks() {
       await settle(6)
       check(posts.some((post) => post.action === 'layout-save'), 'saving the layout posts layout-save')
     }
+
+    // 工具条与计数不再互相压住：计数是工具条的兄弟节点，不在条里。
+    const toolbar = byClass('zw-graphToolbar')[0]
+    check(Boolean(toolbar), 'graph toolbar rendered')
+    if (toolbar) {
+      const inside = (toolbar.children || []).filter(
+        (node) => classesOf(node).includes('zw-graphCount')
+      )
+      check(inside.length === 0, 'node counter sits outside the toolbar')
+    }
+    check(byClass('zw-graphCount').length === 1, 'node counter rendered once')
+
+    // 记忆框本身作为可连线节点出现
+    const frameNodes = byClass('zw-gframeNode')
+    check(frameNodes.length >= 1, 'frame is drawn as its own node')
+    const frameNode = frameNodes[0]
+    check(Boolean(frameNode) && textOf(frameNode).includes('战斗记忆框'), 'frame node carries the frame name')
+
+    // 点框 = 选中它的成员（批量条出现），双击 = 改名
+    if (frameNode) {
+      const frameSvg = byClass('zw-graphSvg')[0]
+      const frameAt = screen(nodePoint(frameNode))
+      pointer(frameNode, 'onPointerDown', frameAt, { pointerId: 21 })
+      if (frameSvg) pointer(frameSvg, 'onPointerUp', frameAt, { pointerId: 21 })
+      await settle(8)
+      check(byClass('zw-batchbar').length >= 1, 'clicking a frame selects its members')
+      if (typeof frameNode.props.onDoubleClick === 'function') {
+        frameNode.props.onDoubleClick({})
+        await settle(6)
+        const title = byClass('zw-modalTitle')[0]
+        check(
+          Boolean(title) && textOf(title).includes(ZH['graph.frameRenameTitle']),
+          'double click opens the frame rename dialog'
+        )
+        const closeFrame = findAll(
+          (node) => node.type === 'button' && textOf(node).includes(ZH['action.cancel'])
+        )[0]
+        if (closeFrame) {
+          click(closeFrame)
+          await settle(4)
+        }
+      }
+    }
+
+    // 划线工具：从框拖到一条记忆，建立关系
+    const linkBtn = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolLink']))
+    check(Boolean(linkBtn), 'link tool button available')
+    if (linkBtn && frameNode) {
+      click(linkBtn)
+      await settle(8)
+      const freshSvg = byClass('zw-graphSvg')[0]
+      const chip = byClass('zw-gframeNode')[0]
+      const targetNode = byClass('zw-gnode')[0]
+      if (freshSvg && chip && targetNode) {
+        const fromAt = screen(nodePoint(chip))
+        const toAt = screen(nodePoint(targetNode))
+        pointer(chip, 'onPointerDown', fromAt, { pointerId: 33 })
+        pointer(freshSvg, 'onPointerMove', toAt, { pointerId: 33 })
+        pointer(freshSvg, 'onPointerUp', toAt, { pointerId: 33 })
+        await settle(8)
+        const dialog = byClass('zw-modalTitle')[0]
+        check(
+          Boolean(dialog) && textOf(dialog).includes(ZH['relation.create']),
+          'dragging a line from a frame opens the relation dialog'
+        )
+        const cancel = findAll(
+          (node) => node.type === 'button' && textOf(node).includes(ZH['action.cancel'])
+        )[0]
+        if (cancel) {
+          click(cancel)
+          await settle(4)
+        }
+      }
+    }
   }
 }
 

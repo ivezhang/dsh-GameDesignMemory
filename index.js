@@ -876,11 +876,24 @@ function migrateStore(parsed) {
     entries.push(entry)
   }
 
+  // 记忆框要先落库：关系两端允许是记忆框，校验关系时需要知道哪些框存在。
+  const frames = []
+  const frameIds = new Set()
+  for (const item of Array.isArray(parsed.frames) ? parsed.frames : []) {
+    const frame = normalizeFrame(item, entryIds, now)
+    if (!frame || frameIds.has(frame.id)) continue
+    frameIds.add(frame.id)
+    frames.push(frame)
+    if (frames.length >= LIMITS.frames) break
+  }
+  const nodeIds = new Set(entryIds)
+  frameIds.forEach((id) => nodeIds.add(id))
+
   const relations = []
   const relationKeys = new Set()
   const rawRelations = Array.isArray(parsed.relations) ? parsed.relations : []
   for (const item of rawRelations) {
-    const relation = normalizeRelation(item, entryIds, now)
+    const relation = normalizeRelation(item, nodeIds, now)
     if (!relation) continue
     const key = relation.sourceMemoryId + '\u0000' + relation.targetMemoryId + '\u0000' + relation.relationType
     if (relationKeys.has(key)) continue
@@ -903,7 +916,7 @@ function migrateStore(parsed) {
             createdBy: 'user',
             createdAt: item.updatedAt || item.createdAt
           },
-          entryIds,
+          nodeIds,
           now
         )
         if (!relation) continue
@@ -971,25 +984,17 @@ function migrateStore(parsed) {
     project.order = index * 10
   })
 
-  const frames = []
-  const frameIds = new Set()
-  for (const item of Array.isArray(parsed.frames) ? parsed.frames : []) {
-    const frame = normalizeFrame(item, entryIds, now)
-    if (!frame || frameIds.has(frame.id)) continue
-    frameIds.add(frame.id)
-    frames.push(frame)
-    if (frames.length >= LIMITS.frames) break
-  }
-
-  const layout = normalizeLayout(parsed.layout, entryIds)
+  const layout = normalizeLayout(parsed.layout, nodeIds)
 
   return { version: STORE_VERSION, projects, entries, relations, collections, views, proposals, recalls, frames, layout }
 }
 
 function pruneStore(store) {
   const entryIds = new Set(store.entries.map((entry) => entry.id))
+  const nodeIds = new Set(entryIds)
+  ;(store.frames || []).forEach((frame) => nodeIds.add(frame.id))
   store.relations = store.relations.filter(
-    (relation) => entryIds.has(relation.sourceMemoryId) && entryIds.has(relation.targetMemoryId)
+    (relation) => nodeIds.has(relation.sourceMemoryId) && nodeIds.has(relation.targetMemoryId)
   )
   for (const collection of store.collections) {
     const members = []
@@ -1018,7 +1023,7 @@ function pruneStore(store) {
   if (store.layout && store.layout.positions) {
     const next = {}
     for (const key of Object.keys(store.layout.positions)) {
-      if (entryIds.has(key)) next[key] = store.layout.positions[key]
+      if (nodeIds.has(key)) next[key] = store.layout.positions[key]
     }
     store.layout.positions = next
   }
@@ -2767,11 +2772,23 @@ function bulkEntries(store, input) {
   throw httpError(400, 'unknown-bulk-op', '不支持的批量操作：' + op)
 }
 
+function isFrameId(store, id) {
+  return store.frames.some((frame) => frame.id === id)
+}
+
+// 关系两端既可以是记忆，也可以是记忆框（框当超级节点用，用来串项目结构路径）。
+function mustNode(store, id, label) {
+  if (isFrameId(store, id)) return { kind: 'frame', id: id }
+  const entry = store.entries.find((item) => item.id === id)
+  if (entry) return { kind: 'entry', id: id, entry: entry }
+  throw httpError(404, 'not-found', (label || '记忆') + '不存在：' + id)
+}
+
 function saveRelation(store, input) {
   const sourceMemoryId = cleanLine(input.sourceMemoryId || input.id, 64)
   const targetMemoryId = cleanLine(input.targetMemoryId, 64)
-  mustEntry(store, sourceMemoryId)
-  mustEntry(store, targetMemoryId)
+  const source = mustNode(store, sourceMemoryId, '起点')
+  const target = mustNode(store, targetMemoryId, '终点')
   if (sourceMemoryId === targetMemoryId) throw httpError(400, 'self-relation', '不能把记忆连到自己身上')
   const relationType = normalizeRelationType(input.relationType)
   const existing = store.relations.find(
@@ -2800,7 +2817,8 @@ function saveRelation(store, input) {
     createdAt: isoNow()
   }
   store.relations.push(relation)
-  touchEntry(mustEntry(store, sourceMemoryId), '新增关联（' + RELATION_LABEL[relationType] + '）')
+  if (source.kind === 'entry') touchEntry(source.entry, '新增关联（' + RELATION_LABEL[relationType] + '）')
+  if (target.kind === 'entry') touchEntry(target.entry, '新增关联（' + RELATION_LABEL[relationType] + '）')
   return { relation, created: true }
 }
 
@@ -2812,7 +2830,7 @@ function updateRelation(store, input) {
   if (input.status !== undefined) relation.status = normalizeRelationStatus(input.status)
   if (input.targetMemoryId !== undefined) {
     const target = cleanLine(input.targetMemoryId, 64)
-    mustEntry(store, target)
+    mustNode(store, target, '终点')
     if (target !== relation.sourceMemoryId) relation.targetMemoryId = target
   }
   return { relation }
@@ -3050,15 +3068,21 @@ function deleteFrame(store, input) {
   const frame = store.frames.find((item) => item.id === id)
   if (!frame) throw httpError(404, 'frame-not-found', '记忆框不存在：' + id)
   store.frames = store.frames.filter((item) => item.id !== id)
+  // 框本身可能是关系的一端，删框时把挂在它身上的关系一起收掉，避免留下悬空线。
+  store.relations = store.relations.filter(
+    (relation) => relation.sourceMemoryId !== id && relation.targetMemoryId !== id
+  )
+  if (store.layout && store.layout.positions) delete store.layout.positions[id]
   return { deleted: id, name: frame.name }
 }
 
 function saveLayout(store, input) {
-  const entryIds = new Set(store.entries.map((entry) => entry.id))
+  const nodeIds = new Set(store.entries.map((entry) => entry.id))
+  store.frames.forEach((frame) => nodeIds.add(frame.id))
   const source = (input && input.positions) || {}
   const positions = {}
   for (const key of Object.keys(source)) {
-    if (!entryIds.has(key)) continue
+    if (!nodeIds.has(key)) continue
     const point = source[key]
     const x = Number(point && point.x)
     const y = Number(point && point.y)

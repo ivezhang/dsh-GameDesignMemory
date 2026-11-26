@@ -179,6 +179,9 @@ window.__ModuleLoader__.load({
       'graph.layoutSaved': '已保存当前布局',
       'graph.frameName': '记忆框',
       'graph.frameSaved': '已把这个范围归到一个框里',
+      'graph.frameNodeHint': '记忆框也是节点：可以拖动，也可以拖线连到别的记忆或别的框',
+      'graph.frameRenameTitle': '重命名记忆框',
+      'graph.frameRenamed': '记忆框已重命名',
       'action.edit': '编辑',
       'action.close': '关闭',
       'action.confirm': '确认',
@@ -675,6 +678,9 @@ window.__ModuleLoader__.load({
       'graph.layoutSaved': 'Layout saved',
       'graph.frameName': 'Frame',
       'graph.frameSaved': 'Grouped this area into a frame',
+      'graph.frameNodeHint': 'A frame is a node too: drag it, or drag a line from it to another memory or frame',
+      'graph.frameRenameTitle': 'Rename frame',
+      'graph.frameRenamed': 'Frame renamed',
       'action.edit': 'Edit',
       'action.close': 'Close',
       'action.confirm': 'Confirm',
@@ -1705,7 +1711,7 @@ window.__ModuleLoader__.load({
     .zw-pickRowOn { background: var(--zw-accent-soft); border-color: color-mix(in srgb, var(--zw-accent) 40%, transparent); }
 
     /* ================= 关系图 ================= */
-    .zw-graphWrap { flex: 1; min-height: 0; display: flex; }
+    .zw-graphWrap { flex: 1; min-height: 0; display: flex; position: relative; }
     .zw-graphStage {
       flex: 1; min-width: 0; position: relative; overflow: hidden;
       background:
@@ -1751,6 +1757,23 @@ window.__ModuleLoader__.load({
       pointer-events: none; user-select: none;
     }
     .zw-gnodeHit { fill: transparent; }
+    /* 记忆框节点：框本身也是一个可拖、可连线的超级节点 */
+    .zw-gframeNode { cursor: grab; }
+    .zw-gframeNode:active { cursor: grabbing; }
+    .zw-gframeChip {
+      fill: color-mix(in srgb, var(--zw-surface) 92%, transparent);
+      stroke-width: 1.4; stroke-dasharray: 7 4;
+    }
+    .zw-gframeOn .zw-gframeChip { stroke-width: 2.2; stroke-dasharray: none; }
+    .zw-gframeText {
+      font-size: 11px; font-weight: 650; font-family: var(--zw-font);
+      pointer-events: none; user-select: none; dominant-baseline: middle;
+    }
+    .zw-gframeBadge {
+      font-size: 9px; font-family: var(--zw-font); pointer-events: none;
+      user-select: none; dominant-baseline: middle;
+    }
+    .zw-gframeDim { opacity: 0.2; }
     .zw-hull { opacity: 0.1; transition: opacity 200ms; }
     .zw-hullOn { opacity: 0.2; }
     .zw-hullOutline { fill: none; stroke-width: 1.2; opacity: 0.5; stroke-dasharray: 6 5; animation: zwHull 22s linear infinite; }
@@ -1766,6 +1789,7 @@ window.__ModuleLoader__.load({
 
     .zw-graphToolbar {
       position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 4px;
+      flex-wrap: wrap; max-width: calc(100% - 88px);
       padding: 4px; border-radius: 11px; border: 1px solid var(--zw-border);
       background: color-mix(in srgb, var(--zw-surface) 92%, transparent);
       backdrop-filter: blur(8px); box-shadow: var(--zw-shadow-md); z-index: 6;
@@ -2591,6 +2615,15 @@ window.__ModuleLoader__.load({
     .zw-search { flex: 0 1 260px; min-width: 120px; }
     .zw-projectRowDrag { opacity: 0.55; }
     .zw-projectRowOver { outline: 1px dashed var(--zw-accent); outline-offset: -1px; }
+
+    /* relation row: a frame (not a memory) on the other end */
+    .zw-relFrameName {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--zw-text-2);
+      border-bottom: 1px dashed var(--zw-border);
+    }
     `
 
     const ICONS = {
@@ -4811,7 +4844,13 @@ window.__ModuleLoader__.load({
             ),
             h(
               'span',
-              { role: 'button', tabIndex: 0, onClick: () => props.onOpen(other.id) },
+              {
+                className: other.frame ? 'zw-relFrameName' : '',
+                role: 'button',
+                tabIndex: 0,
+                onClick: () => props.onOpen(other.id)
+              },
+              other.frame ? h(Icon, { name: 'frame', size: 11 }) : null,
               other.title
             ),
             h(
@@ -7798,6 +7837,8 @@ window.__ModuleLoader__.load({
       const positionsRef = useRef(new Map())
       const viewRef = useRef({ x: 0, y: 0, k: 1 })
       const dragRef = useRef(null)
+      // 被用户手动拖过的记忆框不再自动跟随成员位置。
+      const pinnedFrames = useRef(new Set())
       const seed = props.initialConfig || {}
       const [size, setSize] = useState({ width: 900, height: 560 })
       const [view, setView] = useState({ x: 0, y: 0, k: 1 })
@@ -7908,6 +7949,25 @@ window.__ModuleLoader__.load({
             memberIds: members
           })
         })
+        // 记忆框：框本身是一个超级节点，可以拖、可以拖线连到别的记忆或别的框，
+        // 这样「这一组东西」就能作为整体参与项目结构。
+        const frameNodes = (props.frames || [])
+          .map((frame) => {
+            const members = frame.memberIds.filter((id) => visibleIds.has(id))
+            if (!members.length) return null
+            return {
+              id: frame.id,
+              frame: frame,
+              frameNode: true,
+              memberIds: members,
+              label: frame.name
+            }
+          })
+          .filter(Boolean)
+        frameNodes.forEach((node) => {
+          visibleIds.add(node.id)
+          nodes.push(node)
+        })
         const edges = []
         props.relations
           .filter((relation) => showSuggested || relation.status !== 'suggested')
@@ -7937,6 +7997,12 @@ window.__ModuleLoader__.load({
         })
         nodes.forEach((node) => {
           node.degree = degree.get(node.id) || 0
+          if (node.frameNode) {
+            node.radius = 13
+            node.frameWidth = Math.max(64, Math.min(150, 30 + String(node.label).length * 6.6))
+            node.frameHeight = 26
+            return
+          }
           node.radius = node.clusterCollapsed
             ? 24 + Math.min(node.count, 12) * 1.4
             : 11 + Math.min(node.degree, 9) * 1.5 + (node.entry.status === 'active' ? 0 : 0)
@@ -7981,6 +8047,7 @@ window.__ModuleLoader__.load({
           }
         })
         positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, seeded, 300)
+        placeFrameNodes()
         fitToWindow()
         setTick((value) => value + 1)
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -7989,9 +8056,30 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         if (!positionsRef.current.size) return
         positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, positionsRef.current, 80)
+        placeFrameNodes()
         setTick((value) => value + 1)
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [model.edges.length])
+
+      // 记忆框默认贴在成员上方；被拖过的框保留用户位置。
+      const placeFrameNodes = () => {
+        model.nodes.forEach((node) => {
+          if (!node.frameNode || pinnedFrames.current.has(node.id)) return
+          if (!node.memberIds.length) return
+          let sumX = 0
+          let sumY = 0
+          let count = 0
+          node.memberIds.forEach((id) => {
+            const point = positionsRef.current.get(id)
+            if (!point) return
+            sumX += point.x
+            sumY += point.y
+            count += 1
+          })
+          if (!count) return
+          positionsRef.current.set(node.id, { x: sumX / count, y: sumY / count - 58 })
+        })
+      }
 
       const positionOf = (id) => positionsRef.current.get(id) || { x: 0, y: 0 }
 
@@ -8160,7 +8248,15 @@ window.__ModuleLoader__.load({
         dragRef.current = null
         if (!drag) return
         if (drag.kind === 'node') {
-          if (!drag.moved) props.onSelect(drag.id, Boolean(event && event.shiftKey))
+          if (!drag.moved) {
+            if (drag.node && drag.node.frameNode && props.onSelectFrame) {
+              props.onSelectFrame(drag.node.frame, Boolean(event && event.shiftKey))
+            } else {
+              props.onSelect(drag.id, Boolean(event && event.shiftKey))
+            }
+          } else if (drag.node && drag.node.frameNode) {
+            pinnedFrames.current.add(drag.id)
+          }
           return
         }
         if (drag.kind === 'link') {
@@ -8175,6 +8271,12 @@ window.__ModuleLoader__.load({
           model.nodes.forEach((node) => {
             if (node.clusterCollapsed) return
             const center = positionOf(node.id)
+            if (node.frameNode) {
+              const halfW = node.frameWidth / 2 + 6
+              const halfH = node.frameHeight / 2 + 6
+              if (Math.abs(center.x - graphPoint.x) <= halfW && Math.abs(center.y - graphPoint.y) <= halfH) hit = node
+              return
+            }
             const distance = Math.sqrt(
               Math.pow(center.x - graphPoint.x, 2) + Math.pow(center.y - graphPoint.y, 2)
             )
@@ -8583,6 +8685,58 @@ window.__ModuleLoader__.load({
                     )
                   )
                 }
+                if (node.frameNode) {
+                  const width = node.frameWidth
+                  const height = node.frameHeight
+                  const color = collectionColor(node.frame.color)
+                  const inFrame = node.memberIds.indexOf(selection[0]) >= 0
+                  return h(
+                    'g',
+                    {
+                      key: node.id,
+                      className:
+                        'zw-gframeNode' +
+                        (selected || inFrame ? ' zw-gframeOn' : '') +
+                        (dim ? ' zw-gframeDim' : ''),
+                      transform: 'translate(' + point.x + ',' + point.y + ')',
+                      onPointerDown: (event) => startNodeDrag(event, node),
+                      onDoubleClick: () => props.onRenameFrame && props.onRenameFrame(node.frame)
+                    },
+                    h('rect', {
+                      className: 'zw-gframeChip',
+                      x: -width / 2,
+                      y: -height / 2,
+                      width: width,
+                      height: height,
+                      rx: 9,
+                      style: {
+                        stroke: color,
+                        fill: 'color-mix(in srgb, ' + color + ' 12%, var(--zw-surface))'
+                      }
+                    }),
+                    h(
+                      'text',
+                      {
+                        className: 'zw-gframeText',
+                        x: 0,
+                        y: 0,
+                        textAnchor: 'middle',
+                        style: { fill: color }
+                      },
+                      truncate(node.label, 14)
+                    ),
+                    h(
+                      'text',
+                      { className: 'zw-gframeBadge', y: height / 2 + 11, textAnchor: 'middle' },
+                      node.memberIds.length + ' ' + t('collections.memberCount')
+                    ),
+                    h(
+                      'title',
+                      null,
+                      node.label + ' · ' + t('graph.frameNodeHint')
+                    )
+                  )
+                }
                 const entry = node.entry
                 return h(
                   'g',
@@ -8727,10 +8881,10 @@ window.__ModuleLoader__.load({
               onClick: props.onSaveView
             },
             h(Icon, { name: 'bookmark', size: 14 })
-          ),
-          h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edges.length),
-          flash ? h('span', { className: 'zw-graphHint' }, flash) : null
+          )
         ),
+        h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edges.length),
+        flash ? h('span', { className: 'zw-graphHint' }, flash) : null,
         panelOpen
           ? h(
               'div',
@@ -9541,6 +9695,7 @@ window.__ModuleLoader__.load({
       const entries = data.entries || []
       const relations = data.relations || []
       const collections = data.collections || []
+      const frames = data.frames || []
       const projects = data.projects || []
       const stats = data.stats || {}
       const proposals = data.proposals || []
@@ -9548,6 +9703,7 @@ window.__ModuleLoader__.load({
       const defaultProjectId = projects.length ? projects[0].id : 'prj_default'
 
       const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries])
+      const frameById = useMemo(() => new Map(frames.map((frame) => [frame.id, frame])), [frames])
       const collectionById = useMemo(
         () => new Map(collections.map((collection) => [collection.id, collection])),
         [collections]
@@ -9565,13 +9721,16 @@ window.__ModuleLoader__.load({
             .map((relation) => {
               const outgoing = relation.sourceMemoryId === entryId
               const otherId = outgoing ? relation.targetMemoryId : relation.sourceMemoryId
+              const frame = frameById.get(otherId)
+              const other = entryById.get(otherId) ||
+                (frame ? { id: otherId, title: frame.name, frame: true } : { id: otherId, title: otherId })
               return {
                 relation: relation,
-                other: entryById.get(otherId) || { id: otherId, title: otherId },
+                other: other,
                 direction: outgoing ? 'out' : 'in'
               }
             }),
-        [relations, entryById]
+        [relations, entryById, frameById]
       )
 
       const groupedRelations = useCallback(
@@ -9767,6 +9926,24 @@ window.__ModuleLoader__.load({
         setSelectedId(id)
         setDetailCollapsed(false)
       }, [])
+
+      // 关系可能是连到「记忆框」的：框不是记忆，不能当记忆详情打开，
+      // 而是把画布里框住的成员选中，让用户在关系图上看到它。
+      const openNode = useCallback(
+        (id) => {
+          if (entryById.has(id)) {
+            openEntry(id)
+            return
+          }
+          const frame = frameById.get(id)
+          if (frame) {
+            setNav({ kind: 'graph', id: '' })
+            setGraphSelection(frame.memberIds.slice())
+            setSelectedId('')
+          }
+        },
+        [entryById, frameById, openEntry]
+      )
 
       const onSelectGraphNode = useCallback(
         (id, additive) => {
@@ -10517,6 +10694,11 @@ window.__ModuleLoader__.load({
             },
             onCreateRelation: (sourceId, targetId) =>
               setModal({ type: 'relation', sourceId: sourceId, targetId: targetId }),
+            onSelectFrame: (frame) => {
+              setGraphSelection(frame.memberIds.slice())
+              setSelectedId('')
+            },
+            onRenameFrame: (frame) => setModal({ type: 'frameName', frame: frame }),
             onDecideRelation: decideRelation,
             onSaveView: () => setModal({ type: 'saveView' }),
             onOpenTidy: () => setNav({ kind: 'tidy', id: '' }),
@@ -10761,7 +10943,7 @@ window.__ModuleLoader__.load({
             onEditCollections: (id) => setModal({ type: 'entryCollections', id: id }),
             onDecideRelation: decideRelation,
             onDeleteRelation: deleteRelation,
-            onOpen: openEntry,
+            onOpen: openNode,
             onOpenCollection: (id) => setNav({ kind: 'collection', id: id }),
             onDelete: deleteEntry,
             assist: {
@@ -10996,6 +11178,21 @@ window.__ModuleLoader__.load({
               onSave: async (name) => {
                 setModal(null)
                 await mutate({ action: 'project-save', name: name }, t('toast.saved'))
+              },
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'frameName'
+          ? h(NameDialog, {
+              t: t,
+              title: t('graph.frameRenameTitle'),
+              label: t('common.name'),
+              value: modal.frame.name,
+              icon: 'frame',
+              onSave: async (name) => {
+                const frame = modal.frame
+                setModal(null)
+                await mutate({ action: 'frame-save', id: frame.id, name: name }, t('graph.frameRenamed'))
               },
               onClose: () => setModal(null)
             })

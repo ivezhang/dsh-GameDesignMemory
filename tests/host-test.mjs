@@ -1571,6 +1571,32 @@ async function runWorkspaceSuite() {
 
   const renamed = await api.post({ action: 'frame-save', id: state.frames[0].id, name: '战斗框（改）' })
   check(renamed.json.frame.name === '战斗框（改）', 'frame-save can rename an existing frame')
+  const frameId = state.frames[0].id
+
+  // 记忆框本身也是关系网的节点：框 → 记忆、记忆 → 框、框 → 框
+  const toFrame = await api.post({ action: 'relation-create', sourceMemoryId: idA, targetMemoryId: frameId, relationType: 'belongs_to' })
+  check(toFrame.json.ok === true, 'a relation can point at a frame')
+  const fromFrame = await api.post({ action: 'relation-create', sourceMemoryId: frameId, targetMemoryId: idB, relationType: 'references' })
+  check(fromFrame.json.ok === true, 'a frame can be the source of a relation')
+  const otherFrame = await api.post({ action: 'frame-save', name: '系统框', memberIds: [idA], color: 'blue' })
+  const otherFrameId = otherFrame.json.frame.id
+  const frameToFrame = await api.post({ action: 'relation-create', sourceMemoryId: frameId, targetMemoryId: otherFrameId, relationType: 'depends_on' })
+  check(frameToFrame.json.ok === true, 'frames can relate to other frames')
+  state = (await api.get()).json
+  check(state.relations.length === 3, 'frame relations are persisted')
+
+  const frameLayout = await api.post({ action: 'layout-save', positions: { [frameId]: { x: 260, y: 140 } } })
+  check(frameLayout.json.ok === true, 'layout-save accepts a frame position')
+  state = (await api.get()).json
+  check(Boolean(state.layout.positions[frameId]), 'a frame keeps its saved position')
+
+  const otherRemoved = await api.post({ action: 'frame-delete', id: otherFrameId })
+  check(otherRemoved.json.ok === true, 'a second frame can be deleted')
+  state = (await api.get()).json
+  check(
+    !state.relations.some((relation) => relation.sourceMemoryId === otherFrameId || relation.targetMemoryId === otherFrameId),
+    'deleting a frame also drops its relations'
+  )
 
   const removed = await api.post({ action: 'frame-delete', id: state.frames[0].id })
   check(removed.json.ok === true, 'frame-delete removes the frame')

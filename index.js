@@ -2707,6 +2707,68 @@ function composeContent(existing, candidate) {
 // Automatic observation. Turns conversation text into memory candidates,
 // merges into existing memories when they are clearly the same topic, and
 // leaves uncertain changes as proposals or candidates for the user.
+// --- 工作流程自动识别 -------------------------------------------------------
+// 一段观察文本里如果出现「先 / 然后 / 最后」这类有先后关系的步骤，就可以
+// 归纳成一个流程对象（workflow）。这里只做保守识别：少于三步不动，和已有
+// 流程重复也不动，识别出来的对象一律是 candidate，等用户确认。
+const WORKFLOW_MARKERS = [
+  '首先', '第一步', '第二步', '第三步', '先', '然后', '接着', '随后', '之后', '最后', '再'
+]
+
+function workflowStepsIn(text) {
+  const raw = String(text || '')
+    .replace(/\r\n/g, '\n')
+    .split(/\n+/)
+  const steps = []
+  for (const line of raw) {
+    const pieces = String(line)
+      .replace(/^\s*(?:[-*+]|\d+[.、)])\s*/, '')
+      .split(/[。！？!?；;]/)
+    for (const piece of pieces) {
+      const sentence = piece.replace(/^\s+/, '').replace(/\s+$/, '')
+      if (sentence.length < 4) continue
+      const numbered = /^\s*\d+[.、)]/.test(piece)
+      const marked = WORKFLOW_MARKERS.some((marker) => sentence.indexOf(marker) >= 0)
+      if (!numbered && !marked) continue
+      const title = sentence.replace(/^\s*(?:\d+[.、)]\s*)/, '').slice(0, LIMITS.nodeTitle)
+      if (steps.some((step) => step.title === title)) continue
+      steps.push({ title, note: sentence.length > title.length ? sentence.slice(title.length).replace(/^[，,、\s]+/, '') : '' })
+      if (steps.length >= 12) return steps
+    }
+  }
+  return steps
+}
+
+function tagCorpus(store) {
+  const corpus = new Set()
+  for (const entry of (store && store.entries) || []) {
+    for (const tag of entry.tags || []) corpus.add(tag)
+  }
+  for (const collection of (store && store.collections) || []) {
+    for (const tag of collection.tags || []) corpus.add(tag)
+  }
+  return Array.from(corpus)
+}
+
+function suggestWorkflowNode(state, text, projectId) {
+  const steps = workflowStepsIn(text)
+  if (steps.length < 3) return null
+  const tags = inferTags(text, tagCorpus(state), 4)
+  const label = tags.length ? tags.slice(0, 2).join('·') : steps[0].title.slice(0, 14)
+  const title = ('工作流程：' + label).slice(0, LIMITS.nodeTitle)
+  const description = String(text || '').replace(/\s+/g, ' ').slice(0, LIMITS.nodeDescription)
+  const stepTitles = steps.map((step) => step.title)
+  const existing = (state.nodes || []).find((node) => {
+    if (node.nodeType !== 'workflow' || node.status === 'merged') return false
+    if (node.title === title) return true
+    const own = (node.steps || []).map((step) => step.title)
+    const shared = stepTitles.filter((stepTitle) => own.indexOf(stepTitle) >= 0)
+    return shared.length >= 2
+  })
+  if (existing) return { existing }
+  return { title, description, steps, tags, projectId }
+}
+
 function observeMemories(state, input) {
   const text = cleanText(
     input && (input.text || (Array.isArray(input.messages) ? input.messages.join('\n') : '')),
@@ -2861,6 +2923,40 @@ function observeMemories(state, input) {
       reason: bestNode ? '只和「' + bestNode.title + '」弱相关（重合 ' + bestScore + ' 个词）' : '没有可挂靠的知识对象',
       suggestion: { title: entry.title, nodeType: entry.type === 'habit' || entry.type === 'convention' ? 'preference' : 'concept', projectId: entry.projectId, memoryIds: [entry.id] }
     })
+  }
+
+  // 文本里有先后步骤时，顺手给一个流程对象候选（不会自动确认）。
+  const observedText = (Array.isArray(input && input.messages) ? input.messages.join('\n') : (input && input.text) || '')
+  const workflow = suggestWorkflowNode(state, observedText, (input && input.projectId) || (result.created[0] || {}).projectId)
+  if (workflow && workflow.existing) {
+    result.workflowCandidate = { skipped: true, nodeId: workflow.existing.id, nodeTitle: workflow.existing.title, reason: '已经有相似的流程对象，没有再建' }
+  } else if (workflow) {
+    const saved = saveKnowledgeNode(
+      state,
+      {
+        title: workflow.title,
+        nodeType: 'workflow',
+        description: workflow.description,
+        steps: workflow.steps,
+        tags: workflow.tags,
+        projectId: workflow.projectId,
+        status: 'candidate',
+        confidence: 0.6,
+        importance: 0.5
+      },
+      { allowDuplicate: true }
+    )
+    if (saved && saved.node) {
+      result.nodeCandidates.push({
+        nodeId: saved.node.id,
+        nodeTitle: saved.node.title,
+        nodeType: 'workflow',
+        kind: 'workflow',
+        stepCount: workflow.steps.length,
+        reason: '文本里有 ' + workflow.steps.length + ' 个先后步骤，建议做成流程对象'
+      })
+      result.workflowCandidate = { nodeId: saved.node.id, nodeTitle: saved.node.title, stepCount: workflow.steps.length }
+    }
   }
   return result
 }

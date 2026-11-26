@@ -2186,4 +2186,40 @@ async function runKnowledgeSuite() {
     ok(!ids.includes(other.id), 'recall must not leak memories that belong to another project')
     ok(ids.includes(shared.id), 'global memories still take part in a scoped recall')
   })
+
+  await test('observe turns a step list into a workflow candidate', async () => {
+    const steps = [
+      '先打开活动配置表，找到「星云勘测」这一行。',
+      '然后把掉落权重从 10 调到 25，保存。',
+      '接着在客户端确认掉落预览。',
+      '最后把截图发到群里并登记版本号。'
+    ].join('\n')
+    const digest = await postOk(
+      { action: 'memory-observe', text: steps, conversationId: 'c-workflow' },
+      'observe workflow'
+    )
+    const candidate = digest.nodeCandidates.find((item) => item.kind === 'workflow')
+    ok(Boolean(candidate), 'a workflow candidate should be proposed')
+    ok(Number(candidate.stepCount) >= 3, 'the candidate should carry the detected steps')
+    const snapshot = await api.get()
+    const node = (snapshot.json.nodes || []).find((item) => item.id === candidate.nodeId)
+    ok(Boolean(node), 'the workflow candidate is stored as a knowledge node')
+    eq(node.nodeType, 'workflow', 'node type')
+    eq(node.status, 'candidate', 'candidate nodes wait for confirmation')
+    ok((node.steps || []).length >= 3, 'steps are stored on the node')
+
+    const again = await postOk(
+      { action: 'memory-observe', text: steps, conversationId: 'c-workflow' },
+      'observe workflow again'
+    )
+    ok(again.workflowCandidate && again.workflowCandidate.skipped === true, 'a similar workflow is not created twice')
+    const after = await api.get()
+    const workflows = (after.json.nodes || []).filter((item) => item.nodeType === 'workflow')
+    eq(workflows.length, 1, 'no duplicate workflow nodes')
+
+    const plan = await postOk({ action: 'memory-tidy' }, 'tidy workflow')
+    const report = plan.report || plan.result
+    const listed = (report.candidateNodes || []).some((item) => item.id === node.id)
+    ok(listed, 'the workflow candidate shows up in the tidy center')
+  })
 }

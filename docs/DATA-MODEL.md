@@ -182,6 +182,10 @@
 
 按项目导出（`export` 带 `projectId`）额外带 `scope: "project"` 与 `projectId`，`projects` 只含该项目，`entries/nodes/relations/collections/frames/layout` 都裁到该项目的范围，`views/proposals/recalls` 为空数组。
 
+## 附：撤销栈（运行时，不落库）
+
+无论数据版本是多少，内存里始终只有最近 5 份「写操作前的整库快照」：`{state, action, at}`。它不写进 `memories.json`，也不参与迁移；重启即清空。撤销时把快照整体换回 state，再走一次正常 `persist`（`prune` 与 `.bak` 照旧），因此撤销本身也是一次可追溯的写盘。
+
 ## 八、版本迁移
 
 | 文件版本 | 变化 | 迁移动作 |

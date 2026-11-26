@@ -384,6 +384,8 @@ window.__ModuleLoader__.load({
 
       'toast.saved': '已保存',
       'toast.deleted': '已删除',
+      'toast.undone': '已撤销上一步',
+      'toast.nothingToUndo': '没有可以撤销的操作了',
       'toast.collectionSaved': '已保存到集合',
       'toast.relationCreated': '已建立关联',
       'toast.relationDeleted': '关联已删除',
@@ -1042,6 +1044,8 @@ window.__ModuleLoader__.load({
 
       'toast.saved': 'Saved',
       'toast.deleted': 'Deleted',
+      'toast.undone': 'Undid the last change',
+      'toast.nothingToUndo': 'Nothing left to undo',
       'toast.collectionSaved': 'Saved to collection',
       'toast.relationCreated': 'Relation created',
       'toast.relationDeleted': 'Relation deleted',
@@ -12328,6 +12332,7 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
       const theme = useThemeMode()
       const [data, setData] = useState({
         status: 'loading',
+        undo: { count: 0, limit: 5, last: null },
         meta: DEFAULT_META,
         entries: [],
         relations: [],
@@ -12388,6 +12393,7 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
           frames: payload.frames || [],
           layout: payload.layout || { positions: {}, updatedAt: '' },
           stats: payload.stats || {},
+          undo: payload.undo || (prev && prev.undo) || { count: 0, limit: 5, last: null },
           storagePath: payload.storagePath || '',
           error: null
         }))
@@ -12790,6 +12796,32 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
         return () => window.removeEventListener('keydown', onKeyDown)
       }, [])
 
+      const doUndo = useCallback(async () => {
+        const info = (data && data.undo) || { count: 0 }
+        if (!info.count) {
+          notify(t('toast.nothingToUndo'), 'ok')
+          return
+        }
+        await mutate({ action: 'undo' }, t('toast.undone'))
+      }, [data, mutate, notify, t])
+
+      // Ctrl/Cmd + Z 撤销上一次写操作；输入框里、弹窗打开时让给浏览器原生撤销。
+      useEffect(() => {
+        const onKeyDown = (event) => {
+          const key = String(event.key || '')
+          if (!(event.ctrlKey || event.metaKey) || event.shiftKey) return
+          if (key !== 'z' && key !== 'Z') return
+          if (modal) return
+          const target = event.target
+          const tag = target && target.tagName ? String(target.tagName).toUpperCase() : ''
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || (target && target.isContentEditable)) return
+          event.preventDefault()
+          doUndo()
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+      }, [doUndo, modal])
+
       const openEntry = useCallback((id) => {
         setSelectedId(id)
         setSelectedNodeId('')
@@ -13053,6 +13085,7 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
       const hardDeleteNode = useCallback(
         async (node) => {
           const result = await mutate({ action: "node-delete", id: node.id, mode: "hard" }, t('kn.deleted'))
+        if (result) notify(t('kn.deleted'), 'ok', { label: t('action.undo'), onClick: () => mutate({ action: 'undo' }, t('toast.undone')) })
           if (result) {
             setSelectedNodeId("")
             setModal(null)
@@ -14416,9 +14449,10 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
                       confirmLabel: t('action.deleteConfirm'),
                       disabled: busy === 'entry-bulk',
                       onConfirm: async () => {
-                        await mutate({ action: 'entry-bulk', ids: modal.ids, op: 'delete' }, t('toast.deleted'))
+                        const result = await mutate({ action: 'entry-bulk', ids: modal.ids, op: 'delete' }, t('toast.deleted'))
                         setModal(null)
                         clearBatch()
+                        if (result) notify(t('toast.deleted'), 'ok', { label: t('action.undo'), onClick: () => mutate({ action: 'undo' }, t('toast.undone')) })
                       }
                     }
                   )

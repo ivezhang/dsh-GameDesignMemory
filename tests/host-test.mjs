@@ -2295,6 +2295,25 @@ async function runKnowledgeSuite() {
     ok(hit && /步骤/.test(hit.reason), 'the reason mentions the overlapping steps')
   })
 
+  await test('undo restores a deleted entry and rolls back the create', async () => {
+    const before = (await getBody()).entries.length
+    const created = await postOk({ action: 'entry-save', title: '撤销测试记忆', content: '这条用来验证撤销能整条恢复。' }, 'undo create')
+    const id = created.entry && created.entry.id
+    ok(id, 'undo: entry created')
+    ok(created.undo && created.undo.count >= 1, 'undo: stack grows after write')
+    await postOk({ action: 'entry-delete', id: id }, 'undo delete')
+    eq((await getBody()).entries.length, before, 'undo: entry deleted')
+    const undone = await postOk({ action: 'undo' }, 'undo once')
+    ok(undone.undone === true, 'undo: response marks undone')
+    const body = await getBody()
+    ok(body.entries.some((entry) => entry.id === id), 'undo: deleted entry comes back')
+    eq(body.undo.count, Math.min(5, created.undo.count + 1) - 1, 'undo: stack shrinks by one')
+    await postOk({ action: 'undo' }, 'undo twice')
+    const after = await getBody()
+    ok(!after.entries.some((entry) => entry.id === id), 'undo: second undo rolls back the create')
+    eq(after.entries.length, before, 'undo: entry count back to where it started')
+  })
+
   await test('import restores exported knowledge nodes', async () => {
     const dump = await postOk({ action: 'export' }, 'export for round trip')
     const beforeIds = (dump.data.nodes || []).map((node) => node.id)

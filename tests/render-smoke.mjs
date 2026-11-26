@@ -473,11 +473,15 @@ function payload() {
     nodes: live.nodes || [],
     layout: live.layout || { positions: {}, updatedAt: '' },
     stats: live.stats,
+    undo: { count: 1, limit: 5, last: { action: 'entry-delete', at: new Date().toISOString() } },
     storagePath: 'C:\\fake\\memories.json'
   })
 }
 
 function applyPost(input) {
+  if (input.action === 'undo') {
+    return { undone: true, action: 'entry-delete' }
+  }
   if (input.action === 'frame-save') {
     live.frames = live.frames || []
     const existing = input.id ? live.frames.find((item) => item.id === input.id) : null
@@ -1789,6 +1793,8 @@ async function searchChecks() {
   await settle(3)
   check(posts.length === before, 'ctrl/cmd+k only focuses the search box')
 
+
+
   const firstRow = byClass('zw-row')[0]
   check(Boolean(firstRow), 'list renders rows for enter-to-open')
   if (input) {
@@ -1858,6 +1864,16 @@ async function interactionChecks() {
     const handlers = (windowListeners[type] || []).slice()
     handlers.forEach((handler) => handler({ key: " ", code: "Space", preventDefault() {} }))
   }
+  escape()
+  await settle(4)
+  const undoBefore = posts.length
+  ;(windowListeners.keydown || []).slice().forEach((handler) => handler({ key: 'z', ctrlKey: true, preventDefault() {}, target: { tagName: 'DIV' } }))
+  await settle(6)
+  check(
+    posts.slice(undoBefore).some((item) => item.action === 'undo'),
+    'ctrl/cmd+z asks the host to undo the last write'
+  )
+
   const navTo = async (label, settlePasses) => {
     const item = byClass("zw-navItem").find((node) => textOf(node).includes(label))
     if (item) {

@@ -5971,6 +5971,48 @@ export function apply(ctx) {
     return task
   }
 
+  // 全局撤销：每次写操作前留一份深拷贝，最多留 5 步。
+  // 刻意不收 layout-save（拖一下节点就一帧）、memory-recall / memory-observe /
+  // search / export（只读或日志类），否则撤销栈会被噪声刷满。
+  const UNDO_LIMIT = 5
+  const undoStack = []
+  const UNDOABLE_ACTIONS = new Set([
+    'entry-save', 'entry-delete', 'entry-status', 'entry-flag', 'entry-bulk',
+    'entry-collections', 'entry-restore', 'entry-protect', 'entry-version-restore',
+    'evidence-add', 'proposal-decide', 'memory-merge',
+    'relation-create', 'relation-update', 'relation-decide', 'relation-delete',
+    'collection-save', 'collection-delete', 'collection-members',
+    'collection-merge', 'collection-split', 'collection-restore',
+    'project-save', 'project-delete', 'project-reorder',
+    'frame-save', 'frame-delete', 'frame-sync',
+    'node-save', 'node-delete', 'node-archive', 'node-restore', 'node-merge',
+    'node-link-memory', 'node-unlink-memory', 'node-version-restore',
+    'import'
+  ])
+
+  function cloneState() {
+    try {
+      return JSON.parse(JSON.stringify(state))
+    } catch (error) {
+      return null
+    }
+  }
+
+  function replaceState(target, next) {
+    if (!next) return
+    for (const key of Object.keys(target)) delete target[key]
+    Object.assign(target, next)
+  }
+
+  function undoInfo() {
+    const last = undoStack.length ? undoStack[undoStack.length - 1] : null
+    return {
+      count: undoStack.length,
+      limit: UNDO_LIMIT,
+      last: last ? { action: last.action, at: last.at } : null
+    }
+  }
+
   const ready = load()
 
   // 当前 DSH 的工具契约要求每个工具声明输出：schema + render（可选 presentationMeta）。
@@ -5985,7 +6027,7 @@ export function apply(ctx) {
   }
 
   function payload() {
-    return { ok: true, ...serializeState(state), stats: stats(), storagePath: storageFile }
+    return { ok: true, ...serializeState(state), stats: stats(), undo: undoInfo(), storagePath: storageFile }
   }
 
   ctx.tools.register({
@@ -6440,8 +6482,23 @@ export function apply(ctx) {
           }
         })
       }
+      // 撤销：把上一份快照整体换回去，再走一次正常存盘（prune 与 .bak 都照旧）。
+      if (action === 'undo') {
+        const snap = undoStack.pop()
+        if (!snap) throw httpError(400, 'nothing-to-undo', '没有可以撤销的操作')
+        const undone = await persist((current) => {
+          replaceState(current, snap.state)
+          return { undone: true, action: snap.action, at: snap.at }
+        })
+        return sendJson(res, 200, { ok: true, ...undone, ...serializeState(state), stats: stats(), undo: undoInfo(), storagePath: storageFile })
+      }
+      const undoSnapshot = UNDOABLE_ACTIONS.has(action) ? cloneState() : null
       const result = await persist((current) => applyAction(current, input))
-      return sendJson(res, 200, { ok: true, ...result, ...serializeState(state), stats: stats(), storagePath: storageFile })
+      if (undoSnapshot) {
+        undoStack.push({ state: undoSnapshot, action: action, at: isoNow() })
+        if (undoStack.length > UNDO_LIMIT) undoStack.splice(0, undoStack.length - UNDO_LIMIT)
+      }
+      return sendJson(res, 200, { ok: true, ...result, ...serializeState(state), stats: stats(), undo: undoInfo(), storagePath: storageFile })
     } catch (error) {
       const status = Number.isInteger(error && error.status)
         ? error.status

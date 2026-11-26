@@ -1560,12 +1560,15 @@ function insideRect(rect, point) {
 
 // 用坐标重算所有带 rect 的框的成员；没有 rect 的老框保留手动成员。
 // 只有「真的保存过布局」时才重算，否则一次空布局会把成员洗掉。
-function rebuildFrameMembers(store) {
+// skipIds 里的框这一轮不动：客户端刚明确提交过成员，坐标重算不该把它算丢。
+function rebuildFrameMembers(store, skipIds) {
+  const skip = skipIds instanceof Set ? skipIds : null
   const centers = nodeCenters(store)
   const saved = Boolean(store.layout && store.layout.updatedAt) && centers.size > 0
   const known = new Set(store.entries.map((entry) => entry.id))
   ;(store.frames || []).forEach((frame) => known.add(frame.id))
   for (const frame of store.frames || []) {
+    if (skip && skip.has(frame.id)) continue
     const members = []
     if (frame.rect && saved) {
       for (const [id, point] of centers) {
@@ -3291,6 +3294,83 @@ function tidyDuplicatePairs(state) {
   return duplicates
 }
 
+// 一键整理：把整理中心里风险最低的两类待办一次做完。
+// 只做两件事——合并「高度重复」的记忆、确认「高置信度」的关系；
+// 受保护的记忆、置信度不够的关系一律不碰，剩下的仍然留给人工判断。
+function tidyApply(state, input) {
+  const dryRun = !input || input.dryRun !== false
+  const mergeScore = 14
+  const relationConfidence = 0.9
+  const merges = []
+  const taken = new Set()
+  const duplicates = tidyDuplicatePairs(state).slice().sort((a, b) => b.score - a.score)
+  for (const pair of duplicates) {
+    if (pair.score < mergeScore) continue
+    const left = findEntry(state, pair.a.id)
+    const right = findEntry(state, pair.b.id)
+    if (!left || !right) continue
+    if (left.status === 'archived' || right.status === 'archived') continue
+    if (left.protectionLevel === 'protected' || right.protectionLevel === 'protected') continue
+    if (taken.has(left.id) || taken.has(right.id)) continue
+    // 留更早创建的那条当主记忆，后来的并进去。
+    const keep = (left.createdAt || '') <= (right.createdAt || '') ? left : right
+    const drop = keep === left ? right : left
+    taken.add(keep.id)
+    taken.add(drop.id)
+    merges.push({
+      targetId: keep.id,
+      targetTitle: keep.title,
+      removedId: drop.id,
+      removedTitle: drop.title,
+      score: pair.score
+    })
+  }
+  const relations = []
+  for (const relation of state.relations) {
+    if (relation.status !== 'suggested') continue
+    if ((relation.confidence || 0) < relationConfidence) continue
+    if ((relation.sourceType || 'memory') !== 'memory' || (relation.targetType || 'memory') !== 'memory') continue
+    const source = findEntry(state, relation.sourceId || relation.sourceMemoryId)
+    const target = findEntry(state, relation.targetId || relation.targetMemoryId)
+    if (!source || !target) continue
+    relations.push({
+      id: relation.id,
+      sourceTitle: source.title,
+      targetTitle: target.title,
+      relationType: relation.relationType,
+      confidence: relation.confidence
+    })
+  }
+  const counts = { merges: merges.length, relations: relations.length }
+  if (dryRun) {
+    return { kind: 'tidy-apply', dryRun: true, merges, relations, counts }
+  }
+  const merged = []
+  for (const item of merges) {
+    try {
+      mergeMemories(state, { ids: [item.targetId, item.removedId], targetId: item.targetId })
+      merged.push(item)
+    } catch (error) {
+      // 单条合并失败不该让整次整理失败，记下来让用户手动处理。
+    }
+  }
+  const confirmed = []
+  for (const item of relations) {
+    const relation = state.relations.find((entry) => entry.id === item.id)
+    if (!relation) continue
+    relation.status = 'confirmed'
+    relation.updatedAt = isoNow()
+    confirmed.push(item)
+  }
+  return {
+    kind: 'tidy-apply',
+    dryRun: false,
+    merges: merged,
+    relations: confirmed,
+    counts: { merges: merged.length, relations: confirmed.length }
+  }
+}
+
 function tidyReport(state) {
   const entries = state.entries.filter((entry) => entry.status !== 'archived')
   const duplicates = tidyDuplicatePairs(state)
@@ -4086,8 +4166,9 @@ function saveFrame(store, input) {
     if (input && input.color !== undefined) existing.color = normalizeCollectionColor(input.color)
     if (input && input.note !== undefined) existing.note = cleanText(input.note, LIMITS.frameNote)
     existing.updatedAt = isoNow()
-    // 框挪了位置 / 改了大小，成员就要按新位置重算：框在哪，里面就属于谁。
-    if (existing.rect) rebuildFrameMembers(store)
+    // 成员以客户端提交的那份为准（画框、拖框、拖节点的当下它最清楚框里有什么）；
+    // 只有没提交成员时才按坐标重算，否则刚框住的东西会被一次重算洗掉。
+    if (existing.rect && !memberIds) rebuildFrameMembers(store)
     return { frame: existing, created: false }
   }
   if (store.frames.length >= LIMITS.frames) throw httpError(400, 'too-many-frames', '记忆框数量达到上限 ' + LIMITS.frames)
@@ -4103,6 +4184,7 @@ function saveFrame(store, input) {
     updatedAt: isoNow()
   }
   store.frames.push(frame)
+  if (frame.rect && !memberIds) rebuildFrameMembers(store)
   return { frame, created: true }
 }
 
@@ -4128,6 +4210,8 @@ function syncFrames(store, input) {
   const incoming = Array.isArray(input && input.frames) ? input.frames : []
   const nodeIds = new Set(store.entries.map((entry) => entry.id))
   store.frames.forEach((frame) => nodeIds.add(frame.id))
+  // 这次明确提交过成员的框，跳过坐标重算，免得把客户端刚算好的成员洗掉。
+  const pinned = new Set()
   let updated = 0
   for (const patch of incoming) {
     const frame = store.frames.find((item) => item.id === cleanLine(patch && patch.id, 64))
@@ -4144,13 +4228,13 @@ function syncFrames(store, input) {
         if (members.length >= LIMITS.frameMembers) break
       }
       frame.memberIds = members
+      pinned.add(frame.id)
     }
     frame.updatedAt = isoNow()
     updated += 1
   }
-  // 有 rect 的记忆区，成员永远由「框内的位置」决定，所以同步完顺手重算一遍，
-  // 免得显式成员列表和画布上的框对不上。
-  rebuildFrameMembers(store)
+  // 没在这次同步里出现的框，仍旧按「框内坐标」重算，保持老行为。
+  rebuildFrameMembers(store, pinned)
   return { frames: store.frames, updated }
 }
 
@@ -5376,6 +5460,7 @@ function writeParameters() {
           'memory-observe',
           'memory-recall',
           'memory-tidy',
+          'tidy-apply',
           'collection-restore',
           'relation-create',
           'relation-update',
@@ -5405,7 +5490,7 @@ function writeParameters() {
           'import'
         ],
         description:
-          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间；project-merge 把 sourceIds 里的几个项目并进 targetId（记忆、知识对象、记忆区、视图一起迁走）；project-reorder 调整项目顺序（传 ids 数组）；frame-save / frame-delete 管理关系图上的记忆框（框住一组记忆，方便阅读）；layout-save 保存关系图的手动布局（positions: {记忆id: {x, y}}）；layout-clear 清空手动布局；import 导入外部 JSON（mode: merge / replace）；node-save 新建或更新知识对象（nodeType: project/system/subsystem/concept/workflow/preference/principle/method）；node-delete 归档或删除知识对象（mode: hard 才真删）；node-archive / node-restore；node-merge 合并重复对象（targetId 保留、sourceId 并入）；node-link-memory / node-unlink-memory 关联或解除关联记忆。'
+          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；tidy-apply 一键整理（合并高度重复的记忆、确认高置信关系，dryRun 默认 true 只预览）；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间；project-merge 把 sourceIds 里的几个项目并进 targetId（记忆、知识对象、记忆区、视图一起迁走）；project-reorder 调整项目顺序（传 ids 数组）；frame-save / frame-delete 管理关系图上的记忆框（框住一组记忆，方便阅读）；layout-save 保存关系图的手动布局（positions: {记忆id: {x, y}}）；layout-clear 清空手动布局；import 导入外部 JSON（mode: merge / replace）；node-save 新建或更新知识对象（nodeType: project/system/subsystem/concept/workflow/preference/principle/method）；node-delete 归档或删除知识对象（mode: hard 才真删）；node-archive / node-restore；node-merge 合并重复对象（targetId 保留、sourceId 并入）；node-link-memory / node-unlink-memory 关联或解除关联记忆。'
       },
       id: { type: 'string', description: '记忆 / 集合 / 关联 / 项目的 id（更新时必填）' },
       title: { type: 'string', description: '记忆标题，一句话说清是什么' },
@@ -5612,6 +5697,8 @@ function applyAction(state, input) {
       const logged = recordRecall(state, input, ranked)
       return Object.assign({}, ranked, { logged: logged.recall ? logged.recall.id : '', updated: logged.updated })
     }
+    case 'tidy-apply':
+      return tidyApply(state, input)
     case 'memory-tidy':
       return tidyReport(state)
     case 'node-save':
@@ -6094,7 +6181,7 @@ export function apply(ctx) {
     'evidence-add', 'proposal-decide', 'memory-merge',
     'relation-create', 'relation-update', 'relation-decide', 'relation-delete',
     'collection-save', 'collection-delete', 'collection-members',
-    'collection-merge', 'collection-split', 'collection-restore',
+    'collection-merge', 'collection-split', 'collection-restore', 'tidy-apply',
     'project-save', 'project-delete', 'project-merge', 'project-reorder',
     'frame-save', 'frame-delete', 'frame-sync',
     'node-save', 'node-delete', 'node-archive', 'node-restore', 'node-merge',

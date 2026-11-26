@@ -127,6 +127,7 @@ window.__ModuleLoader__.load({
 
       'action.new': '新建记忆',
       'action.save': '保存',
+      'action.run': '开始整理',
       'action.cancel': '取消',
       'nav.pickProjects': '批量选择项目',
       'nav.pickedCount': '已选 {count} 个',
@@ -726,6 +727,11 @@ window.__ModuleLoader__.load({
       'tidy.merge': '合并',
       'tidy.protectedCount': '固有约定',
       'tidy.openEntry': '查看',
+      'tidy.auto': 'AI 一键整理',
+      'tidy.autoHint': '自动合并高度重复的记忆、确认把握很大的关系；受保护的记忆不会动，做完还能撤销。',
+      'tidy.autoPreview': '将合并 {merges} 条重复记忆，确认 {relations} 条关系。',
+      'tidy.autoNothing': '目前没有可以自动处理的项，剩下的建议需要你自己判断。',
+      'tidy.autoDone': '整理完成：合并 {merges} 条重复记忆，确认 {relations} 条关系。',
       'recall.title': '调用记录',
       'recall.sub': 'AI 在新对话里真实取用过哪些记忆',
       'recall.empty': '还没有调用记录，下次对话里需要时会自动留下痕迹',
@@ -793,6 +799,7 @@ window.__ModuleLoader__.load({
 
       'action.new': 'New memory',
       'action.save': 'Save',
+      'action.run': 'Tidy now',
       'action.cancel': 'Cancel',
       'nav.pickProjects': 'Select projects',
       'nav.pickedCount': '{count} selected',
@@ -1392,6 +1399,11 @@ window.__ModuleLoader__.load({
       'tidy.merge': 'Merge',
       'tidy.protectedCount': 'Protected',
       'tidy.openEntry': 'Open',
+      'tidy.auto': 'One-click tidy',
+      'tidy.autoHint': 'Merges near-identical memories and confirms high-confidence relations. Protected memories are left alone, and you can undo.',
+      'tidy.autoPreview': 'This merges {merges} duplicate memories and confirms {relations} relations.',
+      'tidy.autoNothing': 'Nothing can be tidied automatically — the remaining items need your call.',
+      'tidy.autoDone': 'Tidied: merged {merges} duplicates and confirmed {relations} relations.',
       'recall.title': 'Recall log',
       'recall.sub': 'What the AI actually retrieved in past conversations',
       'recall.empty': 'No recalls yet — traces appear when memories are needed in a conversation',
@@ -3155,6 +3167,9 @@ window.__ModuleLoader__.load({
 .zw-stepHandle:active { cursor: grabbing; }
 .zw-stepRowDrag { opacity: .55; }
 .zw-stepRowOver { outline: 1px dashed var(--zw-accent); outline-offset: 2px; }
+.zw-autoTidy { display: flex; flex-direction: column; gap: 8px; }
+.zw-autoTidyLead { margin: 0; font-size: 13px; color: var(--zw-text); line-height: 1.6; }
+.zw-autoTidyHint { margin: 0; font-size: 12px; color: var(--zw-muted); line-height: 1.6; }
 `
 
     const ICONS = {
@@ -8561,6 +8576,8 @@ function CollectionPicker(props) {
       const dragRef = useRef(null)
       // 被用户手动拖过的记忆框不再自动跟随成员位置。
       const pinnedFrames = useRef(new Set())
+      // 容器量到真实尺寸之后再自动适应一次：首帧用的是兜底尺寸，图会画到可视区外面。
+      const fitPending = useRef(true)
       const seed = props.initialConfig || {}
       const [size, setSize] = useState({ width: 900, height: 560 })
       const [view, setView] = useState({ x: 0, y: 0, k: 1 })
@@ -8580,6 +8597,7 @@ function CollectionPicker(props) {
       const [boxDraft, setBoxDraft] = useState(null)
       const [activeFrame, setActiveFrame] = useState('')
       const [frameDraftRect, setFrameDraftRect] = useState(null)
+      const frameDraftRef = useRef(null)
       const autoSaveRef = useRef(null)
       const [hoverEdge, setHoverEdge] = useState('')
       const [flash, setFlash] = useState('')
@@ -8593,6 +8611,7 @@ function CollectionPicker(props) {
         if (!node) return undefined
         const measure = () => {
           const rect = node.getBoundingClientRect()
+          fitPending.current = true
           setSize({ width: Math.max(320, Math.round(rect.width)), height: Math.max(320, Math.round(rect.height)) })
         }
         measure()
@@ -8601,6 +8620,15 @@ function CollectionPicker(props) {
           if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('resize', measure)
         }
       }, [])
+
+      // 第一次量到真实尺寸、或容器尺寸变了，就重新适应窗口。
+      useEffect(() => {
+        if (!fitPending.current) return
+        fitPending.current = false
+        fitToWindow()
+        setTick((value) => value + 1)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [size.width, size.height])
 
       useEffect(() => {
         if (!flash) return undefined
@@ -8731,6 +8759,8 @@ function CollectionPicker(props) {
         // 这样「这一组东西」就能作为整体参与项目结构。
         const frameNodes = (props.frames || [])
           .map((frame) => {
+            // 有 rect 的框在画布上就是那个大框，不再多画一颗胶囊；老框（无 rect）才用胶囊。
+            if (frame.rect) return null
             const members = frame.memberIds.filter((id) => visibleIds.has(id))
             if (!members.length) return null
             return {
@@ -8875,8 +8905,14 @@ function CollectionPicker(props) {
             seeded.set(node.id, { x: Number(point.x), y: Number(point.y) })
           }
         })
-        positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, seeded, 300)
+        // 有手动布局就原样沿用：重进关系图不该把摆好的位置再揉一遍，
+        // 否则记忆框里的节点会被重新布局挪到框外，看起来像「框散了、东西没了」。
+        const missing = model.nodes.some((node) => !seeded.has(node.id))
+        positionsRef.current = missing
+          ? layoutGraph(model.nodes, model.edges, clusterAnchors, seeded, 300)
+          : seeded
         placeFrameNodes()
+        fitPending.current = true
         fitToWindow()
         setTick((value) => value + 1)
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -8884,7 +8920,10 @@ function CollectionPicker(props) {
 
       useEffect(() => {
         if (!positionsRef.current.size) return
-        positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, positionsRef.current, 80)
+        // 加一条线就把整张图揉一遍会让框里的位置漂掉，只在有节点还没落座时才补算。
+        if (model.nodes.some((node) => !positionsRef.current.has(node.id))) {
+          positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, positionsRef.current, 80)
+        }
         placeFrameNodes()
         setTick((value) => value + 1)
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -8894,11 +8933,6 @@ function CollectionPicker(props) {
       const placeFrameNodes = () => {
         model.nodes.forEach((node) => {
           if (!node.frameNode || pinnedFrames.current.has(node.id)) return
-          const rect = node.frame && node.frame.rect
-          if (rect) {
-            positionsRef.current.set(node.id, { x: rect.x + 34, y: rect.y - 16 })
-            return
-          }
           if (!node.memberIds.length) return
           let sumX = 0
           let sumY = 0
@@ -8919,8 +8953,13 @@ function CollectionPicker(props) {
 
       const fitToWindow = () => {
         const nodes = model.nodes
+        // 直接量容器：state 里的尺寸可能是首帧兜底值，用它算会让图落到可视区外。
+        const wrap = wrapRef.current
+        const box = wrap && wrap.getBoundingClientRect ? wrap.getBoundingClientRect() : null
+        const viewW = box && box.width ? Math.round(box.width) : size.width
+        const viewH = box && box.height ? Math.round(box.height) : size.height
         if (!nodes.length) {
-          viewRef.current = { x: size.width / 2, y: size.height / 2, k: 1 }
+          viewRef.current = { x: viewW / 2, y: viewH / 2, k: 1 }
           setView(viewRef.current)
           return
         }
@@ -8937,10 +8976,10 @@ function CollectionPicker(props) {
         })
         const width = Math.max(120, maxX - minX)
         const height = Math.max(120, maxY - minY)
-        const scale = clamp(Math.min((size.width - 60) / width, (size.height - 60) / height), 0.2, 1.6)
+        const scale = clamp(Math.min((viewW - 60) / width, (viewH - 60) / height), 0.2, 1.6)
         const next = {
-          x: size.width / 2 - ((minX + maxX) / 2) * scale,
-          y: size.height / 2 - ((minY + maxY) / 2) * scale,
+          x: viewW / 2 - ((minX + maxX) / 2) * scale,
+          y: viewH / 2 - ((minY + maxY) / 2) * scale,
           k: scale
         }
         viewRef.current = next
@@ -9045,6 +9084,23 @@ function CollectionPicker(props) {
         if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
       }
 
+      // 划线工具从框上起手：记忆区本身也可以作为关系的一端。
+      const startFrameLink = (event, frame) => {
+        if (event.button !== 0) return
+        if (event.stopPropagation) event.stopPropagation()
+        const point = localPoint(event)
+        dragRef.current = {
+          kind: 'link',
+          pointerId: event.pointerId,
+          fromId: frame.id,
+          fromCluster: '',
+          start: point,
+          moved: false
+        }
+        setLinkDraft({ from: point, to: point, cluster: false })
+        if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
+      }
+
       // 记住一块已有记忆区：拖动 = 整体平移，四角小方块 = 缩放。
       const startFrameDrag = (event, frame, handle) => {
         if (event.button !== 0) return
@@ -9052,6 +9108,13 @@ function CollectionPicker(props) {
         const rect = frameRectOf(frame) || { x: 0, y: 0, w: 120, h: 90 }
         const point = localPoint(event)
         const graphPoint = toGraph(point.x, point.y)
+        // 框里的成员跟着框一起走：这才是「记忆区是一个整体」。
+        const members = frame.rect ? frameRectMembers(frame) : []
+        const memberStart = new Map()
+        members.forEach((id) => {
+          const center = positionOf(id)
+          memberStart.set(id, { x: center.x, y: center.y })
+        })
         dragRef.current = {
           kind: 'frame',
           pointerId: event.pointerId,
@@ -9060,6 +9123,8 @@ function CollectionPicker(props) {
           handle: handle || '',
           rect: rect,
           start: graphPoint,
+          members: members,
+          memberStart: memberStart,
           moved: false
         }
         setActiveFrame(frame.id)
@@ -9114,6 +9179,12 @@ function CollectionPicker(props) {
               w: drag.rect.w,
               h: drag.rect.h
             }
+            if (drag.memberStart && drag.memberStart.size) {
+              drag.memberStart.forEach((origin, id) => {
+                positionsRef.current.set(id, { x: origin.x + dx, y: origin.y + dy })
+              })
+              setTick((value) => value + 1)
+            }
           } else {
             let left = drag.rect.x
             let top = drag.rect.y
@@ -9130,7 +9201,8 @@ function CollectionPicker(props) {
               h: Math.round(bottom - top)
             }
           }
-          setFrameDraftRect({ id: drag.id, rect: next })
+          frameDraftRef.current = { id: drag.id, rect: next }
+          setFrameDraftRect(frameDraftRef.current)
         }
       }
 
@@ -9238,16 +9310,32 @@ function CollectionPicker(props) {
           return
         }
         if (drag.kind === 'frame') {
-          const draft = frameDraftRect
+          const draft = frameDraftRef.current || frameDraftRect
+          frameDraftRef.current = null
           setFrameDraftRect(null)
           if (!drag.moved) return
           const nextRect = draft && draft.id === drag.id ? draft.rect : drag.rect
           // 框搬过家之后，把门牌重新贴到框上。
           pinnedFrames.current.delete(drag.id)
-          if (props.onUpdateFrame) props.onUpdateFrame(drag.frame, nextRect)
+          // 成员交给客户端算：它手里有最新的坐标，服务端不必再猜一遍。
+          const inside = model.nodes
+            .filter((node) => node.id !== drag.id)
+            .filter((node) => {
+              const center = positionOf(node.id)
+              return (
+                center.x >= nextRect.x &&
+                center.x <= nextRect.x + nextRect.w &&
+                center.y >= nextRect.y &&
+                center.y <= nextRect.y + nextRect.h
+              )
+            })
+            .map((node) => node.id)
+          if (props.onUpdateFrame) props.onUpdateFrame(drag.frame, nextRect, inside)
           else if (props.onSaveFrame) {
-            props.onSaveFrame({ id: drag.id, name: drag.frame.name, rect: nextRect })
+            props.onSaveFrame({ id: drag.id, name: drag.frame.name, rect: nextRect, memberIds: inside })
           }
+          // 成员被搬动了，坐标要一起落库，否则下次进来又对不上。
+          if (drag.memberStart && drag.memberStart.size) scheduleAutoSave()
           return
         }
         if (drag.kind === 'pan') {
@@ -9384,6 +9472,11 @@ function CollectionPicker(props) {
         const visibleSet = new Set(model.nodes.map((node) => node.id))
         const box = frameRectOf(frame)
         if (!box) return frame.memberIds.filter((id) => visibleSet.has(id))
+        // 没在拖这个框的时候，以落库的成员为准：重进关系图、重新算布局都不会把成员算丢。
+        const dragging = Boolean(frameDraftRect && frameDraftRect.id === frame.id)
+        if (!dragging && frame.memberIds && frame.memberIds.length) {
+          return frame.memberIds.filter((id) => visibleSet.has(id))
+        }
         return model.nodes
           .filter((node) => node.id !== frame.id)
           .filter((node) => {
@@ -9451,7 +9544,8 @@ function CollectionPicker(props) {
                 width: rect.w,
                 height: rect.h,
                 rx: 16,
-                onPointerDown: (event) => startFrameDrag(event, frame, ''),
+                onPointerDown: (event) =>
+                  tool === 'link' ? startFrameLink(event, frame) : startFrameDrag(event, frame, ''),
                 onDoubleClick: () => {
                   if (props.onRenameFrame) props.onRenameFrame(frame)
                 }
@@ -10551,6 +10645,18 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
           h('span', { className: 'zw-tidyStat', title: t('tidy.pendingHint') }, t('tidy.pending') + ' ' + (report.pendingMemories || 0)),
           h('span', { className: 'zw-tidyStat', title: t('tidy.reviewHint') }, t('tidy.review') + ' ' + (report.reviewMemories || 0)),
           h('span', { className: 'zw-tidyStat' }, t('tidy.protectedCount') + ' ' + (report.protectedCount || 0)),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-btn zw-btnSm zw-btnPrimary',
+              title: t('tidy.autoHint'),
+              disabled: props.busy,
+              onClick: props.onAutoTidy
+            },
+            h(Icon, { name: 'sparkles', size: 12 }),
+            t('tidy.auto')
+          ),
           h(
             'button',
             {
@@ -12729,6 +12835,44 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
         }
       }, [notify, t])
 
+      // AI 一键整理：先预览（dryRun）让用户看清会改什么，确认后才真正落库。
+      const previewAutoTidy = useCallback(async () => {
+        if (busy) return
+        setBusy('tidy-apply')
+        try {
+          const result = await mutateState({ action: 'tidy-apply', dryRun: true })
+          const counts = (result && result.counts) || { merges: 0, relations: 0 }
+          if (!counts.merges && !counts.relations) {
+            notify(t('tidy.autoNothing'), 'ok')
+            return
+          }
+          setModal({
+            type: 'autoTidy',
+            plan: {
+              counts: counts,
+              merges: (result && result.merges) || [],
+              relations: (result && result.relations) || []
+            }
+          })
+        } catch (err) {
+          notify(isOfflineError(err) ? t('error.offline') : errorText(err, t('error.write')), 'error')
+        } finally {
+          setBusy('')
+        }
+      }, [busy, mutateState, notify, t])
+
+      const applyAutoTidy = useCallback(
+        async (plan) => {
+          const counts = (plan && plan.counts) || { merges: 0, relations: 0 }
+          setModal(null)
+          const result = await mutate({ action: 'tidy-apply', dryRun: false }, '')
+          if (!result) return
+          notify(t('tidy.autoDone', counts), 'ok')
+          loadTidy(true)
+        },
+        [loadTidy, mutate, notify, t]
+      )
+
       useEffect(() => {
         if (nav.kind === 'tidy' && !tidyReport && !tidyBusy) loadTidy(true)
       }, [nav.kind, tidyReport, tidyBusy, loadTidy])
@@ -13982,6 +14126,7 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
             report: tidyReport,
             busy: tidyBusy,
             onRefresh: loadTidy,
+            onAutoTidy: previewAutoTidy,
             onOpen: openEntry,
             onDecideProposal: decideProposal,
             onConfirmRelation: (id) => decideRelation(id, 'confirmed'),
@@ -14071,7 +14216,8 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
               setSelectedId('')
             },
             onRenameFrame: (frame) => setModal({ type: 'frameName', frame: frame }),
-            onUpdateFrame: (frame, rect) => saveFrame({ id: frame.id, name: frame.name, rect: rect }),
+            onUpdateFrame: (frame, rect, memberIds) =>
+              saveFrame({ id: frame.id, name: frame.name, rect: rect, memberIds: memberIds }),
             onSearchArea: (frame) => {
               setSelectedId('')
               setGraphSelection([])
@@ -14811,6 +14957,44 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
               },
               onClose: () => setModal(null)
             })
+          : null,
+        modal && modal.type === 'autoTidy'
+          ? h(Modal, {
+              title: t('tidy.auto'),
+              icon: 'sparkles',
+              onClose: () => setModal(null),
+              footer: h(
+                'div',
+                { className: 'zw-modalFoot' },
+                h(
+                  'button',
+                  { type: 'button', className: 'zw-btn zw-btnGhost', onClick: () => setModal(null) },
+                  t('action.cancel')
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnPrimary',
+                    onClick: () => applyAutoTidy(modal.plan)
+                  },
+                  t('action.run')
+                )
+              )
+            },
+              h(
+                'div',
+                { className: 'zw-autoTidy' },
+                h(
+                  'p',
+                  { className: 'zw-autoTidyLead' },
+                  t('tidy.autoPreview', {
+                    merges: (modal.plan && modal.plan.counts.merges) || 0,
+                    relations: (modal.plan && modal.plan.counts.relations) || 0
+                  })
+                ),
+                h('p', { className: 'zw-autoTidyHint' }, t('tidy.autoHint'))
+              ))
           : null,
         modal && modal.type === 'frameName'
           ? h(NameDialog, {

@@ -495,6 +495,18 @@ function applyPost(input) {
   if (input.action === 'undo') {
     return { undone: true, action: 'entry-delete' }
   }
+  if (input.action === 'tidy-apply') {
+    if (input.dryRun !== false) {
+      return {
+        kind: 'tidy-apply',
+        dryRun: true,
+        merges: [{ targetId: 'mem_a', targetTitle: '星云勘测：掉落权重', removedId: 'mem_b', removedTitle: '星云勘测：掉落权重调整', score: 18 }],
+        relations: [{ id: 'rel_a', sourceTitle: 'A', targetTitle: 'B', relationType: 'references', confidence: 0.95 }],
+        counts: { merges: 1, relations: 1 }
+      }
+    }
+    return { kind: 'tidy-apply', dryRun: false, merges: [], relations: [], counts: { merges: 1, relations: 1 } }
+  }
   if (input.action === 'frame-save') {
     live.frames = live.frames || []
     const existing = input.id ? live.frames.find((item) => item.id === input.id) : null
@@ -1403,6 +1415,28 @@ if (confirmAll) {
   check(confirmed.length >= 2, 'batch confirm activates every candidate object')
 }
 
+const autoTidy = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['tidy.auto'])[0]
+check(Boolean(autoTidy), 'tidy center offers the AI one-click tidy button')
+if (autoTidy) {
+  const before = posts.length
+  click(autoTidy)
+  await settle(10)
+  const preview = posts.slice(before).filter((post) => post.action === 'tidy-apply')
+  check(preview.length === 1 && preview[0].dryRun === true, 'one-click tidy previews before writing')
+  const dialog = byClass('zw-modal')[0]
+  check(Boolean(dialog) && byClass('zw-autoTidyLead').length === 1, 'the preview dialog explains what will happen')
+  const runBtn = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.run'])[0]
+  check(Boolean(runBtn), 'the preview dialog can start the tidy')
+  if (runBtn) {
+    const mark = posts.length
+    click(runBtn)
+    await settle(10)
+    const applied = posts.slice(mark).filter((post) => post.action === 'tidy-apply')
+    check(applied.length === 1 && applied[0].dryRun === false, 'confirming runs the tidy for real')
+    check(byClass('zw-modal').length === 0, 'the dialog closes after tidying')
+  }
+}
+
 // recall log
 const recallNav = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.recall']))
 check(Boolean(recallNav), 'nav item for the recall log')
@@ -1633,16 +1667,16 @@ async function workspaceChecks() {
     }
     check(byClass('zw-graphCount').length === 1, 'node counter rendered once')
 
-    // 记忆框本身作为可连线节点出现
-    const frameNodes = byClass('zw-gframeNode')
-    check(frameNodes.length >= 1, 'frame is drawn as its own node')
-    const frameNode = frameNodes[0]
-    check(Boolean(frameNode) && textOf(frameNode).includes('战斗记忆框'), 'frame node carries the frame name')
+    // 有 rect 的框就是画布上那个大框：不再额外画一颗胶囊节点，框本身才是容器。
+    check(byClass('zw-frameBox').length >= 1, 'frame is drawn as an area box')
+    check(byClass('zw-gframeNode').length === 0, 'area frames no longer draw a separate chip node')
+    const frameNode = byClass('zw-frameHit')[0]
+    check(Boolean(frameNode), 'frame area has a grab layer')
 
     // 点框 = 选中它的成员（批量条出现），双击 = 改名
     if (frameNode) {
       const frameSvg = byClass('zw-graphSvg')[0]
-      const frameAt = screen(nodePoint(frameNode))
+      const frameAt = { clientX: 430, clientY: 300 }
       pointer(frameNode, 'onPointerDown', frameAt, { pointerId: 21 })
       if (frameSvg) pointer(frameSvg, 'onPointerUp', frameAt, { pointerId: 21 })
       await settle(8)
@@ -1671,6 +1705,34 @@ async function workspaceChecks() {
       }
     }
 
+    // 拖框：框和里面的记忆一起走，而不是拖一个空壳
+    if (frameNode) {
+      const beforeFrame = posts.filter((post) => post.action === 'frame-save').length
+      const beforeLayout = posts.filter((post) => post.action === 'layout-save').length
+      const dragSvg = byClass('zw-graphSvg')[0]
+      const grabAt = { clientX: 430, clientY: 300 }
+      pointer(frameNode, 'onPointerDown', grabAt, { pointerId: 41 })
+      if (dragSvg) {
+        pointer(dragSvg, 'onPointerMove', { clientX: 512, clientY: 382 }, { pointerId: 41 })
+        pointer(dragSvg, 'onPointerUp', { clientX: 512, clientY: 382 }, { pointerId: 41 })
+      }
+      await new Promise((resolve) => setTimeout(resolve, 900))
+      await settle(6)
+      const frameSaves = posts.filter((post) => post.action === 'frame-save').slice(beforeFrame)
+      check(frameSaves.length >= 1, 'dragging a frame saves the frame')
+      const saved = frameSaves[frameSaves.length - 1]
+      check(
+        Boolean(saved) && Array.isArray(saved.memberIds) && saved.memberIds.length >= 1,
+        'the saved frame carries the members that are inside it'
+      )
+      check(
+        Boolean(saved) && Boolean(saved.rect) && saved.rect.x !== -210,
+        'the frame rect moves with the drag'
+      )
+      const layoutSaves = posts.filter((post) => post.action === 'layout-save').slice(beforeLayout)
+      check(layoutSaves.length >= 1, 'moving a frame also persists the member positions')
+    }
+
     // 划线工具：从框拖到一条记忆，建立关系
     const linkBtn = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolLink']))
     check(Boolean(linkBtn), 'link tool button available')
@@ -1678,10 +1740,10 @@ async function workspaceChecks() {
       click(linkBtn)
       await settle(8)
       const freshSvg = byClass('zw-graphSvg')[0]
-      const chip = byClass('zw-gframeNode')[0]
+      const chip = byClass('zw-frameHit')[0]
       const targetNode = byClass('zw-gnode')[0]
       if (freshSvg && chip && targetNode) {
-        const fromAt = screen(nodePoint(chip))
+        const fromAt = { clientX: 430, clientY: 300 }
         const toAt = screen(nodePoint(targetNode))
         pointer(chip, 'onPointerDown', fromAt, { pointerId: 33 })
         pointer(freshSvg, 'onPointerMove', toAt, { pointerId: 33 })

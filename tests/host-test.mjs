@@ -2336,6 +2336,64 @@ async function runKnowledgeSuite() {
     ok(hit && /步骤/.test(hit.reason), 'the reason mentions the overlapping steps')
   })
 
+  await test('tidy-apply merges near-identical memories and leaves protected ones alone', async () => {
+    const tags = ['星云勘测', '掉落', '数值', '活动']
+    const a = await postOk(
+      {
+        action: 'entry-save',
+        title: '星云勘测：掉落权重调整规则',
+        type: 'reference',
+        tags: tags,
+        domains: ['level'],
+        content: '星云勘测 活动 掉落 权重 从 10 调到 25，记得同步客户端预览。'
+      },
+      'tidy apply a'
+    )
+    const b = await postOk(
+      {
+        action: 'entry-save',
+        title: '星云勘测：掉落权重调整',
+        type: 'reference',
+        tags: tags,
+        domains: ['level'],
+        content: '星云勘测 活动 掉落 权重 调到 25 之后要同步客户端预览。'
+      },
+      'tidy apply b'
+    )
+    const guarded = await postOk(
+      {
+        action: 'entry-save',
+        title: '星云勘测：掉落权重调整底线',
+        type: 'reference',
+        tags: tags,
+        domains: ['level'],
+        content: '星云勘测 活动 掉落 权重 任何时候不许低于 5，这是硬底线。'
+      },
+      'tidy apply guarded'
+    )
+    await postOk({ action: 'entry-protect', id: guarded.entry.id, level: 'protected' }, 'protect guarded entry')
+    const ids = [a.entry.id, b.entry.id]
+    const preview = await postOk({ action: 'tidy-apply', dryRun: true }, 'tidy apply preview')
+    ok(preview.dryRun === true, 'tidy-apply previews by default')
+    const planned = (preview.merges || []).filter((item) => ids.includes(item.targetId) || ids.includes(item.removedId))
+    ok(planned.length >= 1, 'tidy-apply plans to merge the near-identical pair')
+    ok(
+      !(preview.merges || []).some((item) => item.targetId === guarded.entry.id || item.removedId === guarded.entry.id),
+      'tidy-apply never plans to touch a protected memory'
+    )
+    const still = await getBody()
+    ok(
+      still.entries.some((entry) => entry.id === ids[0]) && still.entries.some((entry) => entry.id === ids[1]),
+      'preview does not change anything'
+    )
+    const applied = await postOk({ action: 'tidy-apply', dryRun: false }, 'tidy apply run')
+    ok((applied.counts || {}).merges >= 1, 'tidy-apply reports the merged count')
+    const after = await getBody()
+    const survivors = ids.filter((id) => after.entries.some((entry) => entry.id === id))
+    ok(survivors.length === 1, 'exactly one of the duplicate pair survives')
+    ok(after.entries.some((entry) => entry.id === guarded.entry.id), 'the protected memory is still there')
+  })
+
   await test('undo restores a deleted entry and rolls back the create', async () => {
     const before = (await getBody()).entries.length
     const created = await postOk({ action: 'entry-save', title: '撤销测试记忆', content: '这条用来验证撤销能整条恢复。' }, 'undo create')

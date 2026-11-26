@@ -626,7 +626,8 @@ window.__ModuleLoader__.load({
       'kn.typeChangeTitle': '修改类型会影响已有关系',
       'kn.typeChangeText': '改成新类型后，下面这些关系可能不再符合语义。确认的话会保留关系，但需要你之后检查一遍。',
       'kn.typeChangeConfirm': '仍然修改',
-      'kn.stepUp': '上移',
+      'kn.stepDrag': '拖动这里可以调整步骤顺序',
+'kn.stepUp': '上移',
       'kn.stepDown': '下移',
       'kn.correct': '纠正 AI 的理解',
       'kn.correctHint': 'AI 对你的判断可能不准：你可以缩小范围、标记不再适用，或说明这只是一次性要求。',
@@ -1282,6 +1283,7 @@ window.__ModuleLoader__.load({
       'kn.typeChangeText': 'These relations may no longer make sense with the new type. If you continue, they are kept and you should review them later.',
       'kn.typeChangeConfirm': 'Change anyway',
       'kn.stepUp': 'Move up',
+      'kn.stepDrag': 'Drag here to reorder steps',
       'kn.stepDown': 'Move down',
       'kn.correct': 'Correct what the AI thinks',
       'kn.correctHint': 'The AI may be wrong about you: narrow the scope, mark it as no longer applicable, or say it was a one-off request.',
@@ -3076,6 +3078,11 @@ window.__ModuleLoader__.load({
           gap: 6px;
           padding: 0 2px 6px;
         }
+.zw-stepHandle { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 20px; border-radius: 5px; color: var(--zw-text-3); cursor: grab; }
+.zw-stepHandle:hover { color: var(--zw-text); background: var(--zw-bg-soft); }
+.zw-stepHandle:active { cursor: grabbing; }
+.zw-stepRowDrag { opacity: .55; }
+.zw-stepRowOver { outline: 1px dashed var(--zw-accent); outline-offset: 2px; }
 `
 
     const ICONS = {
@@ -11319,11 +11326,24 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
       const valueRef = useRef(form)
       valueRef.current = form
       const patch = (next) => setForm(Object.assign({}, valueRef.current, next))
+      const [dragStep, setDragStep] = useState(-1)
+      const [dragOverStep, setDragOverStep] = useState(-1)
       const moveStep = (index, delta) => {
         const list = (form.steps || []).slice()
         const to = index + delta
         if (to < 0 || to >= list.length) return
         const picked = list.splice(index, 1)[0]
+        list.splice(to, 0, picked)
+        patch({ steps: list })
+      }
+      const dropStep = (to) => {
+        const from = dragStep
+        setDragStep(-1)
+        setDragOverStep(-1)
+        if (from < 0 || to < 0 || from === to) return
+        const list = (valueRef.current.steps || []).slice()
+        if (from >= list.length || to >= list.length) return
+        const picked = list.splice(from, 1)[0]
         list.splice(to, 0, picked)
         patch({ steps: list })
       }
@@ -11454,9 +11474,38 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
                   (form.steps || []).map((step, index) =>
                     h(
                       'div',
-                      { key: 'step-' + index, className: 'zw-factRow zw-stepEditRow' },
+                      {
+                        key: 'step-' + index,
+                        className: 'zw-factRow zw-stepEditRow' +
+                          (dragOverStep === index ? ' zw-stepRowOver' : '') +
+                          (dragStep === index ? ' zw-stepRowDrag' : ''),
+                        onDragOver: (event) => {
+                          if (dragStep < 0) return
+                          if (event && typeof event.preventDefault === 'function') event.preventDefault()
+                          if (dragOverStep !== index) setDragOverStep(index)
+                        },
+                        onDrop: (event) => {
+                          if (event && typeof event.preventDefault === 'function') event.preventDefault()
+                          dropStep(index)
+                        }
+                      },
                       h(
                         'div',
+                        {
+                          className: 'zw-stepHandle',
+                          title: t('kn.stepDrag'),
+                          draggable: true,
+                          onDragStart: (event) => {
+                            if (event && typeof event.preventDefault === 'function') event.preventDefault()
+                            setDragStep(index)
+                            setDragOverStep(index)
+                          },
+                          onDragEnd: () => {
+                            setDragStep(-1)
+                            setDragOverStep(-1)
+                          }
+                        },
+                        h(Icon, { name: 'more', size: 12 }),
                         { className: 'zw-stepTools' },
                         h(
                           'button',

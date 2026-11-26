@@ -325,6 +325,52 @@ live.nodes = (live.nodes || []).concat([
     updatedAt: new Date().toISOString()
   }
 ])
+live.nodes.push({
+  "id": "knd_smoke_flow",
+  "title": "烟雾测试流程",
+  "description": "测试用流程对象",
+  "nodeType": "workflow",
+  "scope": "project",
+  "projectId": "prj_default",
+  "parentNodeId": "",
+  "attributes": [],
+  "tags": [],
+  "aliases": [],
+  "status": "active",
+  "confidence": 0.8,
+  "importance": 0.6,
+  "sourceMemoryIds": [],
+  "relatedMemoryIds": [],
+  "steps": [
+    {
+      "id": "stp_1",
+      "title": "第一步",
+      "note": ""
+    },
+    {
+      "id": "stp_2",
+      "title": "第二步",
+      "note": ""
+    },
+    {
+      "id": "stp_3",
+      "title": "第三步",
+      "note": ""
+    }
+  ],
+  "versions": [
+    {
+      "id": "ver_flow_1",
+      "version": 1,
+      "title": "烟雾测试流程",
+      "changeType": "create",
+      "createdAt": "2026-11-26T14:15:57.459Z"
+    }
+  ],
+  "currentVersion": 1,
+  "createdAt": "2026-11-26T14:15:57.459Z",
+  "updatedAt": "2026-11-26T14:15:57.459Z"
+})
 live.recalls = [
   {
     id: 'rcl_smoke',
@@ -2147,6 +2193,84 @@ check(Boolean(expandAllBtn), 'graph offers expand all')
     }
   }
 
+  // ---- 流程步骤拖拽排序（V2.4 第六节：改序用明显把手）
+  {
+    const knNav = navButtons().find((node) => textOf(node).includes(ZH['nav.knowledge']))
+    if (knNav) {
+      click(knNav)
+      await settle(10)
+      for (let guard = 0; guard < 3; guard += 1) {
+        if (!byClass('zw-modal').length) break
+        ;(documentListeners.keydown || []).concat(windowListeners.keydown || []).forEach((handler) =>
+          handler({ key: 'Escape', target: { tagName: 'div' }, preventDefault() {}, stopPropagation() {} })
+        )
+        await settle(6)
+      }
+      check(byClass('zw-modal').length === 0, 'no dialog is left open before the step drag test')
+      const newBtn = findAll((node) => node.type === 'button' && textOf(node).indexOf(ZH['kn.new']) >= 0)[0]
+      check(Boolean(newBtn), 'knowledge view offers a new-object button')
+      if (newBtn) {
+        click(newBtn)
+        await settle(8)
+        const typeSelect = byClass('zw-select')[0]
+        check(Boolean(typeSelect), 'new-object dialog has a type field')
+        if (typeSelect && typeSelect.props.onChange) {
+          typeSelect.props.onChange({ target: { value: 'workflow' } })
+          await settle(8)
+        }
+        const addStep = findAll((node) => node.type === 'button' && textOf(node).indexOf(ZH['kn.addStep']) >= 0)[0]
+        check(Boolean(addStep), 'workflow dialog offers adding a step')
+        for (let i = 0; i < 3; i += 1) {
+          const btn = findAll((node) => node.type === 'button' && textOf(node).indexOf(ZH['kn.addStep']) >= 0)[0]
+          if (btn) { click(btn); await settle(4) }
+        }
+        const titleInputs = () => byClass('zw-input').filter((node) => node.props && node.props.placeholder === ZH['kn.stepTitle'])
+        const slots = titleInputs()
+        check(slots.length === 3, 'three steps were added: ' + slots.length)
+        if (slots.length === 3) {
+          const stepLabels = ['第一步', '第二步', '第三步']
+          for (let index = 0; index < 3; index += 1) {
+            const input = titleInputs()[index]
+            if (input && input.props.onChange) input.props.onChange({ target: { value: stepLabels[index] } })
+            await settle(4)
+          }
+          await settle(6)
+          const handles = byClass('zw-stepHandle')
+          check(handles.length === 3, 'every workflow step has a drag handle: ' + handles.length)
+          if (handles.length === 3) {
+            handles[2].props.onDragStart({ preventDefault() {}, stopPropagation() {} })
+            await settle(4)
+            const rows = byClass('zw-stepEditRow')
+            rows[0].props.onDragOver({ preventDefault() {}, stopPropagation() {} })
+            await settle(2)
+            rows[0].props.onDrop({ preventDefault() {}, stopPropagation() {} })
+            await settle(6)
+            const order = titleInputs().map((node) => node.props.value)
+            check(order[0] === '第三步', 'dropping a step on the first row moves it to the top: ' + order.join('/'))
+            check(order[2] === '第二步', 'the other steps keep their relative order: ' + order.join('/'))
+            check(order.length === 3, 'reordering keeps every step')
+            const nameInput = byClass('zw-input').find((node) => node.props && node.props.placeholder === ZH['kn.titlePlaceholder'])
+            if (nameInput && nameInput.props.onChange) nameInput.props.onChange({ target: { value: '拖拽排序测试流程' } })
+            await settle(4)
+            const saveBtn = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.save'])[0]
+            check(Boolean(saveBtn), 'workflow dialog offers saving')
+            if (saveBtn) {
+              const startIndex = posts.length
+              click(saveBtn)
+              await settle(10)
+              const saved = posts.slice(startIndex).find((item) => item && item.action === 'node-save')
+              check(Boolean(saved), 'reordered steps are saved')
+              if (saved) {
+                const savedOrder = (saved.steps || []).map((step) => step.title)
+                check(savedOrder[0] === '第三步', 'node-save carries the new step order: ' + savedOrder.join('/'))
+                check(savedOrder[2] === '第二步', 'node-save keeps the remaining order: ' + savedOrder.join('/'))
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   // 回到全部记忆，确认导航还能切回去
   const allNav = navButtons().find((node) => textOf(node).includes(ZH['nav.all']))
   if (allNav) {

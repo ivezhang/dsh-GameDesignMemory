@@ -136,6 +136,6 @@
 | --- | --- |
 | 布局与知识数据分离存储 | 已实现：layout.positions / layout.hidden 与 nodes 分开存 |
 | 不为每次拖动重载整库 | 已实现：layout-save 只写布局，节点拖动 700ms 防抖 |
-| 数百节点流畅 | 未实测（当前 34 记忆 + 1 对象，上限 4000 记忆 / 1200 对象） |
+| 数百节点流畅 | **数据层已实测**：300 对象 / 1000 记忆 / 300 关系下，读取 16ms、搜索 2ms、召回 57ms、整理中心 69ms、保存 300 节点布局 46ms，7/7 在预算内（docs/PERF.md）；浏览器绘制耗时仍需 DevTools 实测 |
 | 交付文档包 | 已齐：V2.4-DESIGN / CHANGELOG / UPGRADE-2.5.x / MIGRATION-REPORT / ACCEPTANCE / WALKTHROUGH / FEATURES / DETAIL |
 

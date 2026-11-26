@@ -3140,13 +3140,27 @@ function recordRecall(state, input, ranked) {
 function duplicateNodePairs(state) {
   const nodes = (state.nodes || []).filter((node) => node.status !== 'merged' && node.status !== 'archived')
   const pairs = []
-  for (let i = 0; i < nodes.length; i += 1) {
-    for (let j = i + 1; j < nodes.length; j += 1) {
-      const left = nodes[i]
-      const right = nodes[j]
+  const nodeTokens = new Map()
+  const tokensOfNode = (node) => {
+    if (!nodeTokens.has(node.id)) {
+      nodeTokens.set(node.id, tokensOf((node.title + ' ' + (node.description || '')).toLowerCase()))
+    }
+    return nodeTokens.get(node.id)
+  }
+  const byType = new Map()
+  for (const node of nodes) {
+    const key = node.nodeType || ''
+    if (!byType.has(key)) byType.set(key, [])
+    byType.get(key).push(node)
+  }
+  for (const bucket of byType.values()) {
+  for (let i = 0; i < bucket.length; i += 1) {
+    for (let j = i + 1; j < bucket.length; j += 1) {
+      const left = bucket[i]
+      const right = bucket[j]
       if (left.nodeType !== right.nodeType) continue
-      const leftTokens = tokensOf((left.title + ' ' + (left.description || '')).toLowerCase())
-      const rightTokens = tokensOf((right.title + ' ' + (right.description || '')).toLowerCase())
+      const leftTokens = tokensOfNode(left)
+      const rightTokens = tokensOfNode(right)
       let shared = 0
       leftTokens.forEach((token) => {
         if (rightTokens.has(token)) shared += 1
@@ -3165,30 +3179,79 @@ function duplicateNodePairs(state) {
       }
     }
   }
+  }
   return pairs
 }
 
-function tidyReport(state) {
+function tidyDuplicatePairs(state) {
+  // 旧实现是 O(n^2) 全量两两比对，每对都要重新算两边的正文主题词；
+  // 记忆涨到上千条后整理中心要跑七八秒。这里改成：先按类型分桶，
+  // 再用「标签 → 记忆」倒排只比共同标签至少 2 个的候选，主题词每组只算一次。
   const duplicates = []
   const entries = state.entries.filter((entry) => entry.status !== 'archived')
-  for (let i = 0; i < entries.length; i += 1) {
-    for (let j = i + 1; j < entries.length; j += 1) {
-      const left = entries[i]
-      const right = entries[j]
-      if (left.type !== right.type) continue
-      const shared = shareTags(left, right)
-      const leftTokens = tokensForEntry(left)
-      const sim = similarityOf(left, right, leftTokens)
-      if (shared.length >= 2 && sim.score >= 8) {
-        duplicates.push({
-          a: { id: left.id, title: left.title },
-          b: { id: right.id, title: right.title },
-          score: sim.score,
-          reason: '共同标签 ' + shared.length + ' 个，正文主题词重合 ' + sim.tokenHits + ' 个'
-        })
+  const byType = new Map()
+  for (const entry of entries) {
+    const key = entry.type || ''
+    if (!byType.has(key)) byType.set(key, [])
+    byType.get(key).push(entry)
+  }
+  const bodyTokens = new Map()
+  const tokensOfBody = (entry) => {
+    if (!bodyTokens.has(entry.id)) bodyTokens.set(entry.id, tokensOf(entryText(entry)))
+    return bodyTokens.get(entry.id)
+  }
+  const titleTokens = new Map()
+  const tokensOfTitle = (entry) => {
+    if (!titleTokens.has(entry.id)) titleTokens.set(entry.id, tokensForEntry(entry))
+    return titleTokens.get(entry.id)
+  }
+  for (const bucket of byType.values()) {
+    if (bucket.length < 2) continue
+    // 用「标签对」当桶键：同一条记忆的任意两个标签都登记一次，
+    // 共享两个以上标签的两条记忆必然落进同一个桶，桶内再比对就不会退化。
+    const tagIndex = new Map()
+    for (const entry of bucket) {
+      const tags = unique((entry.tags || []).slice(0, 8))
+      for (let i = 0; i < tags.length; i += 1) {
+        for (let j = i + 1; j < tags.length; j += 1) {
+          const pairKey = tags[i] < tags[j] ? tags[i] + '\u0000' + tags[j] : tags[j] + '\u0000' + tags[i]
+          if (!tagIndex.has(pairKey)) tagIndex.set(pairKey, [])
+          tagIndex.get(pairKey).push(entry)
+        }
+      }
+    }
+    const seen = new Set()
+    for (const list of tagIndex.values()) {
+      if (list.length < 2) continue
+      for (let i = 0; i < list.length; i += 1) {
+        for (let j = i + 1; j < list.length; j += 1) {
+          const left = list[i]
+          const right = list[j]
+          const key = left.id + '|' + right.id
+          if (seen.has(key)) continue
+          seen.add(key)
+          const shared = shareTags(left, right)
+          if (shared.length < 2) continue
+          const domainOverlap = left.domains.filter((domain) => right.domains.includes(domain)).length
+          const tokenHits = overlapCount(tokensOfTitle(left), tokensOfBody(right))
+          const score = shared.length * 3 + domainOverlap * 2 + tokenHits
+          if (score < 8) continue
+          duplicates.push({
+            a: { id: left.id, title: left.title },
+            b: { id: right.id, title: right.title },
+            score,
+            reason: '共同标签 ' + shared.length + ' 个，正文主题词重合 ' + tokenHits + ' 个'
+          })
+        }
       }
     }
   }
+  return duplicates
+}
+
+function tidyReport(state) {
+  const entries = state.entries.filter((entry) => entry.status !== 'archived')
+  const duplicates = tidyDuplicatePairs(state)
   const linked = new Set()
   for (const relation of state.relations) {
     if (relation.status === 'rejected') continue

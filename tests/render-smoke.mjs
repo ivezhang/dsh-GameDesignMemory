@@ -1874,6 +1874,19 @@ async function interactionChecks() {
     'ctrl/cmd+z asks the host to undo the last write'
   )
 
+  const undoBtn = (byClass('zw-undoBtn') || [])[0]
+  check(Boolean(undoBtn), 'toolbar has an undo button')
+  check(Boolean(undoBtn && undoBtn.props && undoBtn.props.disabled === false), 'undo button is enabled while the stack has steps')
+  if (undoBtn) {
+    const beforeClick = posts.length
+    click(undoBtn)
+    await settle(6)
+    check(
+      posts.slice(beforeClick).some((item) => item.action === 'undo'),
+      'clicking the toolbar undo button asks the host to undo'
+    )
+  }
+
   const navTo = async (label, settlePasses) => {
     const item = byClass("zw-navItem").find((node) => textOf(node).includes(label))
     if (item) {

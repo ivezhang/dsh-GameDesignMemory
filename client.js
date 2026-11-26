@@ -526,6 +526,7 @@ window.__ModuleLoader__.load({
       'assist.downstream': '下游（受它影响的）',
       'assist.notApplied': '仅供参考，不会自动写入',
       'action.undo': '撤销',
+      'action.undoHint': '撤销上一步（Ctrl / Cmd + Z）',
       'common.none': '无',
 
       'type.habit': '用户习惯',
@@ -1186,6 +1187,7 @@ window.__ModuleLoader__.load({
       'assist.downstream': 'Downstream (affected by this)',
       'assist.notApplied': 'For reference only, nothing is written',
       'action.undo': 'Undo',
+      'action.undoHint': 'Undo the last change (Ctrl / Cmd + Z)',
       'common.none': 'none',
 
       'type.habit': 'Habit',
@@ -1742,6 +1744,8 @@ window.__ModuleLoader__.load({
     }
     .zw-iconBtn:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
     .zw-iconBtn:disabled { opacity: 0.4; cursor: default; }
+.zw-undoBtn { color: var(--zw-muted); }
+.zw-undoBtn:hover:not(:disabled) { color: var(--zw-text); }
     .zw-iconBtnOn { background: var(--zw-accent-soft); color: var(--zw-accent-text); }
 
     .zw-seg { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--zw-border); border-radius: 9px; background: var(--zw-bg-soft); }
@@ -14081,6 +14085,17 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
                         h(Icon, { name: 'close', size: 11 })
                       )
                     : null
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-iconBtn zw-undoBtn',
+                    title: data.undo && data.undo.count ? t('action.undoHint') : t('toast.nothingToUndo'),
+                    disabled: !(data.undo && data.undo.count),
+                    onClick: () => doUndo()
+                  },
+                  h(Icon, { name: 'history', size: 14 })
                 ),
                 h(
                   'button',

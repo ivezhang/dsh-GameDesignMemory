@@ -199,8 +199,8 @@
 
 | 测试 | 结果 |
 | --- | --- |
-| host 单元/集成（临时 DSH_HOME + 真实 HTTP handler） | 95 tests · 95 passed；另有 WORKSPACE 55 checks |
-| 渲染冒烟（假 React + 假 DOM 跑真实 `client.js`） | 200 checks · 200 passed |
+| host 单元/集成（临时 DSH_HOME + 真实 HTTP handler） | 102 tests · 102 passed；另有 WORKSPACE 55 checks |
+| 渲染冒烟（假 React + 假 DOM 跑真实 `client.js`，含交互断言） | 243 checks · 243 passed |
 | 工具契约（复刻 DSH 的 schema/render 校验 + systemPrompt 注入 + 契约损坏时的容错） | 8 checks · 8 passed |
 | 迁移（真实线上库副本 → v6，含真实数据冒烟） | 16 checks · 16 passed；冒烟 8/8 |
 | 静态审计（i18n 键一致性、CSS 类双向一致） | 干净 |
@@ -234,3 +234,5 @@
 ---
 
 *文档版本：2.5.7 · 2026-11-26*
+
+> 版本、全部测试结果、本地提交清单与人工待办汇总在 [FINAL-ACCEPTANCE.md](FINAL-ACCEPTANCE.md)。

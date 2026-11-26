@@ -2243,4 +2243,33 @@ async function runKnowledgeSuite() {
     ok(workflows[0].steps.length >= 6, 'all six steps are stored')
     ok((workflows[0].versions || []).length >= 2, 'the merge is recorded in the version history')
   })
+  await test('tidy flags two workflows whose steps overlap', async () => {
+    const stepsA = [
+      { title: '打开活动配置表，找到星云勘测这一行' },
+      { title: '把掉落权重从 10 调到 25 并保存' },
+      { title: '在客户端确认掉落预览' }
+    ]
+    const stepsB = [
+      { title: '打开活动配置表，找到星云勘测这一行' },
+      { title: '在客户端确认掉落预览' },
+      { title: '把改动补进迭代日志' }
+    ]
+    const a = await postOk(
+      { action: 'node-save', title: '工作流程：改掉落权重', nodeType: 'workflow', steps: stepsA, status: 'active' },
+      'save workflow a'
+    )
+    const b = await postOk(
+      { action: 'node-save', title: '工作流程：调整掉落并记录', nodeType: 'workflow', steps: stepsB, status: 'active' },
+      'save workflow b'
+    )
+    const plan = await postOk({ action: 'memory-tidy' }, 'tidy workflow duplicates')
+    const report = plan.report || plan.result
+    const pairs = report.duplicateNodes || []
+    const ids = [a.node.id, b.node.id].sort().join('|')
+    const found = pairs.some((pair) => [pair.a.id, pair.b.id].sort().join('|') === ids)
+    ok(found, 'two workflows sharing two steps are flagged as duplicates')
+    const hit = pairs.find((pair) => [pair.a.id, pair.b.id].sort().join('|') === ids)
+    ok(hit && /步骤/.test(hit.reason), 'the reason mentions the overlapping steps')
+  })
+
 }

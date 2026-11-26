@@ -3170,11 +3170,20 @@ function duplicateNodePairs(state) {
   const nodes = (state.nodes || []).filter((node) => node.status !== 'merged' && node.status !== 'archived')
   const pairs = []
   const nodeTokens = new Map()
+  // 流程对象的重复判断要把步骤算进去：标题措辞不同、步骤几乎一样的两条流程，
+  // 只看标题/描述是发现不了的，整理中心会漏报。
   const tokensOfNode = (node) => {
     if (!nodeTokens.has(node.id)) {
-      nodeTokens.set(node.id, tokensOf((node.title + ' ' + (node.description || '')).toLowerCase()))
+      const stepText = (node.steps || []).map((step) => step.title || '').join(' ')
+      nodeTokens.set(node.id, tokensOf((node.title + ' ' + (node.description || '') + ' ' + stepText).toLowerCase()))
     }
     return nodeTokens.get(node.id)
+  }
+  const stepTitlesOf = (node) => (node.steps || []).map((step) => step.title).filter(Boolean)
+  const sharedStepCount = (left, right) => {
+    const own = stepTitlesOf(left)
+    const theirs = stepTitlesOf(right)
+    return own.filter((title) => theirs.indexOf(title) >= 0).length
   }
   const byType = new Map()
   for (const node of nodes) {
@@ -3198,12 +3207,16 @@ function duplicateNodePairs(state) {
         left.title === right.title ||
         left.title.indexOf(right.title) >= 0 ||
         right.title.indexOf(left.title) >= 0
-      if (shared >= 4 || (similarTitle && shared >= 2)) {
+      const sharedSteps = sharedStepCount(left, right)
+      const bothWorkflow = left.nodeType === 'workflow' && right.nodeType === 'workflow'
+      if (shared >= 4 || (similarTitle && shared >= 2) || (bothWorkflow && sharedSteps >= 2)) {
         pairs.push({
           a: { id: left.id, title: left.title },
           b: { id: right.id, title: right.title },
-          score: shared,
-          reason: '同类对象，名称/描述重合 ' + shared + ' 处'
+          score: shared + sharedSteps,
+          reason: bothWorkflow && sharedSteps >= 2
+            ? '都是流程对象，有 ' + sharedSteps + ' 个步骤同名'
+            : '同类对象，名称/描述重合 ' + shared + ' 处'
         })
       }
     }

@@ -62,7 +62,7 @@
 | 关联记忆：解除关联不删记忆 | unlinkMemoryFromNode | 已自动化（host） |
 | 合并对象：主 ID 保留、关系迁移、来源标记 merged | mergeKnowledgeNodes | 已自动化 |
 | 搜索覆盖记忆 / 对象 / 集合 / 项目并分组 | 80-panel nodeHits / collectionHits / projectHits | 已自动化 |
-| 整理中心：候选对象、重复、批量确认 | 76-tidy.js + tidyReport | 已自动化 |
+| 整理中心：候选对象、重复、批量确认 | 76-tidy.js + tidyReport；流程对象按步骤重合判重（2.6.7） | 已自动化 |
 | 删除与撤销区分（关联 / 归档 / 删除） | entry-restore、node-archive、relation-delete 撤销 | 已自动化 |
 | 动画轻量、不使用长动画 | 10-css.js keyframes 均 ≤ 2.4s | 仅代码级 |
 

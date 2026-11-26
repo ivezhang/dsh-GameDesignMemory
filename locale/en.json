@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Design memory",
-    "description": "A planner's long-term memory: system rules, numeric decisions, workflows, and design conventions organized as Systems, Numbers, Workflows, and Other — confirm or deprecate entries by hand, link them into a draggable, zoomable network, and let the agent read and write through tools.",
+    "description": "A planner's long-term memory: system rules, numeric decisions, workflows, and design conventions organized as Systems, Numbers, Workflows, and Other — confirm or deprecate entries by hand, draw links directly on a neural-network style memory map, box a cluster of entries into a region, and let the agent read and write through tools.",
     "detail": "docs/DETAIL.md"
   }
 }

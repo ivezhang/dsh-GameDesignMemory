@@ -1,8 +1,8 @@
 {
   "name": "@local/design-memory",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
-  "description": "Planner's long-term design memory: sidebar panel for system rules, numeric decisions, and project conventions, with linked-memory network view, manual confirm/deprecate, and agent tools.",
+  "description": "Planner's long-term design memory: sidebar panel for system rules, numeric decisions, and project conventions, with a neural-network style memory map (drag to link, box to group regions), manual confirm/deprecate, and agent tools.",
   "license": "MIT",
   "type": "module",
   "exports": {

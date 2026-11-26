@@ -137,7 +137,28 @@ window.__ModuleLoader__.load({
       'graph.isolate': '只看这一条',
       'graph.isolateOn': '显示全部',
       'graph.title': '关系网',
-      'graph.sharedTags': '共同标签'
+      'graph.sharedTags': '共同标签',
+      'graph.hintLink': '从一个记忆拖到另一个记忆，松手就建立关联',
+      'graph.hintRegion': '拖出一个框，把有关系的记忆圈成一个记忆区',
+      'graph.toolSelect': '选择',
+      'graph.toolLink': '划线',
+      'graph.toolRegion': '圈区',
+      'graph.regionName': '记忆区',
+      'graph.regions': '记忆区',
+      'graph.regionsUnit': '个区',
+      'graph.regionUnit': '条',
+      'graph.regionColor': '换颜色',
+      'graph.regionRename': '改名',
+      'graph.regionDelete': '删除记忆区',
+      'graph.regionDeleteConfirm': '再点一次删除',
+      'graph.linkSelf': '不能连到自己',
+      'graph.linkNeedTarget': '要拖到另一个记忆上',
+      'graph.linkDone': '已建立关联',
+      'graph.boxEmpty': '框里没有记忆',
+      'graph.boxDone': '已圈成新的记忆区',
+      'graph.regionSaved': '已保存记忆区',
+      'graph.regionRemoved': '已删除记忆区',
+      'detail.region': '记忆区'
     }
 
     const EN = {
@@ -257,7 +278,28 @@ window.__ModuleLoader__.load({
       'graph.isolate': 'Isolate',
       'graph.isolateOn': 'Show all',
       'graph.title': 'Network',
-      'graph.sharedTags': 'shared tags'
+      'graph.sharedTags': 'shared tags',
+      'graph.hintLink': 'Drag from one memory onto another to link them',
+      'graph.hintRegion': 'Drag a box around related memories to group them into a region',
+      'graph.toolSelect': 'Select',
+      'graph.toolLink': 'Draw link',
+      'graph.toolRegion': 'Draw region',
+      'graph.regionName': 'Region',
+      'graph.regions': 'Regions',
+      'graph.regionsUnit': 'regions',
+      'graph.regionUnit': 'entries',
+      'graph.regionColor': 'Change color',
+      'graph.regionRename': 'Rename',
+      'graph.regionDelete': 'Delete region',
+      'graph.regionDeleteConfirm': 'Click again to delete',
+      'graph.linkSelf': "A memory can't link to itself",
+      'graph.linkNeedTarget': 'Drop it on another memory',
+      'graph.linkDone': 'Link created',
+      'graph.boxEmpty': 'No memory inside the box',
+      'graph.boxDone': 'Created a new region',
+      'graph.regionSaved': 'Region saved',
+      'graph.regionRemoved': 'Region deleted',
+      'detail.region': 'Region'
     }
 
     const CSS = `
@@ -282,6 +324,15 @@ window.__ModuleLoader__.load({
   --dm-edge: rgba(15, 23, 42, 0.3);
   --dm-edge-auto: rgba(15, 23, 42, 0.16);
   --dm-node-ring: var(--dsw-alias-bg-base, #ffffff);
+  --dm-graph-glow: rgba(65, 118, 230, 0.10);
+  --dm-signal: rgba(65, 118, 230, 0.72);
+  --dm-signal-soft: rgba(65, 118, 230, 0.26);
+  --dm-region-violet: #8b5cf6;
+  --dm-region-blue: #3b82f6;
+  --dm-region-teal: #14b8a6;
+  --dm-region-amber: #f59e0b;
+  --dm-region-rose: #f43f5e;
+  --dm-region-lime: #84cc16;
   --dm-cat-system: var(--dsw-alias-link, #3b82f6);
   --dm-cat-numbers: var(--dsw-alias-state-success-primary, #22c55e);
   --dm-cat-workflow: var(--dsw-alias-state-info-primary, #7c6cd6);
@@ -303,6 +354,15 @@ window.__ModuleLoader__.load({
   --dm-edge: rgba(228, 232, 240, 0.36);
   --dm-edge-auto: rgba(228, 232, 240, 0.18);
   --dm-node-ring: var(--dsw-alias-bg-base, #151517);
+  --dm-graph-glow: rgba(96, 145, 255, 0.20);
+  --dm-signal: rgba(138, 180, 255, 0.86);
+  --dm-signal-soft: rgba(138, 180, 255, 0.32);
+  --dm-region-violet: #a78bfa;
+  --dm-region-blue: #60a5fa;
+  --dm-region-teal: #2dd4bf;
+  --dm-region-amber: #fbbf24;
+  --dm-region-rose: #fb7185;
+  --dm-region-lime: #a3e635;
 }
 .dm-root[data-dm-theme='light'] { color-scheme: light; }
 .dm-root[data-dm-theme='dark'] { color-scheme: dark; }
@@ -479,38 +539,75 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
 .dm-graphWrap { position:absolute; inset:0; }
 .dm-graphSvg { display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
 .dm-graphSvg:active { cursor:grabbing; }
-.dm-graphGrid { stroke:var(--dm-grid); stroke-width:1; }
-.dm-gedge { stroke:var(--dm-edge); stroke-width:1.3; fill:none; }
-.dm-gedgeSel { stroke:var(--dm-accent); stroke-width:2; }
-.dm-gedgeAuto { stroke:var(--dm-edge-auto); stroke-dasharray:5 5; stroke-width:1.1; }
-.dm-gedgeDim { opacity:.16; }
+.dm-graphSvg.dm-toolLink, .dm-graphSvg.dm-toolRegion { cursor:crosshair; }
+.dm-graphDot { fill:var(--dm-grid); }
+.dm-graphGlowStop { stop-color:var(--dm-graph-glow); }
+.dm-regionLayer { pointer-events:none; }
+.dm-regionBlob { fill-opacity:.10; stroke-width:1.3; stroke-dasharray:7 8; animation:dmRegionFlow 22s linear infinite; }
+.dm-regionBlobDim { fill-opacity:.03; stroke-opacity:.22; animation:none; }
+.dm-regionBlobFocus { fill-opacity:.16; stroke-opacity:.9; stroke-width:1.7; }
+.dm-regionLabel { font-size:10.5px; font-weight:600; paint-order:stroke; stroke:var(--dm-graph-bg); stroke-width:3.2px; stroke-linejoin:round; }
+.dm-regionLabelOn { font-size:11.5px; }
+.dm-gedge { fill:none; stroke:var(--dm-edge); stroke-width:1.15; }
+.dm-gedgeAuto { stroke:var(--dm-edge-auto); stroke-dasharray:4 7; stroke-width:1; }
+.dm-gedgeSel { stroke:var(--dm-accent); stroke-width:1.9; }
+.dm-gedgeDim { stroke-opacity:.12; }
+.dm-gedgeSignal { fill:none; stroke:var(--dm-signal); stroke-width:1.8; stroke-linecap:round; stroke-dasharray:1.4 26; animation:dmSignalFlow 5.2s linear infinite; }
+.dm-gedgeSignalAuto { stroke:var(--dm-signal-soft); stroke-dasharray:1.2 34; animation-duration:7.4s; }
+.dm-gedgeDraft { fill:none; stroke:var(--dm-accent); stroke-width:1.7; stroke-dasharray:6 5; opacity:.9; }
 .dm-gedgeArrow { fill:var(--dm-edge); }
 .dm-gedgeArrowSel { fill:var(--dm-accent); }
-.dm-gedgeLabel { font-size:10px; fill:var(--dm-text-2); text-anchor:middle; pointer-events:none; }
+.dm-gedgeLabel { font-size:10px; fill:var(--dm-text-2); text-anchor:middle; pointer-events:none; paint-order:stroke; stroke:var(--dm-graph-bg); stroke-width:3px; stroke-linejoin:round; }
+.dm-linkDot { fill:var(--dm-accent); }
 .dm-gnode { cursor:pointer; }
-.dm-gnodeDot { stroke:var(--dm-node-ring); stroke-width:3; }
-.dm-gnodeDotSel { stroke:var(--dm-accent); stroke-width:4; }
-.dm-gnodeLabel { font-size:11px; fill:var(--dm-text-2); text-anchor:middle; pointer-events:none; }
+.dm-gnodeHalo { opacity:.12; transform-box:fill-box; transform-origin:center; animation:dmNodeBreath 6.4s ease-in-out infinite; }
+.dm-gnodeRing { fill:none; stroke-width:1; opacity:.4; }
+.dm-gnodeDot { stroke:var(--dm-node-ring); stroke-width:2.2; }
+.dm-gnodeDotSel { stroke:var(--dm-accent); stroke-width:3; }
+.dm-gnodeSelRing { fill:none; stroke:var(--dm-accent); stroke-width:1.1; stroke-dasharray:3 4; opacity:.65; animation:dmRegionFlow 9s linear infinite; }
+.dm-gnodeLabel { font-size:11px; fill:var(--dm-text-2); text-anchor:middle; pointer-events:none; paint-order:stroke; stroke:var(--dm-graph-bg); stroke-width:3.2px; stroke-linejoin:round; }
 .dm-gnodeLabelSel { fill:var(--dm-text); font-weight:600; }
-.dm-gnodeStar { fill:var(--dsw-alias-state-warn-primary, #f59e0b); }
-.dm-gnodeDim { opacity:.2; }
-.dm-gnode .dm-gnodeDraft { stroke-dasharray:4 3; }
-.dm-gnode .dm-gnodeDeprecated { opacity:.55; }
-.dm-graphToolbar { position:absolute; top:12px; left:12px; z-index:2; display:flex; align-items:center; gap:4px; padding:5px; border:1px solid var(--dm-border); border-radius:10px; background:var(--dm-toolbar-fill); backdrop-filter:blur(10px); }
-.dm-graphToolbar .dm-graphCount { padding:0 8px; color:var(--dm-text-2); font-size:11px; font-variant-numeric:tabular-nums; }
-.dm-graphToggle { display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 8px; border:0; border-radius:7px; background:transparent; color:var(--dm-text-2); font-size:11px; cursor:pointer; }
+.dm-gnodeStar { fill:var(--dm-cat-other); }
+.dm-gnodeDim { opacity:.18; }
+.dm-gnodeTarget { filter:drop-shadow(0 0 6px var(--dm-accent)); }
+.dm-gnodeDraft { stroke-dasharray:4 3; }
+.dm-gnodeDeprecated { opacity:.55; }
+.dm-boxRect { fill:var(--dm-accent); fill-opacity:.07; stroke:var(--dm-accent); stroke-width:1.1; stroke-dasharray:5 4; }
+.dm-graphToolbar { position:absolute; top:12px; left:12px; z-index:2; display:flex; flex-wrap:wrap; align-items:center; gap:4px; max-width:calc(100% - 96px); padding:5px; border:1px solid var(--dm-border); border-radius:10px; background:var(--dm-toolbar-fill); backdrop-filter:blur(10px); }
+.dm-graphCount { padding:0 8px; color:var(--dm-text-2); font-size:11px; font-variant-numeric:tabular-nums; }
+.dm-graphToggle { display:inline-flex; align-items:center; gap:4px; height:26px; padding:0 8px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--dm-text-2); font-size:11px; cursor:pointer; }
 .dm-graphToggle:hover { background:var(--dm-hover); color:var(--dm-text); }
-.dm-graphToggleOn { background:var(--dm-active); color:var(--dm-text); }
-.dm-graphHint { position:absolute; left:14px; bottom:12px; z-index:2; color:var(--dm-text-2); font-size:11px; opacity:.75; pointer-events:none; }
-.dm-graphLegend { position:absolute; right:14px; bottom:12px; z-index:2; display:flex; gap:12px; align-items:center; color:var(--dm-text-2); font-size:11px; opacity:.8; pointer-events:none; }
+.dm-graphToggle:disabled { opacity:.4; cursor:default; }
+.dm-graphToggleOn { border-color:var(--dm-border-strong); background:var(--dm-active); color:var(--dm-text); }
+.dm-graphHint { position:absolute; left:14px; bottom:12px; z-index:2; max-width:calc(100% - 250px); color:var(--dm-text-2); font-size:11px; opacity:.82; pointer-events:none; }
+.dm-graphFlash { position:absolute; left:50%; bottom:44px; z-index:4; transform:translateX(-50%); padding:5px 12px; border:1px solid var(--dm-border-strong); border-radius:999px; background:var(--dm-surface); box-shadow:var(--dm-shadow-sm); color:var(--dm-text); font-size:11.5px; pointer-events:none; }
+.dm-graphLegend { position:absolute; right:14px; bottom:12px; z-index:2; display:flex; gap:12px; align-items:center; color:var(--dm-text-2); font-size:11px; opacity:.85; pointer-events:none; }
 .dm-legendItem { display:inline-flex; gap:5px; align-items:center; }
 .dm-legendSample { display:inline-block; width:16px; height:0; border-top:1px solid var(--dm-edge); }
-.dm-legendSample.dm-legendDashed { border-top:1px dashed var(--dm-edge-auto); }
-.dm-drawer { position:absolute; top:0; right:0; bottom:0; z-index:3; display:flex; flex-direction:column; width:min(420px, 48%); border-left:1px solid var(--dm-border); background:var(--dm-surface); box-shadow:var(--dm-shadow); }
-.dm-drawerHead { flex:none; display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:.5px solid var(--dm-border); color:var(--dm-text-2); font-size:11px; letter-spacing:.04em; }
+.dm-legendDashed { border-top:1px dashed var(--dm-edge-auto); }
+.dm-regionPanel { position:absolute; top:58px; right:12px; z-index:3; display:flex; flex-direction:column; gap:1px; width:min(232px, 54%); max-height:calc(100% - 132px); overflow:auto; padding:7px; border:1px solid var(--dm-border); border-radius:12px; background:var(--dm-surface); box-shadow:var(--dm-shadow-sm); }
+.dm-regionPanelHead { display:flex; align-items:center; gap:5px; padding:2px 4px 5px; color:var(--dm-text-2); font-size:11px; }
+.dm-regionRow { display:flex; align-items:center; gap:6px; width:100%; padding:5px 6px; border:0; border-radius:8px; background:transparent; color:var(--dm-text); font:inherit; font-size:12px; text-align:left; cursor:pointer; }
+.dm-regionRow:hover { background:var(--dm-hover); }
+.dm-regionRowOn { background:var(--dm-active); }
+.dm-regionSwatch { flex:none; width:9px; height:9px; padding:0; border:0; border-radius:50%; cursor:pointer; }
+.dm-regionName { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dm-regionEditInput { flex:1; min-width:0; height:22px; padding:0 6px; border:1px solid var(--dm-accent); border-radius:6px; background:var(--dm-surface); color:var(--dm-text); font:inherit; font-size:12px; }
+.dm-regionCount { flex:none; color:var(--dm-text-2); font-size:11px; font-variant-numeric:tabular-nums; }
+.dm-regionDel { flex:none; display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--dm-text-2); cursor:pointer; }
+.dm-regionDel:hover { background:var(--dm-hover); color:var(--dm-text); }
+.dm-regionDelArmed { color:var(--dsw-alias-state-error-primary, #dc2626); }
+.dm-regionChip { display:inline-flex; align-items:center; height:20px; padding:0 8px; border:1px solid var(--dm-border-strong); border-radius:999px; color:var(--dm-text-2); font-size:11px; }
+.dm-graphSvg.dm-toolRegion .dm-gnode { cursor:cell; }
+@keyframes dmNodeBreath { 0%, 100% { opacity:.09; transform:scale(.94); } 50% { opacity:.24; transform:scale(1.10); } }
+@keyframes dmSignalFlow { from { stroke-dashoffset:0; } to { stroke-dashoffset:-54; } }
+@keyframes dmRegionFlow { from { stroke-dashoffset:0; } to { stroke-dashoffset:-120; } }
+.dm-drawer { position:absolute; top:12px; right:12px; bottom:12px; z-index:3; display:flex; flex-direction:column; width:min(372px, 46%); border:1px solid var(--dm-border); border-radius:12px; background:var(--dm-surface); box-shadow:var(--dm-shadow); overflow:hidden; }
+.dm-drawerHead { flex:none; display:flex; align-items:center; gap:6px; padding:10px 12px; border-bottom:.5px solid var(--dm-border); color:var(--dm-text); font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .dm-drawerHead .dm-iconBtn { margin-left:auto; }
-.dm-drawerScroll { flex:1; min-height:0; overflow-y:auto; }
-.dm-drawerScroll .dm-detailInner { padding:18px 20px 36px; }
+.dm-drawerScroll { flex:1; min-height:0; overflow:auto; padding:14px 16px 20px; }
+.dm-drawerScroll .dm-detailInner { max-width:none; }
+
 @media (max-width:1080px) {
   .dm-body { grid-template-columns:168px minmax(240px, 300px) minmax(0, 1fr); }
   .dm-body-graph { grid-template-columns:168px minmax(0, 1fr); }
@@ -542,6 +639,8 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       frame: [['path', { d: 'M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9' }], ['path', { d: 'M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9' }], ['path', { d: 'M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15' }], ['path', { d: 'M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15' }]],
       shuffle: [['path', { d: 'M4 7h4l8 10h4' }], ['path', { d: 'M4 17h4l8-10h4' }], ['path', { d: 'M17 4l3 3-3 3M17 14l3 3-3 3' }]],
       link: [['path', { d: 'M9.5 14.5 14.5 9.5' }], ['path', { d: 'M13 6.5 14.8 4.7a3.8 3.8 0 0 1 5.4 5.4L18.4 12' }], ['path', { d: 'M11 17.5 9.2 19.3a3.8 3.8 0 0 1-5.4-5.4L5.6 12' }]],
+      select: [['path', { d: 'M5.5 3.5 18 11.2l-5 1.1-2.6 4.6-4.9-13.4Z' }]],
+      box: [['path', { d: 'M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8' }], ['path', { d: 'M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8' }], ['path', { d: 'M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16' }], ['path', { d: 'M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16' }]],
       info: [['circle', { cx: 12, cy: 12, r: 8.5 }], ['path', { d: 'M12 11v5' }], ['path', { d: 'M12 8.2h.01' }]]
     }
 
@@ -1125,6 +1224,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
     function MemoryDetail(props) {
       const entry = props.entry
       const t = props.t
+      const region = props.region || null
       return h(
         'article',
         { className: 'dm-detailInner' },
@@ -1133,6 +1233,9 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           { className: 'dm-detailMeta' },
           h('span', { className: 'dm-catChip dm-cat-' + entry.category }, t('rail.' + entry.category)),
           h('span', { className: 'dm-statusPill dm-status-' + entry.status }, t('status.' + entry.status)),
+          region
+            ? h('span', { className: 'dm-regionChip', title: t('detail.region') }, h(Icon, { name: 'box', size: 12 }), region.name)
+            : null,
           h('span', { className: 'dm-detailDate' }, t('detail.updated') + ' ' + formatDay(entry.updatedAt))
         ),
         h(
@@ -1418,6 +1521,27 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       return left < right ? left + '|' + right : right + '|' + left
     }
 
+    const REGION_COLORS = ['violet', 'blue', 'teal', 'amber', 'rose', 'lime']
+
+    function roundCoord(value) {
+      return Math.round(value * 10) / 10
+    }
+
+    function hashNumber(text) {
+      let hash = 7
+      for (let index = 0; index < text.length; index += 1) hash = (hash * 31 + text.charCodeAt(index)) % 1000003
+      return hash
+    }
+
+    function normalized(area) {
+      return {
+        x0: Math.min(area.x0, area.x1),
+        y0: Math.min(area.y0, area.y1),
+        x1: Math.max(area.x0, area.x1),
+        y1: Math.max(area.y0, area.y1)
+      }
+    }
+
     function buildGraph(entries, includeAuto) {
       const nodes = entries.map((entry) => ({ id: entry.id, entry }))
       const index = new Map(nodes.map((node, position) => [node.id, position]))
@@ -1464,25 +1588,109 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
     }
 
     function nodeRadius(degree) {
-      return 20 + Math.min(degree || 0, 8) * 1.6
+      return 19 + Math.min(degree || 0, 9) * 1.7
     }
 
-    function layoutNodes(count, edges, indexById, startPositions, iterations) {
+    function convexHull(points) {
+      const sorted = points.slice().sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x))
+      if (sorted.length < 3) return sorted
+      const cross = (origin, left, right) =>
+        (left.x - origin.x) * (right.y - origin.y) - (left.y - origin.y) * (right.x - origin.x)
+      const lower = []
+      for (const point of sorted) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) lower.pop()
+        lower.push(point)
+      }
+      const upper = []
+      for (let index = sorted.length - 1; index >= 0; index -= 1) {
+        const point = sorted[index]
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop()
+        upper.push(point)
+      }
+      lower.pop()
+      upper.pop()
+      return lower.concat(upper)
+    }
+
+    function centroidOf(points) {
+      return points.reduce(
+        (accumulator, point) => ({
+          x: accumulator.x + point.x / points.length,
+          y: accumulator.y + point.y / points.length
+        }),
+        { x: 0, y: 0 }
+      )
+    }
+
+    function circlePath(point, radius) {
+      return (
+        'M' + roundCoord(point.x - radius) + ',' + roundCoord(point.y) +
+        'a' + roundCoord(radius) + ',' + roundCoord(radius) + ' 0 1,0 ' + roundCoord(radius * 2) + ',0' +
+        'a' + roundCoord(radius) + ',' + roundCoord(radius) + ' 0 1,0 ' + roundCoord(-radius * 2) + ',0'
+      )
+    }
+
+    function regionBlobPath(points, pad) {
+      if (!points.length) return ''
+      if (points.length === 1) return circlePath(points[0], pad)
+      if (points.length === 2) {
+        const middle = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 }
+        const span = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) / 2
+        return circlePath(middle, pad + span)
+      }
+      const hull = convexHull(points)
+      if (hull.length < 3) {
+        const middle = centroidOf(points)
+        const span = points.reduce((best, point) => Math.max(best, Math.hypot(point.x - middle.x, point.y - middle.y)), 0)
+        return circlePath(middle, pad + span * 0.35)
+      }
+      const center = centroidOf(hull)
+      const inflated = hull.map((point) => {
+        const dx = point.x - center.x
+        const dy = point.y - center.y
+        const distance = Math.hypot(dx, dy) || 1
+        return { x: point.x + (dx / distance) * pad, y: point.y + (dy / distance) * pad }
+      })
+      const midpoint = (left, right) => ({ x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 })
+      const first = midpoint(inflated[inflated.length - 1], inflated[0])
+      let path = 'M' + roundCoord(first.x) + ',' + roundCoord(first.y)
+      for (let index = 0; index < inflated.length; index += 1) {
+        const current = inflated[index]
+        const next = inflated[(index + 1) % inflated.length]
+        const middle = midpoint(current, next)
+        path += 'Q' + roundCoord(current.x) + ',' + roundCoord(current.y) + ' ' + roundCoord(middle.x) + ',' + roundCoord(middle.y)
+      }
+      return path + 'Z'
+    }
+
+    function layoutNodes(nodes, edges, startPositions, iterations, clusters) {
       const positions = new Map()
       const golden = Math.PI * (3 - Math.sqrt(5))
-      for (let i = 0; i < count; i += 1) {
-        const id = Array.from(indexById.keys())[i]
-        const previous = startPositions && startPositions.get(id)
+      const groups = clusters || []
+      const groupOf = new Map()
+      groups.forEach((members, index) => {
+        for (const id of members) groupOf.set(id, index)
+      })
+      const anchors = groups.map((members, index) => {
+        const angle = (index / Math.max(groups.length, 1)) * Math.PI * 2 - Math.PI / 2
+        const radius = 210 + 90 * Math.sqrt(index)
+        return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
+      })
+      nodes.forEach((node, index) => {
+        const previous = startPositions && startPositions.get(node.id)
         if (previous) {
-          positions.set(id, { x: previous.x, y: previous.y })
-        } else {
-          const radius = 120 + 46 * Math.sqrt(i)
-          const angle = i * golden
-          positions.set(id, { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius })
+          positions.set(node.id, { x: previous.x, y: previous.y })
+          return
         }
-      }
-      const ids = Array.from(indexById.keys())
-      const damping = startPositions && startPositions.size ? 0.22 : 0.4
+        const angle = index * golden
+        const group = groupOf.has(node.id) ? groupOf.get(node.id) : null
+        const anchor = group === null ? null : anchors[group]
+        const ring = anchor ? 54 + 22 * Math.sqrt(index % 9) : 120 + 46 * Math.sqrt(index)
+        const base = anchor || { x: 0, y: 0 }
+        positions.set(node.id, { x: base.x + Math.cos(angle) * ring, y: base.y + Math.sin(angle) * ring })
+      })
+      const ids = nodes.map((node) => node.id)
+      const damping = startPositions && startPositions.size ? 0.24 : 0.42
       for (let step = 0; step < iterations; step += 1) {
         const disp = new Map(ids.map((id) => [id, { x: 0, y: 0 }]))
         for (let i = 0; i < ids.length; i += 1) {
@@ -1498,7 +1706,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
               distanceSquared = dx * dx + dy * dy
             }
             const distance = Math.sqrt(distanceSquared)
-            const force = 16000 / distanceSquared
+            const force = 15000 / distanceSquared
             const ux = dx / distance
             const uy = dy / distance
             const leftDisp = disp.get(ids[i])
@@ -1516,8 +1724,8 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           const dx = right.x - left.x
           const dy = right.y - left.y
           const distance = Math.hypot(dx, dy) || 1
-          const target = edge.auto ? 300 : 230
-          const force = (distance - target) * (edge.auto ? 0.02 : 0.05)
+          const target = edge.auto ? 320 : 240
+          const force = (distance - target) * (edge.auto ? 0.018 : 0.05)
           const ux = dx / distance
           const uy = dy / distance
           const leftDisp = disp.get(edge.a)
@@ -1527,11 +1735,19 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           rightDisp.x -= ux * force
           rightDisp.y -= uy * force
         }
+        for (const [id, group] of groupOf) {
+          const anchor = anchors[group]
+          const point = positions.get(id)
+          const delta = disp.get(id)
+          if (!anchor || !point || !delta) continue
+          delta.x += (anchor.x - point.x) * 0.014
+          delta.y += (anchor.y - point.y) * 0.014
+        }
         for (const id of ids) {
           const point = positions.get(id)
           const delta = disp.get(id)
-          point.x += clamp(delta.x * damping, -36, 36)
-          point.y += clamp(delta.y * damping, -36, 36)
+          point.x += clamp(delta.x * damping, -34, 34)
+          point.y += clamp(delta.y * damping, -34, 34)
           point.x *= 0.997
           point.y *= 0.997
         }
@@ -1539,9 +1755,19 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       return positions
     }
 
+    /**
+     * Neural-network style relationship graph.
+     *
+     * Besides the original pan / zoom / drag, two direct-manipulation tools live on the
+     * canvas: 「划线」(drag from one memory to another to create a link) and 「圈区」
+     * (drag a box around several memories to group them into one 记忆区). Regions render
+     * as translucent hulls behind their members; links render as curved synapses with a
+     * travelling signal pulse.
+     */
     function GraphView(props) {
       const t = props.t
       const entries = props.entries
+      const regions = props.regions || []
       const wrapRef = useRef(null)
       const svgRef = useRef(null)
       const positionsRef = useRef(new Map())
@@ -1550,6 +1776,15 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       const [tick, setTick] = useState(0)
       const [showAuto, setShowAuto] = useState(true)
       const [isolate, setIsolate] = useState(false)
+      const [tool, setTool] = useState('select')
+      const [linkDraft, setLinkDraft] = useState(null)
+      const [boxDraft, setBoxDraft] = useState(null)
+      const [hoverId, setHoverId] = useState(null)
+      const [focusRegionId, setFocusRegionId] = useState(null)
+      const [editingRegionId, setEditingRegionId] = useState(null)
+      const [nameDraft, setNameDraft] = useState('')
+      const [armedRegionId, setArmedRegionId] = useState(null)
+      const [flash, setFlash] = useState('')
 
       const graph = useMemo(() => buildGraph(entries, showAuto), [entries, showAuto])
       const nodes = graph.nodes
@@ -1557,13 +1792,26 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       const nodeById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes])
       const nodeKey = nodes.map((node) => node.id).join('|')
       const edgeKey = edges.map((edge) => edge.key + (edge.manual ? 'm' : 'a')).join('|')
+      const regionKey = regions
+        .map((region) => region.id + ':' + region.color + ':' + region.memberIds.join(','))
+        .join('|')
+      const clusters = useMemo(
+        () =>
+          regions
+            .map((region) => region.memberIds.filter((id) => nodeById.has(id)))
+            .filter((members) => members.length > 0),
+        [regions, nodeById]
+      )
+      const regionByEntry = useMemo(() => {
+        const map = new Map()
+        for (const region of regions) for (const id of region.memberIds) map.set(id, region)
+        return map
+      }, [regions])
 
       const bump = () => setTick((value) => value + 1)
 
       useEffect(() => {
-        const indexById = new Map(nodes.map((node) => [node.id, node]))
-        const positioned = layoutNodes(nodes.length, edges, indexById, null, 320)
-        positionsRef.current = positioned
+        positionsRef.current = layoutNodes(nodes, edges, null, 300, clusters)
         bump()
         const timer = setTimeout(() => fitToWindow(), 30)
         return () => clearTimeout(timer)
@@ -1572,12 +1820,16 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
 
       useEffect(() => {
         if (!nodeKey) return
-        const indexById = new Map(nodes.map((node) => [node.id, node]))
-        const next = layoutNodes(nodes.length, edges, indexById, positionsRef.current, 90)
-        positionsRef.current = next
+        positionsRef.current = layoutNodes(nodes, edges, positionsRef.current, 120, clusters)
         bump()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [edgeKey])
+      }, [edgeKey, regionKey])
+
+      useEffect(() => {
+        if (!flash) return undefined
+        const timer = setTimeout(() => setFlash(''), 2400)
+        return () => clearTimeout(timer)
+      }, [flash])
 
       function viewportSize() {
         const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : null
@@ -1594,13 +1846,13 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           xs.push(point.x)
           ys.push(point.y)
         })
-        const minX = Math.min.apply(null, xs) - 90
-        const maxX = Math.max.apply(null, xs) + 90
-        const minY = Math.min.apply(null, ys) - 80
-        const maxY = Math.max.apply(null, ys) + 80
+        const minX = Math.min.apply(null, xs) - 110
+        const maxX = Math.max.apply(null, xs) + 110
+        const minY = Math.min.apply(null, ys) - 110
+        const maxY = Math.max.apply(null, ys) + 100
         const width = Math.max(maxX - minX, 1)
         const height = Math.max(maxY - minY, 1)
-        const scale = clamp(Math.min(size.width / width, size.height / height), 0.18, 1.5)
+        const scale = clamp(Math.min(size.width / width, size.height / height), 0.16, 1.4)
         viewRef.current = {
           scale,
           x: (size.width - width * scale) / 2 - minX * scale,
@@ -1610,8 +1862,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       }
 
       function relayout() {
-        const indexById = new Map(nodes.map((node) => [node.id, node]))
-        positionsRef.current = layoutNodes(nodes.length, edges, indexById, null, 320)
+        positionsRef.current = layoutNodes(nodes, edges, null, 300, clusters)
         bump()
         setTimeout(() => fitToWindow(), 10)
       }
@@ -1619,7 +1870,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       function zoomBy(factor) {
         const size = viewportSize()
         const view = viewRef.current
-        const next = clamp(view.scale * factor, 0.15, 3)
+        const next = clamp(view.scale * factor, 0.14, 3)
         const ratio = next / view.scale
         viewRef.current = {
           scale: next,
@@ -1638,6 +1889,22 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         }
       }
 
+      function capturePointer(pointerId) {
+        try {
+          if (svgRef.current) svgRef.current.setPointerCapture(pointerId)
+        } catch {
+          /* pointer capture unsupported */
+        }
+      }
+
+      function releasePointer(pointerId) {
+        try {
+          if (svgRef.current) svgRef.current.releasePointerCapture(pointerId)
+        } catch {
+          /* already released */
+        }
+      }
+
       useEffect(() => {
         const svg = svgRef.current
         if (!svg) return undefined
@@ -1646,7 +1913,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           const rect = svg.getBoundingClientRect()
           const view = viewRef.current
           const factor = Math.exp(-event.deltaY * 0.0016)
-          const next = clamp(view.scale * factor, 0.15, 3)
+          const next = clamp(view.scale * factor, 0.14, 3)
           const ratio = next / view.scale
           const px = event.clientX - rect.left
           const py = event.clientY - rect.top
@@ -1662,9 +1929,18 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [nodes.length])
 
-      const startPan = (event) => {
-        if (event.button !== 0) return
-        const svg = svgRef.current
+      function nodeAt(point) {
+        const positions = positionsRef.current
+        for (const node of nodes) {
+          const position = positions.get(node.id)
+          if (!position) continue
+          const radius = nodeRadius(node.degree) + 7
+          if (Math.hypot(point.x - position.x, point.y - position.y) <= radius) return node
+        }
+        return null
+      }
+
+      function startPan(event) {
         dragRef.current = {
           kind: 'pan',
           pointerId: event.pointerId,
@@ -1674,17 +1950,11 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           originY: viewRef.current.y,
           moved: false
         }
-        try {
-          svg.setPointerCapture(event.pointerId)
-        } catch {
-          /* pointer capture unsupported */
-        }
+        capturePointer(event.pointerId)
       }
 
-      const startNodeDrag = (event, node) => {
-        if (event.button !== 0) return
+      function startNodeDrag(event, node) {
         event.stopPropagation()
-        const svg = svgRef.current
         const point = toGraph(event.clientX, event.clientY)
         const current = positionsRef.current.get(node.id) || { x: 0, y: 0 }
         dragRef.current = {
@@ -1697,16 +1967,68 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           offsetY: current.y - point.y,
           moved: false
         }
-        try {
-          svg.setPointerCapture(event.pointerId)
-        } catch {
-          /* pointer capture unsupported */
+        capturePointer(event.pointerId)
+      }
+
+      function startLink(event, node) {
+        event.stopPropagation()
+        const point = toGraph(event.clientX, event.clientY)
+        dragRef.current = {
+          kind: 'link',
+          fromId: node.id,
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          moved: false
         }
+        setLinkDraft({ fromId: node.id, x: point.x, y: point.y })
+        capturePointer(event.pointerId)
+      }
+
+      function startBox(event) {
+        const point = toGraph(event.clientX, event.clientY)
+        dragRef.current = {
+          kind: 'box',
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          originX: point.x,
+          originY: point.y,
+          moved: false
+        }
+        setBoxDraft({ x0: point.x, y0: point.y, x1: point.x, y1: point.y })
+        capturePointer(event.pointerId)
+      }
+
+      const startPointer = (event) => {
+        if (event.button !== 0) return
+        const point = toGraph(event.clientX, event.clientY)
+        const node = tool === 'region' ? null : nodeAt(point)
+        if (node && (tool === 'link' || event.shiftKey)) {
+          startLink(event, node)
+          return
+        }
+        if (tool === 'region' || (tool === 'select' && event.altKey)) {
+          startBox(event)
+          return
+        }
+        if (node) {
+          startNodeDrag(event, node)
+          return
+        }
+        startPan(event)
       }
 
       const onPointerMove = (event) => {
         const drag = dragRef.current
-        if (!drag || drag.pointerId !== event.pointerId) return
+        const point = toGraph(event.clientX, event.clientY)
+        if (!drag) {
+          const node = nodeAt(point)
+          const next = node ? node.id : null
+          if (next !== hoverId) setHoverId(next)
+          return
+        }
+        if (drag.pointerId !== event.pointerId) return
         const dx = event.clientX - drag.startX
         const dy = event.clientY - drag.startY
         if (!drag.moved && Math.hypot(dx, dy) > 4) drag.moved = true
@@ -1719,21 +2041,97 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           bump()
           return
         }
-        const point = toGraph(event.clientX, event.clientY)
-        positionsRef.current.set(drag.id, { x: point.x + drag.offsetX, y: point.y + drag.offsetY })
-        bump()
+        if (drag.kind === 'node') {
+          positionsRef.current.set(drag.id, { x: point.x + drag.offsetX, y: point.y + drag.offsetY })
+          bump()
+          return
+        }
+        if (drag.kind === 'link') {
+          setLinkDraft({ fromId: drag.fromId, x: point.x, y: point.y })
+          const node = nodeAt(point)
+          const next = node ? node.id : null
+          if (next !== hoverId) setHoverId(next)
+          return
+        }
+        if (drag.kind === 'box') {
+          setBoxDraft({ x0: drag.originX, y0: drag.originY, x1: point.x, y1: point.y })
+        }
       }
 
       const endDrag = (event) => {
         const drag = dragRef.current
         if (!drag || drag.pointerId !== event.pointerId) return
         dragRef.current = null
-        try {
-          svgRef.current.releasePointerCapture(event.pointerId)
-        } catch {
-          /* already released */
+        releasePointer(event.pointerId)
+        const point = toGraph(event.clientX, event.clientY)
+        if (drag.kind === 'node') {
+          if (!drag.moved) props.onSelect(drag.id)
+          return
         }
-        if (drag.kind === 'node' && !drag.moved) props.onSelect(drag.id)
+        if (drag.kind === 'link') {
+          setLinkDraft(null)
+          setHoverId(null)
+          if (!drag.moved) return
+          const target = nodeAt(point)
+          if (!target) {
+            setFlash(t('graph.linkNeedTarget'))
+            return
+          }
+          if (target.id === drag.fromId) {
+            setFlash(t('graph.linkSelf'))
+            return
+          }
+          setFlash(t('graph.linkDone'))
+          if (typeof props.onCreateLink === 'function') props.onCreateLink(drag.fromId, target.id)
+          return
+        }
+        if (drag.kind === 'box') {
+          setBoxDraft(null)
+          const area = normalized({ x0: drag.originX, y0: drag.originY, x1: point.x, y1: point.y })
+          const members = []
+          for (const node of nodes) {
+            const position = positionsRef.current.get(node.id)
+            if (!position) continue
+            if (position.x < area.x0 || position.x > area.x1) continue
+            if (position.y < area.y0 || position.y > area.y1) continue
+            members.push(node.id)
+          }
+          if (!members.length) {
+            setFlash(t('graph.boxEmpty'))
+            return
+          }
+          setFlash(t('graph.boxDone'))
+          if (typeof props.onSaveRegion === 'function') {
+            props.onSaveRegion({
+              name: t('graph.regionName') + ' ' + (regions.length + 1),
+              color: REGION_COLORS[regions.length % REGION_COLORS.length],
+              memberIds: members
+            })
+          }
+          setTool('select')
+        }
+      }
+
+      function cycleColor(region) {
+        const index = REGION_COLORS.indexOf(region.color)
+        const color = REGION_COLORS[(index + 1) % REGION_COLORS.length]
+        if (typeof props.onUpdateRegion === 'function') props.onUpdateRegion({ regionId: region.id, color })
+      }
+
+      function commitRename(region) {
+        const name = nameDraft.trim()
+        setEditingRegionId(null)
+        if (!name || name === region.name) return
+        if (typeof props.onUpdateRegion === 'function') props.onUpdateRegion({ regionId: region.id, name })
+      }
+
+      function armOrDelete(region) {
+        if (armedRegionId !== region.id) {
+          setArmedRegionId(region.id)
+          return
+        }
+        setArmedRegionId(null)
+        if (typeof props.onDeleteRegion === 'function') props.onDeleteRegion(region.id)
       }
 
       const selectedId = props.selectedId
@@ -1748,6 +2146,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       }, [edges, selectedId])
 
       const isolated = isolate && selectedId ? neighbors : null
+      const focusRegion = regions.some((region) => region.id === focusRegionId) ? focusRegionId : null
 
       if (!nodes.length) {
         return h(
@@ -1766,6 +2165,36 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       const view = viewRef.current
       const positions = positionsRef.current
       const nodeList = nodes.filter((node) => !isolated || node.id === selectedId || isolated.has(node.id))
+
+      const regionShapes = regions.map((region) => {
+        const points = region.memberIds.map((id) => positions.get(id)).filter(Boolean)
+        if (!points.length) return null
+        const focused = focusRegion === region.id
+        const dimmed = focusRegion !== null && !focused
+        const center = centroidOf(points)
+        const top = points.reduce((best, point) => (point.y < best.y ? point : best), points[0])
+        const color = 'var(--dm-region-' + region.color + ')'
+        return h(
+          'g',
+          { key: region.id, className: 'dm-regionLayer' },
+          h('path', {
+            className:
+              'dm-regionBlob' + (dimmed ? ' dm-regionBlobDim' : '') + (focused ? ' dm-regionBlobFocus' : ''),
+            d: regionBlobPath(points, 34),
+            style: { fill: color, stroke: color }
+          }),
+          h(
+            'text',
+            {
+              className: 'dm-regionLabel' + (focused ? ' dm-regionLabelOn' : ''),
+              x: center.x,
+              y: top.y - 44,
+              style: { fill: color }
+            },
+            truncate(region.name, 16) + ' · ' + region.memberIds.length
+          )
+        )
+      })
 
       const edgeElements = edges
         .filter((edge) => !isolated || edge.a === selectedId || edge.b === selectedId)
@@ -1786,15 +2215,24 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           const startY = from.y + uy * radiusA
           const endX = to.x - ux * radiusB
           const endY = to.y - uy * radiusB
-          const touchesSelection = selectedId && (edge.a === selectedId || edge.b === selectedId)
-          const dimmed = selectedId && !touchesSelection
+          const bend = (hashNumber(edge.key) % 2 === 0 ? 1 : -1) * Math.min(44, distance * 0.16)
+          const controlX = (startX + endX) / 2 - uy * bend
+          const controlY = (startY + endY) / 2 + ux * bend
+          const path =
+            'M' + roundCoord(startX) + ',' + roundCoord(startY) +
+            'Q' + roundCoord(controlX) + ',' + roundCoord(controlY) +
+            ' ' + roundCoord(endX) + ',' + roundCoord(endY)
+          const dimmedByRegion =
+            focusRegion !== null && !regionByEntryOf(regionByEntry, edge.a, focusRegion) && !regionByEntryOf(regionByEntry, edge.b, focusRegion)
+          const touchesSelection = Boolean(selectedId) && (edge.a === selectedId || edge.b === selectedId)
+          const dimmed = (selectedId && !touchesSelection) || dimmedByRegion
           const classes = ['dm-gedge']
           if (edge.auto) classes.push('dm-gedgeAuto')
           if (touchesSelection) classes.push('dm-gedgeSel')
           if (dimmed) classes.push('dm-gedgeDim')
-          const midX = (startX + endX) / 2
-          const midY = (startY + endY) / 2
-          const arrow = (x, y, dx, dy, key) => {
+          const midX = (startX + endX + controlX * 2) / 4
+          const midY = (startY + endY + controlY * 2) / 4
+          const arrow = (x, y, ax, ay, key) => {
             const size = 7
             const spread = size * 0.62
             return h('polygon', {
@@ -1802,16 +2240,30 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
               className: 'dm-gedgeArrow' + (touchesSelection ? ' dm-gedgeArrowSel' : ''),
               points:
                 `${x},${y} ` +
-                `${x - dx * size + dy * spread},${y - dy * size - dx * spread} ` +
-                `${x - dx * size - dy * spread},${y - dy * size + dx * spread}`
+                `${x - ax * size + ay * spread},${y - ay * size - ax * spread} ` +
+                `${x - ax * size - ay * spread},${y - ay * size + ax * spread}`
             })
           }
+          const endTangentX = endX - controlX
+          const endTangentY = endY - controlY
+          const endLength = Math.hypot(endTangentX, endTangentY) || 1
+          const startTangentX = startX - controlX
+          const startTangentY = startY - controlY
+          const startLength = Math.hypot(startTangentX, startTangentY) || 1
           return h(
             'g',
             { key: edge.key },
-            h('line', { className: classes.join(' '), x1: startX, y1: startY, x2: endX, y2: endY }),
-            edge.manual && edge.dirAB ? arrow(endX, endY, ux, uy, 'ab') : null,
-            edge.manual && edge.dirBA ? arrow(startX, startY, -ux, -uy, 'ba') : null,
+            h('path', { className: classes.join(' '), d: path }),
+            h('path', {
+              className: 'dm-gedgeSignal' + (edge.auto ? ' dm-gedgeSignalAuto' : ''),
+              d: path
+            }),
+            edge.manual && edge.dirAB
+              ? arrow(endX, endY, endTangentX / endLength, endTangentY / endLength, 'ab')
+              : null,
+            edge.manual && edge.dirBA
+              ? arrow(startX, startY, startTangentX / startLength, startTangentY / startLength, 'ba')
+              : null,
             touchesSelection && edge.labels.length
               ? h('text', { className: 'dm-gedgeLabel', x: midX, y: midY - 6 }, truncate(edge.labels[0], 18))
               : null,
@@ -1825,20 +2277,34 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         const point = positions.get(node.id)
         if (!point) return null
         const radius = nodeRadius(node.degree)
+        const color = 'var(--dm-cat-' + node.entry.category + ')'
+        const region = regionByEntry.get(node.id)
         const selected = node.id === selectedId
-        const dimmed = selectedId && !selected && !neighbors.has(node.id)
-        const dotClasses = ['dm-gnodeDot']
-        if (selected) dotClasses.push('dm-gnodeDotSel')
-        if (node.entry.status === 'draft') dotClasses.push('dm-gnodeDraft')
-        if (node.entry.status === 'deprecated') dotClasses.push('dm-gnodeDeprecated')
+        const inFocus = focusRegion === null || (region && region.id === focusRegion)
+        const dimmed = (selectedId && !selected && !neighbors.has(node.id)) || !inFocus
+        const hovered = hoverId === node.id
+        const target = Boolean(linkDraft) && hovered && linkDraft.fromId !== node.id
+        const coreClasses = ['dm-gnodeDot']
+        if (selected) coreClasses.push('dm-gnodeDotSel')
+        if (node.entry.status === 'draft') coreClasses.push('dm-gnodeDraft')
+        if (node.entry.status === 'deprecated') coreClasses.push('dm-gnodeDeprecated')
         return h(
           'g',
           {
             key: node.id,
-            className: 'dm-gnode' + (dimmed ? ' dm-gnodeDim' : ''),
+            className: 'dm-gnode' + (dimmed ? ' dm-gnodeDim' : '') + (target ? ' dm-gnodeTarget' : ''),
             transform: `translate(${point.x},${point.y})`,
             'data-node-id': node.id,
-            onPointerDown: (event) => startNodeDrag(event, node),
+            onPointerDown: (event) => {
+              if (event.button !== 0) return
+              event.stopPropagation()
+              if (tool === 'link' || (tool === 'select' && event.shiftKey)) {
+                startLink(event, node)
+                return
+              }
+              if (tool === 'region') return
+              startNodeDrag(event, node)
+            },
             role: 'button',
             tabIndex: 0,
             'aria-label': node.entry.title,
@@ -1849,24 +2315,75 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
               }
             }
           },
-          h('circle', {
-            className: dotClasses.join(' '),
-            r: radius,
-            style: { fill: 'var(--dm-cat-' + node.entry.category + ')' }
-          }),
-          selected
-            ? h('circle', { r: radius + 5, fill: 'none', stroke: 'var(--dm-accent)', strokeWidth: 1.4, opacity: 0.55 })
-            : null,
-          node.entry.pinned
-            ? h('text', { className: 'dm-gnodeStar', x: radius * 0.62, y: -radius * 0.55, fontSize: 12 }, '★')
-            : null,
+          h('circle', { className: 'dm-gnodeHalo', r: Math.round(radius * 2.05), style: { fill: color } }),
+          h('circle', { className: 'dm-gnodeRing', r: radius + 5, stroke: color }),
+          h('circle', { className: coreClasses.join(' '), r: radius, style: { fill: color } }),
+          h('circle', { r: Math.max(3, Math.round(radius * 0.32)), style: { fill: 'var(--dm-node-ring)', opacity: 0.88 } }),
+          selected ? h('circle', { className: 'dm-gnodeSelRing', r: radius + 10 }) : null,
+          node.entry.pinned ? h('text', { className: 'dm-gnodeStar', x: radius * 0.6, y: -radius * 0.5, fontSize: 12 }, '★') : null,
           h(
             'text',
             { className: 'dm-gnodeLabel' + (selected ? ' dm-gnodeLabelSel' : ''), y: radius + 15 },
             truncate(node.entry.title, 11)
-          )
+          ),
+          h('title', null, node.entry.title)
         )
       })
+
+      const draftElements = []
+      if (linkDraft) {
+        const from = positions.get(linkDraft.fromId)
+        if (from) {
+          const node = nodeById.get(linkDraft.fromId)
+          const radius = nodeRadius(node ? node.degree : 0)
+          const dx = linkDraft.x - from.x
+          const dy = linkDraft.y - from.y
+          const length = Math.hypot(dx, dy) || 1
+          const startX = from.x + (dx / length) * radius
+          const startY = from.y + (dy / length) * radius
+          draftElements.push(
+            h(
+              'g',
+              { key: 'draft-link' },
+              h('path', {
+                className: 'dm-gedgeDraft',
+                d:
+                  'M' + roundCoord(startX) + ',' + roundCoord(startY) +
+                  'L' + roundCoord(linkDraft.x) + ',' + roundCoord(linkDraft.y)
+              }),
+              h('circle', { className: 'dm-linkDot', cx: linkDraft.x, cy: linkDraft.y, r: 4 })
+            )
+          )
+        }
+      }
+      if (boxDraft) {
+        const area = normalized(boxDraft)
+        draftElements.push(
+          h('rect', {
+            key: 'draft-box',
+            className: 'dm-boxRect',
+            x: area.x0,
+            y: area.y0,
+            width: Math.max(area.x1 - area.x0, 1),
+            height: Math.max(area.y1 - area.y0, 1),
+            rx: 10
+          })
+        )
+      }
+
+      const toolButton = (id, icon, label) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'dm-graphToggle' + (tool === id ? ' dm-graphToggleOn' : ''),
+            title: label,
+            'aria-pressed': tool === id,
+            onClick: () => setTool(tool === id ? 'select' : id)
+          },
+          h(Icon, { name: icon, size: 13 }),
+          label
+        )
 
       return h(
         'section',
@@ -1877,27 +2394,61 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           h(
             'svg',
             {
-              className: 'dm-graphSvg',
+              className:
+                'dm-graphSvg' +
+                (tool === 'link' ? ' dm-toolLink' : tool === 'region' ? ' dm-toolRegion' : ''),
               ref: svgRef,
-              onPointerDown: startPan,
+              onPointerDown: startPointer,
               onPointerMove,
               onPointerUp: endDrag,
               onPointerCancel: endDrag,
+              onPointerLeave: () => {
+                if (!dragRef.current && hoverId) setHoverId(null)
+              },
               role: 'application',
               'aria-label': t('graph.title')
             },
             h(
+              'defs',
+              null,
+              h(
+                'pattern',
+                { id: 'dmGraphDots', width: 28, height: 28, patternUnits: 'userSpaceOnUse' },
+                h('circle', { className: 'dm-graphDot', cx: 1.4, cy: 1.4, r: 1.15 })
+              ),
+              h(
+                'radialGradient',
+                { id: 'dmGraphGlow', cx: '50%', cy: '46%', r: '64%' },
+                h('stop', { offset: '0%', className: 'dm-graphGlowStop' }),
+                h('stop', { offset: '100%', className: 'dm-graphGlowStop', stopOpacity: 0 })
+              )
+            ),
+            h(
               'g',
               { transform: `translate(${view.x},${view.y}) scale(${view.scale})` },
+              h('rect', {
+                x: -6000,
+                y: -6000,
+                width: 12000,
+                height: 12000,
+                fill: 'url(#dmGraphDots)'
+              }),
+              h('ellipse', { cx: 0, cy: 0, rx: 780, ry: 620, fill: 'url(#dmGraphGlow)' }),
+              regionShapes,
               edgeElements,
-              nodeElements
+              nodeElements,
+              draftElements
             )
           )
         ),
         h(
           'div',
           { className: 'dm-graphToolbar' },
-          h('span', { className: 'dm-graphCount' }, nodes.length + ' ' + t('graph.nodes') + ' · ' + edges.length + ' ' + t('graph.links')),
+          h(
+            'span',
+            { className: 'dm-graphCount' },
+            nodes.length + ' ' + t('graph.nodes') + ' · ' + edges.length + ' ' + t('graph.links') + ' · ' + regions.length + ' ' + t('graph.regionsUnit')
+          ),
           h(
             'button',
             { type: 'button', className: 'dm-iconBtn', title: t('graph.zoomIn'), 'aria-label': t('graph.zoomIn'), onClick: () => zoomBy(1.25) },
@@ -1918,6 +2469,9 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
             { type: 'button', className: 'dm-iconBtn', title: t('graph.relayout'), 'aria-label': t('graph.relayout'), onClick: relayout },
             h(Icon, { name: 'shuffle', size: 15 })
           ),
+          toolButton('select', 'select', t('graph.toolSelect')),
+          toolButton('link', 'link', t('graph.toolLink')),
+          toolButton('region', 'box', t('graph.toolRegion')),
           h(
             'button',
             {
@@ -1944,7 +2498,83 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
             isolate ? t('graph.isolateOn') : t('graph.isolate')
           )
         ),
-        h('div', { className: 'dm-graphHint' }, t('graph.hint')),
+        regions.length
+          ? h(
+              'div',
+              { className: 'dm-regionPanel' },
+              h(
+                'div',
+                { className: 'dm-regionPanelHead' },
+                h(Icon, { name: 'box', size: 12 }),
+                t('graph.regions') + ' · ' + regions.length
+              ),
+              regions.map((region) => {
+                const editing = editingRegionId === region.id
+                const armed = armedRegionId === region.id
+                return h(
+                  'div',
+                  {
+                    key: region.id,
+                    className: 'dm-regionRow' + (focusRegion === region.id ? ' dm-regionRowOn' : ''),
+                    role: 'button',
+                    tabIndex: 0,
+                    onClick: () => setFocusRegionId(focusRegion === region.id ? null : region.id)
+                  },
+                  h('button', {
+                    type: 'button',
+                    className: 'dm-regionSwatch',
+                    title: t('graph.regionColor'),
+                    style: { background: 'var(--dm-region-' + region.color + ')' },
+                    onClick: (event) => {
+                      event.stopPropagation()
+                      cycleColor(region)
+                    }
+                  }),
+                  editing
+                    ? h('input', {
+                        className: 'dm-regionEditInput',
+                        value: nameDraft,
+                        autoFocus: true,
+                        onClick: (event) => event.stopPropagation(),
+                        onChange: (event) => setNameDraft(event.target.value),
+                        onKeyDown: (event) => {
+                          if (event.key === 'Enter') commitRename(region)
+                          if (event.key === 'Escape') setEditingRegionId(null)
+                        }
+                      })
+                    : h(
+                        'span',
+                        {
+                          className: 'dm-regionName',
+                          title: t('graph.regionRename'),
+                          onClick: (event) => {
+                            event.stopPropagation()
+                            setEditingRegionId(region.id)
+                            setNameDraft(region.name)
+                          }
+                        },
+                        region.name
+                      ),
+                  h('span', { className: 'dm-regionCount' }, region.memberIds.length + ' ' + t('graph.regionUnit')),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'dm-regionDel' + (armed ? ' dm-regionDelArmed' : ''),
+                      title: armed ? t('graph.regionDeleteConfirm') : t('graph.regionDelete'),
+                      onClick: (event) => {
+                        event.stopPropagation()
+                        armOrDelete(region)
+                      }
+                    },
+                    h(Icon, { name: 'trash', size: 12 })
+                  )
+                )
+              })
+            )
+          : null,
+        h('div', { className: 'dm-graphHint' }, tool === 'link' ? t('graph.hintLink') : tool === 'region' ? t('graph.hintRegion') : t('graph.hint')),
+        flash ? h('div', { className: 'dm-graphFlash' }, flash) : null,
         showAuto
           ? h(
               'div',
@@ -1978,6 +2608,11 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       )
     }
 
+    function regionByEntryOf(map, entryId, focusId) {
+      const region = map.get(entryId)
+      return Boolean(region && region.id === focusId)
+    }
+
     function DesignMemoryPanel(props) {
       const t = useCallback(
         (key) => {
@@ -1990,7 +2625,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         [props.t]
       )
       const themeMode = useThemeMode()
-      const [data, setData] = useState({ status: 'loading', entries: [], error: null, storagePath: '' })
+      const [data, setData] = useState({ status: 'loading', entries: [], regions: [], error: null, storagePath: '' })
       const [category, setCategory] = useState('all')
       const [statusFilter, setStatusFilter] = useState('all')
       const [query, setQuery] = useState('')
@@ -2017,6 +2652,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           setData({
             status: 'ready',
             entries: payload.entries || [],
+            regions: payload.regions || [],
             error: null,
             storagePath: payload.storagePath || ''
           })
@@ -2051,6 +2687,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       }, [notice])
 
       const entries = data.entries || []
+      const regions = data.regions || []
       const editing = composer !== null
 
       const counts = useMemo(() => {
@@ -2073,12 +2710,16 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
 
       const selected = entries.find((entry) => entry.id === selectedId) || null
 
+      const regionOfEntry = (entry) =>
+        entry ? regions.find((region) => region.memberIds.includes(entry.id)) || null : null
+
       const notify = (tone, text) => setNotice({ tone, text })
 
       const applyResult = (result) => {
         setData({
           status: 'ready',
           entries: result.entries || [],
+          regions: result.regions || [],
           error: null,
           storagePath: result.storagePath || data.storagePath
         })
@@ -2230,6 +2871,72 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         }
       }
 
+      const createLink = async (fromId, toId) => {
+        if (!fromId || !toId || fromId === toId || busy) return
+        setBusy(true)
+        try {
+          const result = await mutateEntries({ action: 'link', id: fromId, targetId: toId, note: t('graph.linkDone') })
+          applyResult(result)
+          notify('success', t('graph.linkDone'))
+        } catch (error) {
+          notify('error', errorText(error, t))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      const saveRegion = async (payload) => {
+        if (!payload || busy) return
+        setBusy(true)
+        try {
+          const result = await mutateEntries({
+            action: 'region-save',
+            name: payload.name,
+            color: payload.color,
+            memberIds: payload.memberIds || [],
+            note: t('graph.boxDone')
+          })
+          applyResult(result)
+          notify('success', t('graph.regionSaved'))
+        } catch (error) {
+          notify('error', errorText(error, t))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      const updateRegion = async (payload) => {
+        if (!payload || !payload.regionId || busy) return
+        setBusy(true)
+        try {
+          const result = await mutateEntries({
+            action: 'region-save',
+            regionId: payload.regionId,
+            name: payload.name,
+            color: payload.color
+          })
+          applyResult(result)
+        } catch (error) {
+          notify('error', errorText(error, t))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      const deleteRegion = async (regionId) => {
+        if (!regionId || busy) return
+        setBusy(true)
+        try {
+          const result = await mutateEntries({ action: 'region-delete', regionId })
+          applyResult(result)
+          notify('success', t('graph.regionRemoved'))
+        } catch (error) {
+          notify('error', errorText(error, t))
+        } finally {
+          setBusy(false)
+        }
+      }
+
       const handleKeyDown = (event) => {
         if (event.key !== 'Escape') return
         if (composer) {
@@ -2371,6 +3078,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         detail = h(MemoryDetail, {
           entry: selected,
           entries,
+          region: regionOfEntry(selected),
           t,
           busy,
           confirmDelete,
@@ -2453,16 +3161,22 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       const graph = graphMode
         ? h(GraphView, {
             entries: visible,
+            regions,
             t,
             selectedId,
             selectedEntry: selected,
             onSelect: selectEntry,
             onClose: () => setSelectedId(null),
             onIsolate: (id) => selectEntry(id),
+            onCreateLink: createLink,
+            onSaveRegion: saveRegion,
+            onUpdateRegion: updateRegion,
+            onDeleteRegion: deleteRegion,
             drawer: selected
               ? h(MemoryDetail, {
                   entry: selected,
                   entries,
+                  region: regionOfEntry(selected),
                   t,
                   busy,
                   confirmDelete,

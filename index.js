@@ -16,6 +16,7 @@ export const inject = ['tools']
 const ROUTE_PATH = '/design-memory'
 const CATEGORIES = ['system', 'numbers', 'workflow', 'other']
 const STATUSES = ['draft', 'confirmed', 'deprecated']
+const REGION_COLORS = ['violet', 'blue', 'teal', 'amber', 'rose', 'lime']
 const MAX_BODY_BYTES = 2 * 1024 * 1024
 const LIMITS = {
   title: 160,
@@ -30,7 +31,11 @@ const LIMITS = {
   links: 40,
   linkLabel: 80,
   note: 500,
-  history: 30
+  history: 30,
+  regionName: 60,
+  regionNote: 500,
+  regionMembers: 400,
+  regions: 40
 }
 
 const CATEGORY_LABEL = { system: '系统', numbers: '数值', workflow: '工作流', other: '其他' }
@@ -71,9 +76,9 @@ const WRITE_PARAMETERS = {
   properties: {
     action: {
       type: 'string',
-      enum: ['save', 'update', 'delete', 'status', 'link', 'unlink'],
+      enum: ['save', 'update', 'delete', 'status', 'link', 'unlink', 'region-save', 'region-delete'],
       description:
-        'save=新建；update=修改已有条目；status=只改状态（确认/废弃）；link=新增一条关联；unlink=移除一条关联；delete=删除。'
+        'save=新建；update=修改已有条目；status=只改状态（确认/废弃）；link=新增一条关联；unlink=移除一条关联；delete=删除；region-save=新建或修改一个记忆区（画框圈起来的一组记忆）；region-delete=删除记忆区（记忆本身保留）。'
     },
     id: {
       type: 'string',
@@ -129,7 +134,25 @@ const WRITE_PARAMETERS = {
     source: {
       type: 'string',
       description: '来源：会话标题、文档路径或配置表名。'
-    }
+    },
+    regionId: {
+      type: 'string',
+      description: 'region-save / region-delete 用：记忆区 id。region-save 省略表示新建一个区。'
+    },
+    name: {
+      type: 'string',
+      description: 'region-save 用：记忆区名称，例如「战令奖励链路」。省略时自动命名为「记忆区 N」。'
+    },
+    color: {
+      type: 'string',
+      enum: REGION_COLORS,
+      description: 'region-save 用：记忆区颜色，violet / blue / teal / amber / rose / lime。'
+    },
+    memberIds: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'region-save 用：这个记忆区包含的记忆 id 列表。一条记忆最多属于一个区，写进新区会自动从旧区移走。'
+    },
   },
   required: ['action']
 }
@@ -152,7 +175,7 @@ export function apply(ctx) {
   const home = process.env.DSH_HOME || path.join(homedir(), '.dsh')
   const storageDir = path.join(home, 'design-memory')
   const storageFile = path.join(storageDir, 'memories.json')
-  const state = { entries: [] }
+  const state = { entries: [], regions: [] }
   let chain = Promise.resolve()
 
   const ready = load()
@@ -165,9 +188,12 @@ export function apply(ctx) {
       state.entries = list
         .filter((item) => item && typeof item === 'object' && typeof item.title === 'string' && item.title.trim())
         .map(normalizeStored)
+      state.regions = normalizeRegions(parsed && parsed.regions)
       pruneDanglingLinks()
+      pruneRegionMembers()
     } catch (error) {
       state.entries = []
+      state.regions = []
       if (!error || error.code !== 'ENOENT') {
         console.warn('[design-memory] memories.json unreadable:', error && error.message)
         try {
@@ -187,13 +213,17 @@ export function apply(ctx) {
     } catch {
       /* the first write has no previous generation to keep */
     }
-    await writeFile(temp, JSON.stringify({ version: 1, entries: state.entries }, null, 2), 'utf8')
+    await writeFile(
+      temp,
+      JSON.stringify({ version: 2, entries: state.entries, regions: state.regions }, null, 2),
+      'utf8'
+    )
     await rename(temp, storageFile)
   }
 
   function persist(mutate) {
     const run = chain.then(async () => {
-      mutate(state.entries)
+      mutate(state.entries, state.regions)
       await save()
     })
     chain = run.catch(() => {})
@@ -204,12 +234,14 @@ export function apply(ctx) {
     const byCategory = { system: 0, numbers: 0, workflow: 0, other: 0 }
     const byStatus = { draft: 0, confirmed: 0, deprecated: 0 }
     let links = 0
+    let grouped = 0
     for (const entry of state.entries) {
       byCategory[entry.category] = (byCategory[entry.category] || 0) + 1
       byStatus[entry.status] = (byStatus[entry.status] || 0) + 1
       links += entry.links.length
     }
-    return { total: state.entries.length, byCategory, byStatus, links }
+    for (const region of state.regions) grouped += region.memberIds.length
+    return { total: state.entries.length, byCategory, byStatus, links, regions: state.regions.length, grouped }
   }
 
   async function createEntry(input) {
@@ -335,7 +367,7 @@ export function apply(ctx) {
     const index = state.entries.findIndex((entry) => entry.id === id)
     if (index === -1) throw httpError(404, 'not-found', '记忆条目不存在：' + id)
     const entry = state.entries[index]
-    await persist((entries) => {
+    await persist((entries, regions) => {
       const position = entries.findIndex((item) => item.id === id)
       if (position !== -1) entries.splice(position, 1)
       for (const item of entries) {
@@ -343,8 +375,87 @@ export function apply(ctx) {
         const filtered = item.links.filter((link) => link.to !== id)
         if (filtered.length !== item.links.length) item.links = filtered
       }
+      for (const region of regions) {
+        if (!region.memberIds.includes(id)) continue
+        region.memberIds = region.memberIds.filter((item) => item !== id)
+        region.updatedAt = new Date().toISOString()
+      }
+      for (let cursor = regions.length - 1; cursor >= 0; cursor -= 1) {
+        if (!regions[cursor].memberIds.length) regions.splice(cursor, 1)
+      }
     })
     return entry
+  }
+
+  async function saveRegion(input) {
+    const now = new Date().toISOString()
+    const regionId = typeof input.regionId === 'string' ? input.regionId.trim() : ''
+    const requested = Array.isArray(input.memberIds) ? input.memberIds : null
+    const memberIds = []
+    const seen = new Set()
+    for (const raw of requested || []) {
+      if (typeof raw !== 'string') continue
+      const id = raw.trim()
+      if (!id || seen.has(id)) continue
+      if (!state.entries.some((entry) => entry.id === id)) continue
+      seen.add(id)
+      memberIds.push(id)
+      if (memberIds.length >= LIMITS.regionMembers) break
+    }
+    const color = REGION_COLORS.includes(input.color) ? input.color : null
+    const name = cleanText(input.name, LIMITS.regionName)
+    const note = cleanText(input.note, LIMITS.regionNote)
+    let region = null
+    await persist((entries, regions) => {
+      const existing = regionId ? regions.find((item) => item.id === regionId) : null
+      if (existing) {
+        region = existing
+        if (name) region.name = name
+        if (color) region.color = color
+        if (note) region.note = note
+        if (requested) region.memberIds = memberIds.slice()
+        region.updatedAt = now
+      } else {
+        if (regions.length >= LIMITS.regions) {
+          throw httpError(400, 'too-many-regions', '记忆区数量已达上限 ' + LIMITS.regions)
+        }
+        const index = regions.length + 1
+        region = {
+          id: newRegionId(),
+          name: name || '记忆区 ' + index,
+          color: color || REGION_COLORS[(index - 1) % REGION_COLORS.length],
+          note,
+          memberIds: memberIds.slice(),
+          createdAt: now,
+          updatedAt: now
+        }
+        regions.push(region)
+      }
+      const claimed = new Set(region.memberIds)
+      for (const other of regions) {
+        if (other.id === region.id) continue
+        other.memberIds = other.memberIds.filter((id) => !claimed.has(id))
+      }
+      for (let cursor = regions.length - 1; cursor >= 0; cursor -= 1) {
+        if (!regions[cursor].memberIds.length) regions.splice(cursor, 1)
+      }
+    })
+    return region
+  }
+
+  async function deleteRegion(rawId) {
+    const id = typeof rawId === 'string' ? rawId.trim() : ''
+    if (!id) throw httpError(400, 'missing-id', 'region-delete 需要 regionId')
+    const index = state.regions.findIndex((region) => region.id === id)
+    if (index === -1) throw httpError(404, 'not-found', '记忆区不存在：' + id)
+    let removed = null
+    await persist((entries, regions) => {
+      const position = regions.findIndex((region) => region.id === id)
+      if (position === -1) return
+      removed = regions[position]
+      regions.splice(position, 1)
+    })
+    return removed || { id, name: id }
   }
 
   function pruneDanglingLinks() {
@@ -352,6 +463,27 @@ export function apply(ctx) {
     for (const entry of state.entries) {
       entry.links = entry.links.filter((link) => known.has(link.to) && link.to !== entry.id)
     }
+  }
+
+  /**
+   * Keeps the 「记忆区」(memory regions) consistent with the entries: unknown ids drop
+   * out, one entry belongs to at most one region, and a region that lost every member
+   * disappears instead of lingering as an empty hull.
+   */
+  function pruneRegionMembers() {
+    const known = new Set(state.entries.map((entry) => entry.id))
+    const claimed = new Set()
+    for (const region of state.regions) {
+      region.memberIds = region.memberIds.filter((id) => known.has(id) && !claimed.has(id))
+      for (const id of region.memberIds) claimed.add(id)
+    }
+    for (let cursor = state.regions.length - 1; cursor >= 0; cursor -= 1) {
+      if (!state.regions[cursor].memberIds.length) state.regions.splice(cursor, 1)
+    }
+  }
+
+  function regionOf(entryId) {
+    return state.regions.find((region) => region.memberIds.includes(entryId)) || null
   }
 
   function searchEntries(input) {
@@ -372,13 +504,16 @@ export function apply(ctx) {
       const summary = entry.summary ? '\n   ' + entry.summary : ''
       const tags = entry.tags.length ? ' · #' + entry.tags.join(' #') : ''
       const links = entry.links.length ? ' · 关联 ' + entry.links.length : ''
+      const region = regionOf(entry.id)
+      const group = region ? ' · 区「' + region.name + '」' : ''
       return (
         `${index + 1}. [${labelCategory(entry.category)}/${labelStatus(entry.status)}] ${entry.title}${summary}` +
-        `\n   id=${entry.id} · 更新 ${formatDay(entry.updatedAt)}${tags}${links}`
+        `\n   id=${entry.id} · 更新 ${formatDay(entry.updatedAt)}${tags}${links}${group}`
       )
     })
+    const regions = state.regions.length ? `，${state.regions.length} 个记忆区` : ''
     return (
-      `找到 ${matches.length} 条（共 ${state.entries.length} 条），显示前 ${shown.length} 条：\n` +
+      `找到 ${matches.length} 条（共 ${state.entries.length} 条${regions}），显示前 ${shown.length} 条：\n` +
       lines.join('\n') +
       '\n\n要看全文请把这个 id 传给 design_memory_search。'
     )
@@ -396,7 +531,7 @@ export function apply(ctx) {
       if (typeof input.id === 'string' && input.id.trim()) {
         const entry = state.entries.find((item) => item.id === input.id.trim())
         if (!entry) return { text: `没有找到 id 为 ${input.id} 的记忆。可先不带 id 搜索候选。` }
-        return { text: formatEntry(entry, state.entries) }
+        return { text: formatEntry(entry, state.entries, state.regions) }
       }
       const limit = Math.min(Math.max(Number.isInteger(input.limit) ? input.limit : 8, 1), 30)
       const matches = searchEntries(input)
@@ -413,7 +548,7 @@ export function apply(ctx) {
   ctx.tools.register({
     name: 'design_memory_write',
     description:
-      '写入 / 修改 / 删除「策划记忆」条目（左侧栏同名面板读取同一份数据）。用户确认了新的系统规则、数值结论、工作流细节或设计约定之后调用，让结论跨会话保留。分类：system=系统规则与模块机制；numbers=数值口径、产出消耗、概率阈值；workflow=常用工作细节与流程（翻译、找竞品、目录约定、交付方式等）；other=其他设计约定。facts 每行「名称=值」；tags 逗号分隔；links 每行一个关联记忆 id（可写「id=说明」），把相关记忆串成关系网；status 动作用来只改状态（confirmed=用户已确认，deprecated=结论作废）；update 的 note 会写入改动记录。',
+      '写入 / 修改 / 删除「策划记忆」条目（左侧栏同名面板读取同一份数据）。用户确认了新的系统规则、数值结论、工作流细节或设计约定之后调用，让结论跨会话保留。分类：system=系统规则与模块机制；numbers=数值口径、产出消耗、概率阈值；workflow=常用工作细节与流程（翻译、找竞品、目录约定、交付方式等）；other=其他设计约定。facts 每行「名称=值」；tags 逗号分隔；links 每行一个关联记忆 id（可写「id=说明」），把相关记忆串成关系网；status 动作用来只改状态（confirmed=用户已确认，deprecated=结论作废）；update 的 note 会写入改动记录。面板里还可以画框把一组有关的记忆圈成一个「记忆区」：region-save 新建或修改记忆区（name / color / memberIds / note），region-delete 删除记忆区但保留记忆本身，一条记忆最多属于一个区；搜索结果会显示记忆所属的区。',
     parameters: WRITE_PARAMETERS,
     output: TEXT_OUTPUT,
     async execute(args) {
@@ -455,7 +590,20 @@ export function apply(ctx) {
         const entry = await deleteEntry(input.id)
         return { text: `已删除记忆：${entry.title}（id=${entry.id}），指向它的关联也已清理` }
       }
-      throw new Error('action 必须是 save / update / delete / status / link / unlink')
+      if (input.action === 'region-save') {
+        const region = await saveRegion(input)
+        return {
+          text:
+            `已保存记忆区「${region.name}」（${region.memberIds.length} 条记忆）\n` +
+            `id=${region.id} · 颜色 ${region.color}` +
+            (region.memberIds.length ? `\n成员: ${region.memberIds.join(', ')}` : '')
+        }
+      }
+      if (input.action === 'region-delete') {
+        const region = await deleteRegion(input.regionId)
+        return { text: `已删除记忆区「${region.name}」，区里的记忆本身保留` }
+      }
+      throw new Error('action 必须是 save / update / delete / status / link / unlink / region-save / region-delete')
     }
   })
 
@@ -471,7 +619,13 @@ export function apply(ctx) {
       }
       await ready
       if (req.method === 'GET' || req.method === 'HEAD') {
-        const body = JSON.stringify({ ok: true, entries: state.entries, stats: stats(), storagePath: storageFile })
+        const body = JSON.stringify({
+          ok: true,
+          entries: state.entries,
+          regions: state.regions,
+          stats: stats(),
+          storagePath: storageFile
+        })
         return sendRaw(res, 200, body, req.method === 'HEAD')
       }
       if (req.method !== 'POST') {
@@ -487,6 +641,7 @@ export function apply(ctx) {
         ok: true,
         ...result,
         entries: state.entries,
+        regions: state.regions,
         stats: stats(),
         storagePath: storageFile
       })
@@ -508,7 +663,9 @@ export function apply(ctx) {
     if (input.action === 'link') return { entry: await linkEntry(input) }
     if (input.action === 'unlink') return { entry: await unlinkEntry(input) }
     if (input.action === 'delete') return { entry: await deleteEntry(input.id) }
-    throw httpError(400, 'unknown-action', 'action 必须是 save / update / delete / status / link / unlink')
+    if (input.action === 'region-save') return { region: await saveRegion(input) }
+    if (input.action === 'region-delete') return { region: await deleteRegion(input.regionId) }
+    throw httpError(400, 'unknown-action', 'action 必须是 save / update / delete / status / link / unlink / region-save / region-delete')
   }
 
   ctx.inject(['webServer'], (webCtx) => {
@@ -521,6 +678,46 @@ export function apply(ctx) {
 
 function newEntryId() {
   return 'mem_' + Date.now().toString(36) + '_' + randomBytes(3).toString('hex')
+}
+
+function newRegionId() {
+  return 'reg_' + Date.now().toString(36) + '_' + randomBytes(3).toString('hex')
+}
+
+/**
+ * Sanitises the 「记忆区」list read from disk: unknown colours fall back to the palette,
+ * one entry belongs to at most one region, and a region with no members is dropped.
+ */
+function normalizeRegions(raw) {
+  if (!Array.isArray(raw)) return []
+  const now = new Date().toISOString()
+  const regions = []
+  const claimed = new Set()
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const name = typeof item.name === 'string' ? item.name.trim().slice(0, LIMITS.regionName) : ''
+    const members = []
+    for (const value of Array.isArray(item.memberIds) ? item.memberIds : []) {
+      if (typeof value !== 'string') continue
+      const id = value.trim()
+      if (!id || claimed.has(id)) continue
+      claimed.add(id)
+      members.push(id)
+      if (members.length >= LIMITS.regionMembers) break
+    }
+    if (!members.length) continue
+    regions.push({
+      id: typeof item.id === 'string' && item.id ? item.id : newRegionId(),
+      name: name || '记忆区 ' + (regions.length + 1),
+      color: REGION_COLORS.includes(item.color) ? item.color : REGION_COLORS[regions.length % REGION_COLORS.length],
+      note: typeof item.note === 'string' ? item.note.slice(0, LIMITS.regionNote) : '',
+      memberIds: members,
+      createdAt: typeof item.createdAt === 'string' ? item.createdAt : now,
+      updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : now
+    })
+    if (regions.length >= LIMITS.regions) break
+  }
+  return regions
 }
 
 function httpError(status, code, message) {
@@ -684,11 +881,13 @@ function formatDay(iso) {
   return date.toLocaleDateString('zh-CN')
 }
 
-function formatEntry(entry, entries) {
+function formatEntry(entry, entries, regions) {
   const lines = [
     `【${labelCategory(entry.category)} · ${labelStatus(entry.status)}】${entry.title}`,
     `id: ${entry.id} ｜ 更新: ${formatDay(entry.updatedAt)} ｜ 标签: ${entry.tags.length ? entry.tags.join('、') : '无'}`
   ]
+  const region = Array.isArray(regions) ? regions.find((item) => item.memberIds.includes(entry.id)) : null
+  if (region) lines.push('记忆区: 「' + region.name + '」（' + region.memberIds.length + ' 条记忆，id=' + region.id + '）')
   if (entry.summary) lines.push('摘要: ' + entry.summary)
   if (entry.facts.length) {
     lines.push('要点:')

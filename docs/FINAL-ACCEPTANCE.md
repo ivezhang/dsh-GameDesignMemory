@@ -1,6 +1,6 @@
 # 知微 V2.4 交付验收记录
 
-> 生成时间：2026-11-26 22:55（Asia/Shanghai）
+> 生成时间：2026-11-26 22:55，最后一次全量复跑 2026-11-26 23:00（Asia/Shanghai）
 > 本文件是「需求 → 实现 → 自动化证据 → 人工待办」的汇总入口。逐条对照见 [TRACEABILITY.md](TRACEABILITY.md)，人工走查表见 [WALKTHROUGH.md](WALKTHROUGH.md)。
 
 ## 一、当前交付版本
@@ -11,6 +11,7 @@
 | 部署位置 | `D:\unity code\N2-main\project-n2\.dsh-plugins\design-memory` |
 | 数据版本 | 6（v5 及更早自动迁移，`docs/MIGRATION-REPORT.md`） |
 | 构建产物 | `index.js` 6548 行 / 283,232 B；`client.js` 14760 行 / 583,292 B |
+| 三处产物一致性 | 构建目录 / 插件目录 / gh 克隆的 `index.js` `client.js` `package.json` SHA256 前 12 位完全相同 |
 | 运行中宿主 | **仍是旧版**（`GET /design-memory/api` 返回 `version=5`、`nodes=0`），需要完全重启 DSH 才会加载 2.6.9 |
 
 ## 二、自动化测试结果（部署目录内复跑）

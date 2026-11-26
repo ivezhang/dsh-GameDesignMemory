@@ -962,6 +962,31 @@ if (boxTool) {
   check(byClass('zw-batchbar').length >= 1, 'box select shows the batch bar')
 }
 
+// graph: 点深色空白背景 = 退出选择 + 收起右侧详情栏
+const graphAgain = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.graph']))
+if (graphAgain) {
+  click(graphAgain)
+  await settle(6)
+}
+if (byClass('zw-gnode').length && byClass('zw-graphSvg').length) {
+  const view = graphView()
+  const firstNode = byClass('zw-gnode')[0]
+  const center = nodePoint(firstNode)
+  const at = { clientX: view.x + center.x * view.k, clientY: view.y + center.y * view.k, button: 0 }
+  pointer(firstNode, 'onPointerDown', at)
+  await settle(2)
+  pointer(byClass('zw-graphSvg')[0], 'onPointerUp', at)
+  await settle(4)
+  check(byClass('zw-detail').length === 1, 'clicking a graph node opens the detail sidebar')
+  const blank = { clientX: 4, clientY: 4, button: 0 }
+  pointer(byClass('zw-graphSvg')[0], 'onPointerDown', blank)
+  await settle(2)
+  pointer(byClass('zw-graphSvg')[0], 'onPointerUp', blank)
+  await settle(4)
+  check(byClass('zw-detail').length === 0, 'clicking the dark graph background closes the detail sidebar')
+  check(byClass('zw-gnodeOn').length === 0, 'clicking the dark graph background clears the node selection')
+}
+
 // ------------------------------------------------- V2.1 detail + tidy + recall
 const allNavAgain = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.all']))
 if (allNavAgain) {

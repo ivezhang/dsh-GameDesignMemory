@@ -7746,6 +7746,11 @@ window.__ModuleLoader__.load({
           if (!picked.length) setFlash(t('graph.boxEmpty'))
           else props.onMultiSelect(picked)
           setTool('select')
+          return
+        }
+        if (drag.kind === 'pan') {
+          // 点空白的深色背景（没有拖动）= 退出选择并收起右侧详情栏。
+          if (!drag.moved && tool === 'select' && props.onClearSelection) props.onClearSelection()
         }
       }
 
@@ -9843,6 +9848,10 @@ window.__ModuleLoader__.load({
             initialConfig: graphView,
             onSelect: onSelectGraphNode,
             onMultiSelect: setGraphSelection,
+            onClearSelection: () => {
+              setSelectedId('')
+              setGraphSelection([])
+            },
             onCreateRelation: (sourceId, targetId) =>
               setModal({ type: 'relation', sourceId: sourceId, targetId: targetId }),
             onDecideRelation: decideRelation,

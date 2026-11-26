@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const PLUGIN_PATH = path.resolve(HERE, '..', 'index.js')
 const ROUTE = '/design-memory/api'
-const STORE_VERSION = 5
+const STORE_VERSION = 6
 
 const ENTRY_TYPES = ['decision', 'rule', 'assumption', 'question', 'proposal', 'reference', 'metric', 'retro', 'process']
 const RELATION_TYPES = ['belongs_to', 'depends_on', 'affects', 'derived_from', 'references', 'conflicts_with', 'supersedes', 'refines']
@@ -349,7 +349,7 @@ async function runFreshSuite() {
     ok(section.text.includes('固有约定'), 'prompt should explain protected memories')
   })
 
-  await test('fresh store: GET returns ok/version 5/full envelope', async () => {
+  await test('fresh store: GET returns ok/version 6/full envelope', async () => {
     const body = await getBody()
     eq(body.ok, true, 'ok')
     eq(body.version, STORE_VERSION, 'version')
@@ -367,7 +367,7 @@ async function runFreshSuite() {
     isArray(body.meta.entryTypes, 'meta.entryTypes')
   })
 
-  await test('fresh store: memories.json created on disk with version 5', async () => {
+  await test('fresh store: memories.json created on disk with version 6', async () => {
     ok(existsSync(storeFile), 'store file was not created at ' + storeFile)
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'on-disk version')
@@ -740,6 +740,29 @@ async function runFreshSuite() {
     ok(!body.entries.some((item) => item.id === b2.id), 'bulk-deleted entry still present')
   })
 
+  await test('entry-bulk addTag/removeTag change tags without touching the rest', async () => {
+    const t1 = (await postOk({ action: 'entry-save', title: '标签甲', content: '标签甲正文。', tags: ['原有'] }, 'tag create 1')).entry
+    const t2 = (await postOk({ action: 'entry-save', title: '标签乙', content: '标签乙正文。' }, 'tag create 2')).entry
+
+    const tagged = await postOk({ action: 'entry-bulk', ids: [t1.id, t2.id], op: 'addTag', value: '批量标签' }, 'bulk addTag')
+    eq(tagged.affected, 2, 'affected after addTag')
+    let body = await getBody()
+    eq(body.entries.find((item) => item.id === t1.id).tags.sort(), ['原有', '批量标签'].sort(), 'existing tag kept')
+    eq(body.entries.find((item) => item.id === t2.id).tags, ['批量标签'], 'tag added to the second entry')
+
+    await postOk({ action: 'entry-bulk', ids: [t1.id], op: 'removeTag', value: '原有' }, 'bulk removeTag')
+    body = await getBody()
+    eq(body.entries.find((item) => item.id === t1.id).tags, ['批量标签'], 'removeTag removed only the named tag')
+
+    let failed = null
+    try {
+      await postOk({ action: 'entry-bulk', ids: [t1.id], op: 'addTag', value: '   ' }, 'empty tag')
+    } catch (error) {
+      failed = error
+    }
+    ok(Boolean(failed), 'empty tag should be rejected')
+  })
+
   await test('collection-merge moves members and removes the source', async () => {
     const c = (await postOk({ action: 'entry-save', title: '合并甲', content: '合并甲正文。' }, 'merge entry c')).entry
     const d = (await postOk({ action: 'entry-save', title: '合并乙', content: '合并乙正文。' }, 'merge entry d')).entry
@@ -759,6 +782,38 @@ async function runFreshSuite() {
     const merged = state.collections.find((item) => item.id === target.id)
     eq(merged.memberIds.sort(), [c.id, d.id].sort(), 'target members')
     ok(state.entries.some((item) => item.id === c.id), 'merged entry deleted')
+  })
+
+  await test('collection-merge also accepts the front-end sourceId/targetId shape', async () => {
+    const m = (await postOk({ action: 'entry-save', title: '前端合并甲', content: '前端合并甲正文。' }, 'fe merge a')).entry
+    const n = (await postOk({ action: 'entry-save', title: '前端合并乙', content: '前端合并乙正文。' }, 'fe merge b')).entry
+    const source = (
+      await postOk({ action: 'collection-save', name: '前端合并源', memberIds: [m.id] }, 'fe source')
+    ).collection
+    const target = (
+      await postOk({ action: 'collection-save', name: '前端合并目标', memberIds: [n.id] }, 'fe target')
+    ).collection
+    await postOk(
+      { action: 'collection-merge', sourceId: source.id, targetId: target.id },
+      'collection-merge with sourceId'
+    )
+    const state = await getBody()
+    ok(!state.collections.some((item) => item.id === source.id), 'sourceId merge left the source behind')
+    const merged = state.collections.find((item) => item.id === target.id)
+    eq(merged.memberIds.sort(), [m.id, n.id].sort(), 'sourceId merge target members')
+  })
+
+  await test('view-delete accepts viewId from the saved-view delete button', async () => {
+    const saved = await postOk(
+      { action: 'view-save', name: '待删视图', kind: 'graph', config: { hiddenTypes: [] } },
+      'view save for delete'
+    )
+    const viewId = (saved.view && saved.view.id) || (saved.views && saved.views[0] && saved.views[0].id)
+    ok(Boolean(viewId), 'view-save did not return an id')
+    const body = await postOk({ action: 'view-delete', viewId: viewId }, 'view-delete by viewId')
+    eq(body.deleted, viewId, 'view-delete deleted id')
+    const state = await getBody()
+    ok(!state.views.some((item) => item.id === viewId), 'deleted view still in the list')
   })
 
   await test('collection-split moves members into a new collection', async () => {
@@ -988,7 +1043,7 @@ async function runFreshSuite() {
     ok(relationsText.length > 0, 'suggest relations returned empty string')
   })
 
-  await test('durability: on-disk JSON parses as version 5 and matches the API', async () => {
+  await test('durability: on-disk JSON parses as version 6 and matches the API', async () => {
     const state = await getBody()
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'disk version')
@@ -1209,7 +1264,7 @@ async function runLegacySuite() {
     eq(collection.memberIds, ['mem_a', 'mem_b'], 'memberIds')
   })
 
-  await test('legacy migration: file rewritten as version 5', async () => {
+  await test('legacy migration: file rewritten as version 6', async () => {
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'on-disk version')
     eq(disk.entries.length, 4, 'on-disk entries')
@@ -1460,6 +1515,17 @@ async function runEvolutionSuite() {
     ok(typeof body.logged === 'string' && body.logged, 'recall should be logged')
     const recallLog = body.recalls[0]
     ok(recallLog && Array.isArray(recallLog.ids), 'recall log should keep the served ids')
+    const loggedPaths = (recallLog && recallLog.paths) || []
+    if (loggedPaths.length) {
+      ok(
+        loggedPaths.every((item) => typeof item.memoryId === 'string' && Array.isArray(item.hops) && item.hops.length >= 2),
+        'recall keeps a structured relation path per memory'
+      )
+      ok(
+        loggedPaths.every((item) => item.hops[0].kind === 'node'),
+        'every recall path starts from the knowledge object that matched the task'
+      )
+    }
     const served = body.items[0]
     const entry = await byId(served.entryId)
     ok(entry.usageCount >= 1, 'served memory counts a real usage')
@@ -1525,6 +1591,7 @@ async function main() {
   await runLegacySuite()
   await runEvolutionSuite()
   await runWorkspaceSuite()
+  await runKnowledgeSuite()
 
   const total = passed + failed
   console.log('')
@@ -1610,6 +1677,25 @@ async function runWorkspaceSuite() {
   state = (await api.get()).json
   check(Boolean(state.layout.positions[idA]), 'saved layout keeps a real entry')
   check(!state.layout.positions.ghost, 'layout drops positions for unknown entries')
+
+  const layoutNode = await api.post({ action: 'node-save', title: '布局用对象', nodeType: 'concept' })
+  const layoutNodeId = layoutNode.json.node.id
+  const hiddenSave = await api.post({
+    action: 'layout-save',
+    positions: Object.assign({}, state.layout.positions, { [layoutNodeId]: { x: 120, y: -60 } }),
+    hidden: [layoutNodeId, 'ghost-id']
+  })
+  check(hiddenSave.json.ok === true, 'layout-save accepts hidden ids')
+  state = (await api.get()).json
+  check(Boolean(state.layout.positions[layoutNodeId]), 'knowledge node keeps its saved position')
+  check(
+    Array.isArray(state.layout.hidden) && state.layout.hidden.length === 1 && state.layout.hidden[0] === layoutNodeId,
+    'hidden list filtered to known ids'
+  )
+  const hiddenKeep = await api.post({ action: 'layout-save', positions: state.layout.positions })
+  check(hiddenKeep.json.ok === true, 'layout-save without hidden field still works')
+  state = (await api.get()).json
+  check(state.layout.hidden.indexOf(layoutNodeId) >= 0, 'hidden survives a save without the hidden field')
 
   const cleared = await api.post({ action: 'layout-clear' })
   check(cleared.json.ok === true, 'layout-clear resets the layout')
@@ -1749,4 +1835,355 @@ async function runWorkspaceSuite() {
 
   console.log('WORKSPACE ' + workspaceChecks + ' checks · 0 failed')
   rm(dshHome, { recursive: true, force: true })
+}
+
+// ---------------------------------------------------------------------------
+// suite: knowledge nodes (v2.4 P0)
+// ---------------------------------------------------------------------------
+
+async function runKnowledgeSuite() {
+  const home = await makeHome('knowledge')
+  const { api, toolDefs } = await boot(home)
+
+  const getBody = async () => {
+    const res = await api.get()
+    eq(res.status, 200, 'GET status')
+    return res.json
+  }
+  const postOk = async (body, what) => {
+    const res = await api.post(body)
+    if (res.status !== 200 || !res.json || res.json.ok !== true) {
+      fail((what || 'POST') + ' failed: HTTP ' + res.status + ' ' + brief(res.text, 400))
+    }
+    return res.json
+  }
+  const postFail = async (body, expectedCode, what) => {
+    const res = await api.post(body)
+    if (res.status === 200) fail((what || 'POST') + ' unexpectedly succeeded')
+    const code = res.json && res.json.error && res.json.error.code
+    if (expectedCode && code !== expectedCode) {
+      fail((what || 'POST') + ': expected error ' + expectedCode + ', got ' + code + ' / ' + brief(res.text, 300))
+    }
+    return res.json
+  }
+
+  await test('migration seeds one project node per project and exposes nodes', async () => {
+    const body = await getBody()
+    eq(body.version, 6, 'store version')
+    isArray(body.nodes, 'nodes')
+    ok(body.nodes.length >= 1, 'expected at least one project node')
+    const projectNode = body.nodes.find((node) => node.nodeType === 'project')
+    ok(projectNode, 'project node missing')
+    eq(projectNode.projectId, body.projects[0].id, 'project node projectId')
+    eq(projectNode.title, body.projects[0].name, 'project node title')
+  })
+
+  await test('node-save creates a concept with parent, attributes and memory links', async () => {
+    const before = await getBody()
+    const projectNode = before.nodes.find((node) => node.nodeType === 'project')
+    const body = await postOk(
+      {
+        action: 'node-save',
+        title: '哥布林',
+        nodeType: 'concept',
+        description: '哥布林洞窟里的基础近战怪物',
+        parentNodeId: projectNode.id,
+        projectId: before.projects[0].id,
+        aliases: ['Goblin'],
+        attributes: { 阵营: '敌对', 战斗定位: '近战' }
+      },
+      'node-save concept'
+    )
+    ok(body.node && body.node.id, 'node missing')
+    eq(body.node.nodeType, 'concept', 'nodeType')
+    eq(body.node.parentNodeId, projectNode.id, 'parentNodeId')
+    eq(body.node.attributes.length, 2, 'attributes count')
+    eq(body.created, true, 'created flag')
+    globalThis.__goblinId = body.node.id
+    globalThis.__projectNodeId = projectNode.id
+  })
+
+  await test('node-save reports similar objects before duplicating', async () => {
+    const body = await postOk({ action: 'node-save', title: '哥布林', nodeType: 'concept' }, 'duplicate probe')
+    ok(Array.isArray(body.duplicate) && body.duplicate.length >= 1, 'expected duplicate suggestions')
+    eq(body.created, false, 'should not create duplicate silently')
+  })
+
+  await test('node-save allowDuplicate creates a second node', async () => {
+    const body = await postOk(
+      { action: 'node-save', title: '哥布林', nodeType: 'concept', allowDuplicate: true, description: '强化哥布林' },
+      'node-save allowDuplicate'
+    )
+    eq(body.created, true, 'created')
+    globalThis.__strongGoblinId = body.node.id
+  })
+
+  await test('node edits keep a version history and can be rolled back', async () => {
+    const created = await postOk(
+      { action: 'node-save', title: '铁矿石', nodeType: 'concept', description: '第一种说明' },
+      'node for versions'
+    )
+    const nodeId = created.node.id
+    eq(created.node.versions.length, 1, 'fresh node has one version')
+    eq(created.node.currentVersion, 1, 'fresh node version counter')
+    const edited = await postOk(
+      { action: 'node-save', id: nodeId, description: '第二种说明', changeReason: '补上掉落位' },
+      'node edit version'
+    )
+    ok(edited.node.versions.length >= 2, 'editing should append a version')
+    ok(edited.node.currentVersion >= 2, 'current version should advance')
+    const last = edited.node.versions[edited.node.versions.length - 1]
+    includes(last.changeReason, '补上掉落位', 'version keeps the reason')
+    const restored = await postOk(
+      { action: 'node-version-restore', nodeId: nodeId, versionId: edited.node.versions[0].id },
+      'node version restore'
+    )
+    eq(restored.node.description, '第一种说明', 'description rolled back')
+    ok(restored.node.versions.length >= 3, 'restore also records a version')
+    const renamed = await postOk({ action: 'node-save', id: nodeId, title: '铁矿石（改）' }, 'node rename')
+    const types = renamed.node.versions.map((version) => version.changeType)
+    ok(types.indexOf('renamed') >= 0, 'rename should be recorded as its own change type')
+  })
+
+  await test('relation-create links nodes with a typed relation', async () => {
+    const body = await postOk(
+      {
+        action: 'relation-create',
+        sourceType: 'node',
+        sourceId: globalThis.__projectNodeId,
+        targetType: 'node',
+        targetId: globalThis.__goblinId,
+        relationType: 'contains',
+        description: '项目包含哥布林'
+      },
+      'node relation'
+    )
+    eq(body.created, true, 'relation created')
+    eq(body.relation.sourceType, 'node', 'sourceType')
+    eq(body.relation.relationType, 'contains', 'relationType')
+    globalThis.__containsRelationId = body.relation.id
+    const again = await postOk(
+      {
+        action: 'relation-create',
+        sourceType: 'node',
+        sourceId: globalThis.__projectNodeId,
+        targetType: 'node',
+        targetId: globalThis.__goblinId,
+        relationType: 'contains'
+      },
+      'duplicate relation'
+    )
+    eq(again.created, false, 'duplicate relation should reuse existing row')
+  })
+
+  await test('relation-create rejects self relation and hierarchy cycles', async () => {
+    await postFail(
+      {
+        action: 'relation-create',
+        sourceType: 'node',
+        sourceId: globalThis.__goblinId,
+        targetType: 'node',
+        targetId: globalThis.__goblinId,
+        relationType: 'related_to'
+      },
+      'self-relation',
+      'self relation'
+    )
+    await postFail(
+      {
+        action: 'relation-create',
+        sourceType: 'node',
+        sourceId: globalThis.__goblinId,
+        targetType: 'node',
+        targetId: globalThis.__projectNodeId,
+        relationType: 'contains'
+      },
+      'relation-cycle',
+      'hierarchy cycle'
+    )
+  })
+
+  await test('relation-create rejects meaningless endpoint types', async () => {
+    await postFail(
+      {
+        action: 'relation-create',
+        sourceType: 'node',
+        sourceId: globalThis.__projectNodeId,
+        targetType: 'node',
+        targetId: globalThis.__goblinId,
+        relationType: 'drops'
+      },
+      'relation-not-applicable',
+      'drops from a project'
+    )
+  })
+
+  await test('node-link-memory links a memory and mirrors nodeIds on the memory', async () => {
+    const entry = await postOk(
+      { action: 'entry-save', title: '哥布林掉落规则', content: '哥布林死亡后有 12% 概率掉落铁矿石。', type: 'rule', status: 'active' },
+      'entry'
+    )
+    const memoryId = entry.entry.id
+    globalThis.__goblinMemoryId = memoryId
+    const linked = await postOk({ action: 'node-link-memory', nodeId: globalThis.__goblinId, memoryId }, 'link memory')
+    ok(linked.node.relatedMemoryIds.includes(memoryId), 'node should list the memory')
+    const body = await getBody()
+    const saved = body.entries.find((item) => item.id === memoryId)
+    ok(saved.nodeIds.includes(globalThis.__goblinId), 'memory should list the node')
+    const relation = await postOk(
+      {
+        action: 'relation-create',
+        sourceType: 'node',
+        sourceId: globalThis.__goblinId,
+        targetType: 'memory',
+        targetId: memoryId,
+        relationType: 'applies_to'
+      },
+      'node to memory relation'
+    )
+    eq(relation.created, true, 'node to memory relation created')
+  })
+
+  await test('node-unlink-memory keeps the memory itself', async () => {
+    const body = await postOk(
+      { action: 'node-unlink-memory', nodeId: globalThis.__goblinId, memoryId: globalThis.__goblinMemoryId },
+      'unlink memory'
+    )
+    ok(body.unlinked, 'unlinked flag')
+    const after = await getBody()
+    ok(after.entries.some((item) => item.id === globalThis.__goblinMemoryId), 'memory must survive unlink')
+  })
+
+  await test('node-merge migrates relations and memories into the target', async () => {
+    await postOk({ action: 'node-link-memory', nodeId: globalThis.__strongGoblinId, memoryId: globalThis.__goblinMemoryId }, 'link to strong goblin')
+    const body = await postOk(
+      { action: 'node-merge', targetId: globalThis.__goblinId, sourceId: globalThis.__strongGoblinId },
+      'node merge'
+    )
+    eq(body.node.id, globalThis.__goblinId, 'target id kept')
+    eq(body.mergedFrom.status, 'merged', 'source status')
+    eq(body.mergedFrom.mergedIntoId, globalThis.__goblinId, 'mergedInto')
+    const after = await getBody()
+    ok(
+      after.nodes.find((node) => node.id === globalThis.__goblinId).relatedMemoryIds.includes(globalThis.__goblinMemoryId),
+      'memory migrated'
+    )
+    const merged = after.nodes.find((node) => node.id === globalThis.__strongGoblinId)
+    eq(merged.status, 'merged', 'merged source retained')
+  })
+
+  await test('node-archive and node-restore keep the node recoverable', async () => {
+    const archived = await postOk({ action: 'node-archive', id: globalThis.__goblinId }, 'archive')
+    eq(archived.node.status, 'archived', 'archived status')
+    const restored = await postOk({ action: 'node-restore', id: globalThis.__goblinId }, 'restore')
+    eq(restored.node.status, 'active', 'restored status')
+  })
+
+  await test('search tool returns knowledge objects with ids', async () => {
+    const tool = toolDefs.find((def) => def.name === 'design_memory_search')
+    const text = await tool.execute({ query: '哥布林', nodeType: 'concept', limit: 5 })
+    includes(text, '知识对象', 'search output should mention knowledge objects')
+    includes(text, globalThis.__goblinId, 'search output should include the node id')
+  })
+
+  await test('recall goes through the knowledge object and records the path', async () => {
+    await postOk({ action: 'node-link-memory', nodeId: globalThis.__goblinId, memoryId: globalThis.__goblinMemoryId }, 'relink')
+    const tool = toolDefs.find((def) => def.name === 'design_memory_recall')
+    const body = await postOk({ action: 'memory-recall', task: '哥布林洞窟的掉落怎么配', limit: 6 }, 'recall')
+    ok(Array.isArray(body.nodes), 'recall should report matched nodes')
+    ok(body.nodes.some((node) => node.id === globalThis.__goblinId), 'recall should match the goblin node')
+    ok(body.items.some((item) => item.entryId === globalThis.__goblinMemoryId), 'recall should surface its memory')
+    const afterRecall = await api.get()
+    const kept = (afterRecall.json.recalls || []).find((row) => row.task === '哥布林洞窟的掉落怎么配')
+    ok(Boolean(kept), 'recall record should be persisted')
+    ok(Boolean(kept) && Array.isArray(kept.nodes) && kept.nodes.length > 0, 'recall record should keep the matched nodes')
+    ok(
+      Boolean(kept && kept.nodes[0] && kept.nodes[0].title),
+      'recall record node entries should carry a title'
+    )
+    ok(
+      Boolean(kept && Array.isArray(kept.paths) && kept.paths.length > 0),
+      'recall record keeps the relation path'
+    )
+    const keptPath = (kept && Array.isArray(kept.paths) ? kept.paths[0] : null) || null
+    ok(Boolean(keptPath && keptPath.memoryId), 'relation path names the memory it led to')
+    ok(
+      Boolean(keptPath && Array.isArray(keptPath.hops) && keptPath.hops[0] && keptPath.hops[0].kind === 'node'),
+      'relation path starts at the knowledge object'
+    )
+    const text = await tool.execute({ task: '哥布林洞窟的掉落怎么配' })
+    includes(text, '哥布林', 'recall text should mention the node')
+  })
+
+  await test('node-delete accepts the nodeId shape used by the tool schema', async () => {
+    const made = await postOk({ action: 'node-save', title: '待删对象 ' + Date.now().toString(36), nodeType: 'concept' }, 'made')
+    const id = made.node.id
+    const byNodeId = await postOk({ action: 'node-delete', nodeId: id, mode: 'hard' }, 'gone')
+    ok(byNodeId.deleted === id || (byNodeId.node && byNodeId.node.id === id), 'node-delete should accept nodeId')
+    const list = await api.get()
+    ok(!(list.json.nodes || []).some((node) => node.id === id), 'the node is gone from the store')
+  })
+
+  await test('node-archive and node-restore accept nodeId too', async () => {
+    const made = await postOk({ action: 'node-save', title: '归档对象 ' + Date.now().toString(36), nodeType: 'concept' }, 'made')
+    const id = made.node.id
+    const archived = await postOk({ action: 'node-archive', nodeId: id }, 'arch')
+    ok(Boolean(archived.node) && archived.node.status === 'archived', 'node-archive should accept nodeId')
+    const restored = await postOk({ action: 'node-restore', nodeId: id }, 'res')
+    ok(Boolean(restored.node) && restored.node.status !== 'archived', 'node-restore should accept nodeId')
+  })
+
+  await test('collections accept knowledge objects as members', async () => {
+    const created = await postOk(
+      { action: 'collection-save', name: '战斗对象', memberIds: [globalThis.__goblinId] },
+      'collection with node'
+    )
+    ok(created.collection.memberIds.includes(globalThis.__goblinId), 'node should be a collection member')
+  })
+
+  await test('observe suggests node links or node candidates for new memories', async () => {
+    const body = await postOk(
+      { action: 'memory-observe', text: '哥布林是洞窟里最常见的近战怪物。哥布林死后掉落铁矿石。', conversationId: 'conv-knowledge', autoCreate: true },
+      'observe'
+    )
+    ok(Array.isArray(body.nodeLinks), 'nodeLinks array')
+    ok(Array.isArray(body.nodeCandidates), 'nodeCandidates array')
+    ok(body.nodeLinks.length + body.nodeCandidates.length > 0, 'observe should say where the memory belongs')
+  })
+
+  await test('recall does not leak memories from other projects', async () => {
+    const projectB = (await postOk({ action: 'project-save', name: '另一个项目' }, 'project b')).project
+    const other = (
+      await postOk(
+        {
+          action: 'entry-save',
+          title: '哥布林洞窟的掉落配置（另一个项目）',
+          content: '哥布林洞窟 掉落 铁矿石 走另一套表',
+          projectId: projectB.id
+        },
+        'entry b'
+      )
+    ).entry
+    const shared = (
+      await postOk(
+        {
+          action: 'entry-save',
+          title: '全局掉落约定',
+          content: '哥布林洞窟 掉落 铁矿石 默认走全局掉落表',
+          scope: 'global'
+        },
+        'entry global'
+      )
+    ).entry
+    const snapshot = await api.get()
+    const projectA = snapshot.json.projects.find((project) => project.id !== projectB.id)
+    ok(Boolean(projectA), 'there should be another project to scope to')
+    const scoped = await postOk(
+      { action: 'memory-recall', task: '哥布林洞窟 掉落', projectId: projectA.id, limit: 10 },
+      'recall scoped'
+    )
+    const ids = scoped.items.map((item) => item.entryId)
+    ok(!ids.includes(other.id), 'recall must not leak memories that belong to another project')
+    ok(ids.includes(shared.id), 'global memories still take part in a scoped recall')
+  })
 }

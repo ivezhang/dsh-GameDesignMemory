@@ -10,7 +10,7 @@ export const name = 'design-memory'
 export const inject = ['tools']
 
 const ROUTE_PATH = '/design-memory'
-const STORE_VERSION = 5
+const STORE_VERSION = 6
 const MAX_BODY_BYTES = 2 * 1024 * 1024
 
 const ENTRY_TYPES = [
@@ -161,21 +161,40 @@ const STATUS_HINT = {
   archived: '收起来，不参与日常检索'
 }
 
-const RELATION_TYPES = [
-  'belongs_to',
-  'depends_on',
-  'affects',
-  'derived_from',
-  'references',
-  'conflicts_with',
-  'supersedes',
-  'refines'
+const RELATION_GROUPS = [
+  { id: 'hierarchy', label: '层级', types: ['contains', 'belongs_to', 'part_of'] },
+  { id: 'business', label: '业务', types: ['appears_in', 'uses', 'drops', 'requires', 'crafted_from', 'affects', 'depends_on', 'balanced_against'] },
+  { id: 'workflow', label: '流程', types: ['follows', 'precedes', 'next_step', 'triggers', 'produces', 'exception_to'] },
+  { id: 'principle', label: '偏好与原则', types: ['prefers', 'avoids', 'applies_to', 'guides', 'constrains'] },
+  { id: 'knowledge', label: '知识', types: ['related_to', 'derived_from', 'references', 'conflicts_with', 'supersedes', 'refines'] }
 ]
 
+const RELATION_TYPES = RELATION_GROUPS.reduce((list, group) => list.concat(group.types), [])
+
 const RELATION_LABEL = {
-  belongs_to: '归属于',
-  depends_on: '依赖于',
+  contains: '包含',
+  belongs_to: '属于',
+  part_of: '是……的一部分',
+  appears_in: '出现在',
+  uses: '使用',
+  drops: '掉落',
+  requires: '需要',
+  crafted_from: '由……制作',
   affects: '影响',
+  depends_on: '依赖',
+  balanced_against: '与……平衡',
+  follows: '遵循',
+  precedes: '先于',
+  next_step: '下一环节',
+  triggers: '触发',
+  produces: '产出',
+  exception_to: '是……的例外',
+  prefers: '偏好',
+  avoids: '避免',
+  applies_to: '适用于',
+  guides: '指导',
+  constrains: '约束',
+  related_to: '相关',
   derived_from: '来源于',
   references: '参考',
   conflicts_with: '冲突',
@@ -183,18 +202,131 @@ const RELATION_LABEL = {
   refines: '细化'
 }
 
+// 自然语言预览用："{source} 掉了 {target}" 这类，方向反过来也要读得通。
+const RELATION_PHRASE = {
+  contains: ['包含', '属于'],
+  belongs_to: ['属于', '包含'],
+  part_of: ['是……的一部分', '由……组成'],
+  appears_in: ['出现在', '出现了'],
+  uses: ['使用', '被……使用'],
+  drops: ['掉落', '由……掉落'],
+  requires: ['需要', '被……需要'],
+  crafted_from: ['由……制作而成', '可以制作'],
+  affects: ['影响', '受……影响'],
+  depends_on: ['依赖', '支撑'],
+  balanced_against: ['与……做平衡', '与……做平衡'],
+  follows: ['遵循', '被……遵循'],
+  precedes: ['先于', '晚于'],
+  next_step: ['的下一环节是', '的上一环节是'],
+  triggers: ['触发', '被……触发'],
+  produces: ['产出', '由……产出'],
+  exception_to: ['是……的例外', '的例外是'],
+  prefers: ['偏好', '被……偏好'],
+  avoids: ['避免', '被……避免'],
+  applies_to: ['适用于', '被……适用'],
+  guides: ['指导', '受……指导'],
+  constrains: ['约束', '受……约束'],
+  related_to: ['与……相关', '与……相关'],
+  derived_from: ['来源于', '衍生出'],
+  references: ['参考', '被……参考'],
+  conflicts_with: ['与……冲突', '与……冲突'],
+  supersedes: ['替代', '被……替代'],
+  refines: ['细化', '被……细化']
+}
+
 const RELATION_HINT = {
-  belongs_to: '这条记忆属于另一条所描述的整体',
-  depends_on: '这条记忆成立需要另一条先成立',
-  affects: '改动这条会牵动另一条',
-  derived_from: '这条结论是从另一条推出来的',
+  contains: '整体包含部分，例如系统包含子系统',
+  belongs_to: '部分属于整体，例如怪物属于怪物系统',
+  part_of: '这个对象是另一个对象的一部分',
+  appears_in: '在一个场景或副本里出现',
+  uses: '使用另一个对象或系统',
+  drops: '被击败或采集后掉落',
+  requires: '成立或制作需要另一个对象',
+  crafted_from: '由另一个对象制作',
+  affects: '改动这个会牵动另一个',
+  depends_on: '这个成立需要另一个先成立',
+  balanced_against: '和另一个对象互相制衡',
+  follows: '按另一个流程走',
+  precedes: '在另一个之前发生',
+  next_step: '流程里的下一步',
+  triggers: '触发另一个流程或对象',
+  produces: '产出另一个对象或结果',
+  exception_to: '是另一个规则的例外',
+  prefers: '偏好某种做法',
+  avoids: '避免某种做法',
+  applies_to: '适用于某个范围或对象',
+  guides: '指导某个设计判断',
+  constrains: '约束某个范围',
+  related_to: '存在关联，但没法归类',
+  derived_from: '从另一个推出来',
   references: '引用别人的做法或案例',
-  conflicts_with: '和另一条互相矛盾，需要裁决',
-  supersedes: '这条取代了旧的那条',
-  refines: '这条是另一条的更细一层'
+  conflicts_with: '互相矛盾，需要裁决',
+  supersedes: '取代了旧的那个',
+  refines: '是另一个的更细一层'
+}
+
+const KNOWLEDGE_NODE_TYPES = [
+  'project',
+  'system',
+  'subsystem',
+  'concept',
+  'workflow',
+  'preference',
+  'principle',
+  'method'
+]
+
+const KNODE_LABEL = {
+  project: '项目',
+  system: '系统',
+  subsystem: '子系统',
+  concept: '业务对象',
+  workflow: '工作流程',
+  preference: '用户偏好',
+  principle: '设计原则',
+  method: '设计方法'
+}
+
+const KNODE_HINT = {
+  project: '一个游戏项目，例如 N2 · 猎星者',
+  system: '项目里的一块系统，例如装备系统、怪物系统',
+  subsystem: '系统下面的一层，例如掉落规则',
+  concept: '具体的业务对象：怪物、装备、技能、副本、材料',
+  workflow: '做一件事的固定步骤与前置条件',
+  preference: '用户长期稳定的工作与表达偏好',
+  principle: '可复用的设计判断标准',
+  method: '做设计的具体办法'
+}
+
+// 四个知识维度。视图只做筛选，不复制数据。
+const KNOWLEDGE_DIMENSIONS = [
+  { id: 'project', label: '项目结构', nodeTypes: ['project', 'system', 'subsystem', 'concept'] },
+  { id: 'work', label: '工作方式', nodeTypes: ['workflow'] },
+  { id: 'preference', label: '偏好与原则', nodeTypes: ['preference', 'principle'] },
+  { id: 'knowledge', label: '设计知识', nodeTypes: ['method', 'principle'] }
+]
+
+const NODE_STATUSES = ['candidate', 'active', 'archived', 'merged']
+
+const NODE_STATUS_LABEL = {
+  candidate: '候选',
+  active: '已启用',
+  archived: '已归档',
+  merged: '已合并'
+}
+
+const NODE_STATUS_HINT = {
+  candidate: 'AI 识别或用户草拟，尚未确认',
+  active: '正常参与检索与关系网',
+  archived: '收起来，历史仍可查看',
+  merged: '已并入另一个对象'
 }
 
 const RELATION_STATUS = ['suggested', 'confirmed', 'rejected']
+
+// 关系两端可以是记忆（memory）或知识对象（node）。
+const RELATION_ENDS = ['memory', 'node']
+
 
 const RELATION_STATUS_LABEL = {
   suggested: 'AI 建议',
@@ -270,7 +402,16 @@ const LIMITS = {
   frameNote: 600,
   frameMembers: 400,
   frameHue: 24,
-  entries: 4000
+  entries: 4000,
+  nodes: 1200,
+  nodeTitle: 120,
+  nodeDescription: 4000,
+  nodeAttributes: 40,
+  attributeValue: 400,
+  nodeMemories: 400,
+  nodeChildren: 400,
+  nodeAliases: 12,
+  nodeAlias: 40
 }
 
 const DEFAULT_PROJECT_ID = 'prj_default'
@@ -292,6 +433,10 @@ const META = {
   collectionColors: COLLECTION_COLORS,
   collectionStatuses: COLLECTION_STATUS,
   frameColors: COLLECTION_COLORS,
+  nodeTypes: KNOWLEDGE_NODE_TYPES.map((id) => ({ id, label: KNODE_LABEL[id], hint: KNODE_HINT[id] })),
+  nodeStatuses: NODE_STATUSES.map((id) => ({ id, label: NODE_STATUS_LABEL[id], hint: NODE_STATUS_HINT[id] })),
+  knowledgeDimensions: KNOWLEDGE_DIMENSIONS,
+  relationGroups: RELATION_GROUPS.map((group) => ({ id: group.id, label: group.label, types: group.types })),
   limits: LIMITS
 }
 
@@ -460,6 +605,10 @@ function newProposalId() {
   return 'prp_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
 }
 
+function newKnowledgeNodeId() {
+  return 'knd_' + Date.now().toString(36) + '_' + randomBytes(3).toString('hex')
+}
+
 function newRecallId() {
   return 'rcl_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
 }
@@ -586,10 +735,61 @@ function normalizeRecall(raw, now) {
     ids: Array.isArray(raw.ids) ? raw.ids.map((item) => cleanLine(item, 64)).filter(Boolean).slice(0, 20) : [],
     outcome: RECALL_OUTCOMES.includes(raw.outcome) ? raw.outcome : 'served',
     note: cleanText(raw.note, LIMITS.recallNote),
-    source: cleanLine(raw.source, 40) || 'agent'
+    source: cleanLine(raw.source, 40) || 'agent',
+    nodes: normalizeRecallNodes(raw.nodes),
+    paths: normalizeRecallPaths(raw.paths)
   }
 }
 
+
+
+// 召回的「关系路径」：记忆是被哪个知识对象、经过哪条关系命中的。
+// 只记录已经走过的跳（深度受限），用于调用记录里解释「为什么召回它」。
+function normalizeRecallPaths(raw) {
+  if (!Array.isArray(raw)) return []
+  const list = []
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue
+    const memoryId = cleanLine(item.memoryId, 64)
+    if (!memoryId) continue
+    const hops = []
+    for (const hop of Array.isArray(item.hops) ? item.hops : []) {
+      if (!hop || typeof hop !== "object") continue
+      const kind = cleanLine(hop.kind, 16)
+      if (kind !== "node" && kind !== "relation" && kind !== "memory") continue
+      hops.push({
+        kind,
+        id: cleanLine(hop.id, 64),
+        title: cleanLine(hop.title, LIMITS.nodeTitle),
+        relationType: cleanLine(hop.relationType, 40)
+      })
+      if (hops.length >= 6) break
+    }
+    if (hops.length) list.push({ memoryId, hops })
+    if (list.length >= 8) break
+  }
+  return list
+}
+
+function normalizeRecallNodes(raw) {
+  if (!Array.isArray(raw)) return []
+  const seen = new Set()
+  const list = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const id = cleanLine(item.id, 64)
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    list.push({
+      id,
+      title: cleanLine(item.title, LIMITS.nodeTitle),
+      nodeType: cleanLine(item.nodeType, 40),
+      score: Math.max(0, Math.round(Number(item.score) || 0))
+    })
+    if (list.length >= 6) break
+  }
+  return list
+}
 
 function normalizeProject(raw, fallbackId) {
   if (!raw || typeof raw !== 'object') return null
@@ -665,8 +865,18 @@ function normalizeLayout(raw, entryIds) {
     positions[key] = { x: Math.round(x), y: Math.round(y) }
     count += 1
   }
+  // 「从视图隐藏」是纯视觉状态：只影响画布，不影响归属与业务数据。
+  const hiddenSource = raw && Array.isArray(raw.hidden) ? raw.hidden : []
+  const hidden = []
+  for (const key of hiddenSource) {
+    const id = cleanLine(key, 64)
+    if (!id || !entryIds.has(id) || hidden.indexOf(id) >= 0) continue
+    hidden.push(id)
+    if (hidden.length >= 4000) break
+  }
   return {
     positions,
+    hidden,
     updatedAt: raw && isIsoDate(raw.updatedAt) ? raw.updatedAt : ''
   }
 }
@@ -771,6 +981,8 @@ function normalizeEntry(raw, projectIds, now) {
     expiresAt: isIsoDate(raw.expiresAt) ? raw.expiresAt : '',
     versions: versions2,
     evidence,
+    nodeIds: uniqueIds(raw.nodeIds || raw.knowledgeNodeIds),
+    parentNodeId: cleanLine(raw.parentNodeId, 64),
     createdAt,
     updatedAt,
     history: normalizeHistory(raw.history),
@@ -778,17 +990,45 @@ function normalizeEntry(raw, projectIds, now) {
   }
 }
 
-function normalizeRelation(raw, entryIds, now) {
+function relationEnds(raw) {
   if (!raw || typeof raw !== 'object') return null
-  const sourceMemoryId = cleanLine(raw.sourceMemoryId || raw.from || raw.sourceId || raw.to, 64)
-  const targetMemoryId = cleanLine(raw.targetMemoryId || raw.to || raw.targetId, 64)
-  if (!entryIds.has(sourceMemoryId) || !entryIds.has(targetMemoryId)) return null
-  if (sourceMemoryId === targetMemoryId) return null
+  const legacySource = cleanLine(raw.sourceMemoryId || raw.from, 64)
+  const legacyTarget = cleanLine(raw.targetMemoryId || raw.to, 64)
+  const sourceId = cleanLine(raw.sourceId, 64) || legacySource
+  const targetId = cleanLine(raw.targetId, 64) || legacyTarget
+  if (!sourceId || !targetId) return null
+  const sourceType = raw.sourceType === 'node' || raw.sourceType === 'memory' ? raw.sourceType : legacySource ? 'memory' : ''
+  const targetType = raw.targetType === 'node' || raw.targetType === 'memory' ? raw.targetType : legacyTarget ? 'memory' : ''
+  return { sourceId, targetId, sourceType, targetType }
+}
+
+// 关系两端可以是记忆（memory）或知识对象（node）。
+// 旧数据只带 sourceMemoryId / targetMemoryId，一律按记忆端点处理。
+function normalizeRelation(raw, ends, now) {
+  if (!raw || typeof raw !== 'object') return null
+  const memoryIds = ends instanceof Set ? ends : ends.memory
+  const nodeIds = ends instanceof Set ? new Set() : ends.node
+  const pair = relationEnds(raw)
+  if (!pair) return null
+  const pickType = (id, declared, legacyId) => {
+    if (declared === 'node') return nodeIds.has(id) ? 'node' : ''
+    if (declared === 'memory') return memoryIds.has(id) ? 'memory' : ''
+    if (legacyId) return memoryIds.has(id) ? 'memory' : ''
+    if (nodeIds.has(id)) return 'node'
+    if (memoryIds.has(id)) return 'memory'
+    return ''
+  }
+  const sourceType = pickType(pair.sourceId, pair.sourceType, cleanLine(raw.sourceMemoryId || raw.from, 64))
+  const targetType = pickType(pair.targetId, pair.targetType, cleanLine(raw.targetMemoryId || raw.to, 64))
+  if (!sourceType || !targetType) return null
+  if (sourceType === targetType && pair.sourceId === pair.targetId) return null
   const status = normalizeRelationStatus(raw.status)
-  return {
+  const relation = {
     id: cleanLine(raw.id, 64) || newRelationId(),
-    sourceMemoryId,
-    targetMemoryId,
+    sourceType,
+    sourceId: pair.sourceId,
+    targetType,
+    targetId: pair.targetId,
     relationType: normalizeRelationType(raw.relationType || raw.type),
     description: cleanText(raw.description || raw.label || raw.note, LIMITS.relationNote),
     status,
@@ -799,8 +1039,137 @@ function normalizeRelation(raw, entryIds, now) {
     createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now,
     updatedAt: isIsoDate(raw.updatedAt) ? raw.updatedAt : isIsoDate(raw.createdAt) ? raw.createdAt : now
   }
+  // 兼容字段：老代码按 sourceMemoryId / targetMemoryId 读写。
+  relation.sourceMemoryId = sourceType === 'memory' ? relation.sourceId : ''
+  relation.targetMemoryId = targetType === 'memory' ? relation.targetId : ''
+  return relation
 }
 
+function normalizeNodeAttributes(raw) {
+  const list = []
+  const seen = new Set()
+  const items = raw && typeof raw === 'object' && !Array.isArray(raw) ? Object.entries(raw) : Array.isArray(raw) ? raw.map((item) => [item && item.label, item && item.value]) : []
+  for (const [label, value] of items) {
+    const key = cleanLine(label, LIMITS.nodeAlias)
+    if (!key || seen.has(key)) continue
+    const text = cleanText(typeof value === 'string' || typeof value === 'number' ? value : value && (value.text || value.value), LIMITS.attributeValue)
+    if (!text) continue
+    seen.add(key)
+    list.push({ label: key, value: text })
+    if (list.length >= LIMITS.nodeAttributes) break
+  }
+  return list
+}
+
+function normalizeNodeSteps(raw) {
+  const steps = []
+  const items = Array.isArray(raw) ? raw : []
+  for (const item of items) {
+    const title = cleanLine(item && (item.title || item.name), LIMITS.nodeTitle)
+    if (!title) continue
+    steps.push({
+      id: cleanLine(item.id, 64) || 'stp_' + (steps.length + 1).toString(36) + '_' + randomBytes(2).toString('hex'),
+      title,
+      note: cleanText(item.note || item.description, LIMITS.attributeValue),
+      memoryIds: Array.isArray(item.memoryIds) ? item.memoryIds.map((id) => cleanLine(id, 64)).filter(Boolean).slice(0, 40) : []
+    })
+    if (steps.length >= 40) break
+  }
+  return steps
+}
+
+function normalizeNodeVersions(raw, node, now) {
+  const list = []
+  const source = Array.isArray(raw) ? raw : []
+  for (const item of source) {
+    if (!item || typeof item !== 'object') continue
+    const title = cleanLine(item.title, LIMITS.nodeTitle)
+    if (!title) continue
+    list.push({
+      id: cleanLine(item.id, 64) || newVersionId(),
+      version: Math.max(1, Math.round(Number(item.version) || list.length + 1)),
+      title,
+      description: cleanText(item.description, LIMITS.nodeDescription),
+      nodeType: KNOWLEDGE_NODE_TYPES.indexOf(item.nodeType) >= 0 ? item.nodeType : node.nodeType,
+      status: NODE_STATUSES.indexOf(item.status) >= 0 ? item.status : node.status,
+      changeType: cleanLine(item.changeType, 24) || 'edit',
+      changeReason: cleanText(item.changeReason, LIMITS.versionNote),
+      createdAt: isIsoDate(item.createdAt) ? item.createdAt : now,
+      createdBy: cleanLine(item.createdBy, 24) || 'user'
+    })
+    if (list.length >= LIMITS.versions) break
+  }
+  return list
+}
+
+function normalizeKnowledgeNode(raw, projectIds, now) {
+  if (!raw || typeof raw !== 'object') return null
+  const id = cleanLine(raw.id, 64) || newKnowledgeNodeId()
+  const title = cleanLine(raw.title || raw.name, LIMITS.nodeTitle)
+  if (!title) return null
+  const nodeType = KNOWLEDGE_NODE_TYPES.indexOf(raw.nodeType || raw.type) >= 0 ? raw.nodeType || raw.type : 'concept'
+  const projectId = cleanLine(raw.projectId, 64)
+  const status = NODE_STATUSES.indexOf(raw.status) >= 0 ? raw.status : 'active'
+  const attributes = normalizeNodeAttributes(raw.attributes)
+  const steps = normalizeNodeSteps(raw.steps || (raw.attributes && raw.attributes.steps))
+  if (steps.length) attributes.push({ label: 'steps', value: String(steps.length) + ' 步' })
+  const aliases = []
+  for (const item of Array.isArray(raw.aliases) ? raw.aliases : []) {
+    const alias = cleanLine(item, LIMITS.nodeAlias)
+    if (!alias || aliases.indexOf(alias) >= 0) continue
+    aliases.push(alias)
+    if (aliases.length >= LIMITS.nodeAliases) break
+  }
+  const node = {
+    id,
+    title,
+    description: cleanText(raw.description || raw.summary || raw.content, LIMITS.nodeDescription),
+    nodeType,
+    scope: normalizeScope(raw.scope),
+    projectId: projectIds.has(projectId) ? projectId : '',
+    parentNodeId: cleanLine(raw.parentNodeId, 64),
+    attributes,
+    steps,
+    aliases,
+    tags: normalizeTags(raw.tags),
+    status,
+    confidence: clamp01(raw.confidence, status === 'active' ? 0.8 : 0.5),
+    importance: clamp01(raw.importance, 0.5),
+    sourceMemoryIds: uniqueIds(raw.sourceMemoryIds).slice(0, LIMITS.nodeMemories),
+    relatedMemoryIds: uniqueIds(raw.relatedMemoryIds || raw.memoryIds).slice(0, LIMITS.nodeMemories),
+    mergedIntoId: cleanLine(raw.mergedIntoId, 64),
+    origin: cleanLine(raw.origin, 24) || (raw.createdBy === 'ai' ? 'ai' : 'user'),
+    createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now,
+    updatedAt: isIsoDate(raw.updatedAt) ? raw.updatedAt : isIsoDate(raw.createdAt) ? raw.createdAt : now
+  }
+  node.versions = normalizeNodeVersions(raw.versions, node, now)
+  if (!node.versions.length) {
+    node.versions.push({
+      id: newVersionId(),
+      version: 1,
+      title: node.title,
+      description: node.description,
+      nodeType: node.nodeType,
+      status: node.status,
+      changeType: 'create',
+      changeReason: '',
+      createdAt: node.createdAt,
+      createdBy: node.origin === 'ai' ? 'ai' : 'user'
+    })
+  }
+  node.currentVersion = node.versions[node.versions.length - 1].version
+  return node
+}
+
+function uniqueIds(raw) {
+  const out = []
+  for (const item of Array.isArray(raw) ? raw : []) {
+    const id = cleanLine(item, 64)
+    if (!id || out.indexOf(id) >= 0) continue
+    out.push(id)
+  }
+  return out
+}
 function normalizeCollection(raw, entryIds, projectIds, now, index) {
   if (!raw || typeof raw !== 'object') return null
   const members = []
@@ -917,16 +1286,52 @@ function migrateStore(parsed) {
   }
   frameIds.clear()
   frames.forEach((frame) => frameIds.add(frame.id))
-  const nodeIds = new Set(entryIds)
-  frameIds.forEach((id) => nodeIds.add(id))
+  // 知识对象必须在关系之前归一化：关系两端可以是记忆、记忆区或知识对象。
+  const nodes = []
+  const nodeIdSet = new Set()
+  for (const item of Array.isArray(parsed.nodes) ? parsed.nodes : []) {
+    const node = normalizeKnowledgeNode(item, projectIds, now)
+    if (!node || nodeIdSet.has(node.id)) continue
+    nodeIdSet.add(node.id)
+    nodes.push(node)
+    if (nodes.length >= LIMITS.nodes) break
+  }
+  // 每个项目至少有一个 project 节点：项目本身就是一个稳定的知识对象。
+  for (const project of projects) {
+    if (nodes.some((node) => node.nodeType === 'project' && node.projectId === project.id)) continue
+    nodes.unshift(
+      normalizeKnowledgeNode(
+        {
+          title: project.name,
+          description: project.description || '',
+          nodeType: 'project',
+          scope: 'project',
+          projectId: project.id,
+          status: 'active',
+          origin: 'user',
+          createdAt: project.createdAt || now
+        },
+        projectIds,
+        now
+      )
+    )
+    if (nodes.length >= LIMITS.nodes) break
+  }
+  nodes.forEach((node) => nodeIdSet.add(node.id))
+
+  const memoryIds = new Set(entryIds)
+  frameIds.forEach((id) => memoryIds.add(id))
+  // 布局坐标只关心记忆与记忆区（知识对象不参与画布位置计算，另有视图布局）。
+  const nodeIds = new Set(memoryIds)
+  const ends = { memory: memoryIds, node: nodeIdSet }
 
   const relations = []
   const relationKeys = new Set()
   const rawRelations = Array.isArray(parsed.relations) ? parsed.relations : []
   for (const item of rawRelations) {
-    const relation = normalizeRelation(item, nodeIds, now)
+    const relation = normalizeRelation(item, ends, now)
     if (!relation) continue
-    const key = relation.sourceMemoryId + '\u0000' + relation.targetMemoryId + '\u0000' + relation.relationType
+    const key = relation.sourceType + '\u0000' + relation.sourceId + '\u0000' + relation.targetType + '\u0000' + relation.targetId + '\u0000' + relation.relationType
     if (relationKeys.has(key)) continue
     relationKeys.add(key)
     relations.push(relation)
@@ -939,19 +1344,21 @@ function migrateStore(parsed) {
       for (const link of item.links) {
         const relation = normalizeRelation(
           {
-            sourceMemoryId: item.id,
-            targetMemoryId: link && (link.to || link.targetId),
+            sourceType: 'memory',
+            sourceId: item.id,
+            targetType: 'memory',
+            targetId: link && (link.to || link.targetId),
             relationType: 'references',
             description: link && link.label,
             status: 'confirmed',
             createdBy: 'user',
             createdAt: item.updatedAt || item.createdAt
           },
-          nodeIds,
+          ends,
           now
         )
         if (!relation) continue
-        const key = relation.sourceMemoryId + '\u0000' + relation.targetMemoryId + '\u0000' + relation.relationType
+        const key = relation.sourceType + '\u0000' + relation.sourceId + '\u0000' + relation.targetType + '\u0000' + relation.targetId + '\u0000' + relation.relationType
         if (relationKeys.has(key)) continue
         relationKeys.add(key)
         relations.push(relation)
@@ -961,6 +1368,9 @@ function migrateStore(parsed) {
 
   const collections = []
   const collectionIds = new Set()
+  // 集合成员既可以是一条记忆，也可以是一个知识对象。
+  const collectionMembers = new Set(entryIds)
+  nodeIdSet.forEach((id) => collectionMembers.add(id))
   const rawCollections = Array.isArray(parsed.collections)
     ? parsed.collections
     : Array.isArray(parsed.regions)
@@ -977,7 +1387,7 @@ function migrateStore(parsed) {
         }))
       : []
   for (const item of rawCollections) {
-    const collection = normalizeCollection(item, entryIds, projectIds, now, collections.length)
+    const collection = normalizeCollection(item, collectionMembers, projectIds, now, collections.length)
     if (!collection || collectionIds.has(collection.id)) continue
     collectionIds.add(collection.id)
     collections.push(collection)
@@ -1015,23 +1425,73 @@ function migrateStore(parsed) {
     project.order = index * 10
   })
 
+  // 记忆与知识对象的双向关联：node.relatedMemoryIds 是主表，entry.nodeIds 由它推导。
+  const nodeMemoryMap = new Map()
+  for (const node of nodes) {
+    const linked = node.relatedMemoryIds.filter((id) => entryIds.has(id))
+    node.relatedMemoryIds = linked
+    node.sourceMemoryIds = node.sourceMemoryIds.filter((id) => entryIds.has(id))
+    for (const id of linked) {
+      if (!nodeMemoryMap.has(id)) nodeMemoryMap.set(id, [])
+      nodeMemoryMap.get(id).push(node.id)
+    }
+  }
+  for (const entry of entries) {
+    const direct = uniqueIds(entry.nodeIds).filter((id) => nodeIdSet.has(id))
+    const derived = nodeMemoryMap.get(entry.id) || []
+    entry.nodeIds = uniqueIds(direct.concat(derived))
+    entry.parentNodeId = entry.nodeIds[0] || ''
+  }
+  for (const node of nodes) {
+    if (node.parentNodeId && !nodeIdSet.has(node.parentNodeId)) node.parentNodeId = ''
+    if (node.parentNodeId === node.id) node.parentNodeId = ''
+    if (node.mergedIntoId && (!nodeIdSet.has(node.mergedIntoId) || node.mergedIntoId === node.id)) node.mergedIntoId = ''
+  }
+
   const layout = normalizeLayout(parsed.layout, nodeIds)
 
-  return { version: STORE_VERSION, projects, entries, relations, collections, views, proposals, recalls, frames, layout }
+  return { version: STORE_VERSION, projects, entries, nodes, relations, collections, views, proposals, recalls, frames, layout }
 }
 
 function pruneStore(store) {
   const entryIds = new Set(store.entries.map((entry) => entry.id))
   const nodeIds = new Set(entryIds)
   ;(store.frames || []).forEach((frame) => nodeIds.add(frame.id))
-  store.relations = store.relations.filter(
-    (relation) => nodeIds.has(relation.sourceMemoryId) && nodeIds.has(relation.targetMemoryId)
-  )
+  const knowledgeIds = new Set((store.nodes || []).map((node) => node.id))
+  // 知识对象也在画布上：它的坐标、隐藏状态都属于画布节点。
+  knowledgeIds.forEach((id) => nodeIds.add(id))
+  const alive = (type, id) => (type === 'node' ? knowledgeIds.has(id) : nodeIds.has(id))
+  // 知识对象是节点的主表：记忆上的 nodeIds / parentNodeId 跟着它修正。
+  const nodeMemoryMap = new Map()
+  for (const node of store.nodes || []) {
+    node.relatedMemoryIds = (node.relatedMemoryIds || []).filter((id) => entryIds.has(id))
+    node.sourceMemoryIds = (node.sourceMemoryIds || []).filter((id) => entryIds.has(id))
+    if (node.parentNodeId && (!knowledgeIds.has(node.parentNodeId) || node.parentNodeId === node.id)) node.parentNodeId = ''
+    if (node.mergedIntoId && !knowledgeIds.has(node.mergedIntoId)) node.mergedIntoId = ''
+    for (const id of node.relatedMemoryIds) {
+      if (!nodeMemoryMap.has(id)) nodeMemoryMap.set(id, [])
+      nodeMemoryMap.get(id).push(node.id)
+    }
+  }
+  for (const entry of store.entries) {
+    const direct = uniqueIds(entry.nodeIds).filter((id) => knowledgeIds.has(id))
+    entry.nodeIds = uniqueIds(direct.concat(nodeMemoryMap.get(entry.id) || []))
+    entry.parentNodeId = entry.nodeIds[0] || ''
+  }
+  store.relations = store.relations.filter((relation) => {
+    const sourceType = relation.sourceType || 'memory'
+    const targetType = relation.targetType || 'memory'
+    const sourceId = relation.sourceId || relation.sourceMemoryId
+    const targetId = relation.targetId || relation.targetMemoryId
+    return alive(sourceType, sourceId) && alive(targetType, targetId)
+  })
+  const collectionAlive = new Set(entryIds)
+  knowledgeIds.forEach((id) => collectionAlive.add(id))
   for (const collection of store.collections) {
     const members = []
     const seen = new Set()
     for (const id of collection.memberIds) {
-      if (!entryIds.has(id) || seen.has(id)) continue
+      if (!collectionAlive.has(id) || seen.has(id)) continue
       seen.add(id)
       members.push(id)
     }
@@ -1057,6 +1517,9 @@ function pruneStore(store) {
       if (nodeIds.has(key)) next[key] = store.layout.positions[key]
     }
     store.layout.positions = next
+    if (Array.isArray(store.layout.hidden)) {
+      store.layout.hidden = store.layout.hidden.filter((id) => nodeIds.has(id))
+    }
   }
   rebuildFrameMembers(store)
   return store
@@ -1071,6 +1534,12 @@ function nodeCenters(store) {
     const point = positions[entry.id]
     if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
       centers.set(entry.id, { x: point.x, y: point.y })
+    }
+  })
+  ;(store.nodes || []).forEach((node) => {
+    const point = positions[node.id]
+    if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+      centers.set(node.id, { x: point.x, y: point.y })
     }
   })
   ;(store.frames || []).forEach((frame) => {
@@ -2316,7 +2785,7 @@ function observeMemories(state, input) {
       } else {
         result.updated.push({ id: best.id, title: best.title, changeType })
         for (const relation of autoRelate(state, best, { limit: 2 })) {
-          result.relations.push({ id: relation.id, from: relation.sourceMemoryId, to: relation.targetMemoryId })
+          result.relations.push({ id: relation.id, from: relation.sourceId || relation.sourceMemoryId, to: relation.targetId || relation.targetMemoryId })
         }
       }
       continue
@@ -2351,8 +2820,47 @@ function observeMemories(state, input) {
     state.entries.unshift(entry)
     result.created.push({ id: entry.id, title: entry.title, type: entry.type })
     for (const relation of autoRelate(state, entry, { limit: 3 })) {
-      result.relations.push({ id: relation.id, from: relation.sourceMemoryId, to: relation.targetMemoryId })
+      result.relations.push({ id: relation.id, from: relation.sourceId || relation.sourceMemoryId, to: relation.targetId || relation.targetMemoryId })
     }
+  }
+
+  // 观察到的记忆优先挂到已有知识对象上；没有对象可挂时，给「候选对象」建议而不是硬造。
+  const touchedIds = []
+  for (const item of result.created.concat(result.updated, result.reinforced)) {
+    if (item.id && touchedIds.indexOf(item.id) < 0) touchedIds.push(item.id)
+  }
+  result.nodeLinks = []
+  result.nodeCandidates = []
+  for (const id of touchedIds) {
+    const entry = findEntry(state, id)
+    if (!entry) continue
+    const entryTokens = tokensOf(entry.title + '\n' + entry.content)
+    let bestNode = null
+    let bestScore = 0
+    for (const node of state.nodes || []) {
+      if (node.status !== 'active') continue
+      const nodeTokens = tokensOf(node.title + '\n' + node.description + '\n' + (node.aliases || []).join(' '))
+      const score = overlapCount(entryTokens, nodeTokens)
+      if (score > bestScore) {
+        bestScore = score
+        bestNode = node
+      }
+    }
+    if (bestNode && bestScore >= 2) {
+      if (!Array.isArray(entry.nodeIds)) entry.nodeIds = []
+      if (entry.nodeIds.indexOf(bestNode.id) < 0) entry.nodeIds.push(bestNode.id)
+      if ((bestNode.relatedMemoryIds || []).indexOf(entry.id) < 0) bestNode.relatedMemoryIds.push(entry.id)
+      if (!entry.parentNodeId) entry.parentNodeId = bestNode.id
+      bestNode.updatedAt = isoNow()
+      result.nodeLinks.push({ nodeId: bestNode.id, nodeTitle: bestNode.title, memoryId: entry.id, memoryTitle: entry.title, score: bestScore })
+      continue
+    }
+    result.nodeCandidates.push({
+      memoryId: entry.id,
+      memoryTitle: entry.title,
+      reason: bestNode ? '只和「' + bestNode.title + '」弱相关（重合 ' + bestScore + ' 个词）' : '没有可挂靠的知识对象',
+      suggestion: { title: entry.title, nodeType: entry.type === 'habit' || entry.type === 'convention' ? 'preference' : 'concept', projectId: entry.projectId, memoryIds: [entry.id] }
+    })
   }
   return result
 }
@@ -2368,12 +2876,79 @@ function rankRecall(state, input) {
   const scopeIds = frameId ? frameSubtree(state, frameId).entryIds : null
   const limit = Math.max(1, Math.min(20, Number(input && input.limit) || 6))
   const tokens = tokensOf(task)
+  // 先识别任务涉及的知识对象，再顺着对象找记忆：召回的可解释性靠这条链路。
+  const nodeHits = []
+  for (const node of state.nodes || []) {
+    if (node.status !== 'active' && node.status !== 'candidate') continue
+    // 指定项目时，别的项目里的对象不参与召回（全局对象仍参与），避免跨项目误召回。
+    if (projectId && node.projectId && node.projectId !== projectId && node.scope !== 'global') continue
+    const haystack = [node.title, node.description, (node.aliases || []).join(' '), (node.tags || []).join(' '), (node.attributes || []).map((item) => item.label + ' ' + item.value).join(' ')].join('\n')
+    let score = overlapCount(tokens, tokensOf(haystack))
+    if (task.indexOf(node.title) >= 0 && node.title.length >= 2) score += 3
+    for (const alias of node.aliases || []) {
+      if (alias && task.indexOf(alias) >= 0) score += 2
+    }
+    if (!score) continue
+    nodeHits.push({ node, score })
+  }
+  nodeHits.sort((left, right) => right.score - left.score)
+  const nodeBoost = new Map()
+  const nodePaths = new Map()
+  // 结构化路径：记忆 ← 知识对象 ←（可选）关系 ← 另一条记忆
+  const pathMap = new Map()
+  for (const hit of nodeHits.slice(0, 6)) {
+    for (const memoryId of hit.node.relatedMemoryIds || []) {
+      nodeBoost.set(memoryId, Math.max(nodeBoost.get(memoryId) || 0, hit.score))
+      if (!nodePaths.has(memoryId)) nodePaths.set(memoryId, [])
+      nodePaths.get(memoryId).push(hit.node.title)
+      if (!pathMap.has(memoryId)) {
+        pathMap.set(memoryId, [
+          { kind: 'node', id: hit.node.id, title: hit.node.title, relationType: '' },
+          { kind: 'memory', id: memoryId, title: '', relationType: '' }
+        ])
+      }
+    }
+  }
+  const relatedBoost = new Map()
+  for (const [memoryId] of nodeBoost) {
+    for (const relation of state.relations) {
+      if (relation.status === 'rejected') continue
+      const sourceMem = (relation.sourceType || 'memory') === 'memory' && (relation.sourceId || relation.sourceMemoryId) === memoryId
+      const targetMem = (relation.targetType || 'memory') === 'memory' && (relation.targetId || relation.targetMemoryId) === memoryId
+      if (!sourceMem && !targetMem) continue
+      const other = sourceMem ? (relation.targetType === 'memory' ? relation.targetId : '') : (relation.sourceType === 'memory' ? relation.sourceId : '')
+      if (!other) continue
+      relatedBoost.set(other, Math.max(relatedBoost.get(other) || 0, 1))
+      if (!nodePaths.has(other)) nodePaths.set(other, nodePaths.get(memoryId) || [])
+      if (!pathMap.has(other)) {
+        const base = pathMap.get(memoryId) || []
+        pathMap.set(
+          other,
+          base.concat([
+            {
+              kind: 'relation',
+              id: relation.id,
+              title: '',
+              relationType: relation.relationType
+            },
+            { kind: 'memory', id: other, title: '', relationType: '' }
+          ])
+        )
+      }
+    }
+  }
   const rows = []
   for (const entry of state.entries) {
     if (entry.status === 'archived' || entry.status === 'deprecated') continue
     if (scopeIds && !scopeIds.has(entry.id)) continue
+    // 指定项目时只召回本项目的记忆与全局记忆：别的项目的条目即使词面命中也不返回。
+    if (projectId && entry.projectId && entry.projectId !== projectId && entry.scope !== 'global') continue
     const entryTokens = tokensForEntry(entry)
     let hits = overlapCount(tokens, entryTokens)
+    const viaNode = nodeBoost.get(entry.id) || 0
+    const viaRelation = relatedBoost.get(entry.id) || 0
+    if (viaNode) hits += viaNode * 2
+    else if (viaRelation) hits += 1
     for (const tag of entry.tags) {
       if (task.indexOf(tag) >= 0) hits += 2
     }
@@ -2387,7 +2962,12 @@ function rankRecall(state, input) {
     const recency = entry.updatedAt ? Math.max(0, 1 - (Date.now() - Date.parse(entry.updatedAt)) / (1000 * 60 * 60 * 24 * 365)) : 0
     const score = hits * 3 + (entry.importance || 0.5) * 2 + (entry.confidence || 0.5) + statusBonus + protectionBonus + recency
     const reasons = []
+    if (viaNode) {
+      const path = nodePaths.get(entry.id) || []
+      reasons.push('通过知识对象「' + path.join(' → ') + '」命中任务')
+    }
     if (hits) reasons.push('命中 ' + hits + ' 处任务相关词')
+    if (!viaNode && viaRelation) reasons.push('与命中的知识对象存在直接关联')
     if (entry.protectionLevel === 'protected') reasons.push('固有约定，需明确遵守')
     if (entry.status === 'active') reasons.push('当前生效')
     if (entry.type === 'habit') reasons.push('长期习惯')
@@ -2404,11 +2984,21 @@ function rankRecall(state, input) {
       score: Number(score.toFixed(2)),
       tier,
       reasons,
+      paths: (pathMap.get(entry.id) || []).map((hop) =>
+        hop.kind === 'memory' ? Object.assign({}, hop, { title: entry.title }) : hop
+      ),
       updatedAt: entry.updatedAt
     })
   }
   rows.sort((left, right) => left.tier - right.tier || right.score - left.score)
-  return { kind: 'recall', task, projectId, items: rows.slice(0, limit), total: rows.length }
+  return {
+    kind: 'recall',
+    task,
+    projectId,
+    items: rows.slice(0, limit),
+    total: rows.length,
+    nodes: nodeHits.slice(0, 6).map((hit) => ({ id: hit.node.id, title: hit.node.title, nodeType: hit.node.nodeType, score: hit.score }))
+  }
 }
 
 function recordRecall(state, input, ranked) {
@@ -2427,6 +3017,12 @@ function recordRecall(state, input, ranked) {
       task: (input && input.task) || (ranked && ranked.task) || '',
       projectId: (input && input.projectId) || (ranked && ranked.projectId) || '',
       ids,
+      nodes: (ranked && ranked.nodes) || input.nodes || [],
+      paths: ranked
+        ? ranked.items
+            .filter((item) => Array.isArray(item.paths) && item.paths.length)
+            .map((item) => ({ memoryId: item.entryId, hops: item.paths }))
+        : (input && input.paths) || [],
       outcome: (input && input.outcome) || 'served',
       note: (input && input.note) || '',
       source: (input && input.source) || 'agent',
@@ -2445,6 +3041,37 @@ function recordRecall(state, input, ranked) {
 
 // Tidy-up payload for the management center: duplicates, orphans, conflicts,
 // pending proposals. Read-only.
+function duplicateNodePairs(state) {
+  const nodes = (state.nodes || []).filter((node) => node.status !== 'merged' && node.status !== 'archived')
+  const pairs = []
+  for (let i = 0; i < nodes.length; i += 1) {
+    for (let j = i + 1; j < nodes.length; j += 1) {
+      const left = nodes[i]
+      const right = nodes[j]
+      if (left.nodeType !== right.nodeType) continue
+      const leftTokens = tokensOf((left.title + ' ' + (left.description || '')).toLowerCase())
+      const rightTokens = tokensOf((right.title + ' ' + (right.description || '')).toLowerCase())
+      let shared = 0
+      leftTokens.forEach((token) => {
+        if (rightTokens.has(token)) shared += 1
+      })
+      const similarTitle =
+        left.title === right.title ||
+        left.title.indexOf(right.title) >= 0 ||
+        right.title.indexOf(left.title) >= 0
+      if (shared >= 4 || (similarTitle && shared >= 2)) {
+        pairs.push({
+          a: { id: left.id, title: left.title },
+          b: { id: right.id, title: right.title },
+          score: shared,
+          reason: '同类对象，名称/描述重合 ' + shared + ' 处'
+        })
+      }
+    }
+  }
+  return pairs
+}
+
 function tidyReport(state) {
   const duplicates = []
   const entries = state.entries.filter((entry) => entry.status !== 'archived')
@@ -2469,8 +3096,8 @@ function tidyReport(state) {
   const linked = new Set()
   for (const relation of state.relations) {
     if (relation.status === 'rejected') continue
-    linked.add(relation.sourceMemoryId)
-    linked.add(relation.targetMemoryId)
+    if ((relation.sourceType || 'memory') === 'memory') linked.add(relation.sourceId || relation.sourceMemoryId)
+    if ((relation.targetType || 'memory') === 'memory') linked.add(relation.targetId || relation.targetMemoryId)
   }
   const orphans = entries
     .filter((entry) => !linked.has(entry.id))
@@ -2514,7 +3141,13 @@ function tidyReport(state) {
     pendingRelations: suggestedRelations.length,
     pendingMemories: state.entries.filter((entry) => entry.status === 'pending').length,
     reviewMemories: state.entries.filter((entry) => entry.status === 'review').length,
-    protectedCount: state.entries.filter((entry) => entry.protectionLevel === 'protected').length
+    protectedCount: state.entries.filter((entry) => entry.protectionLevel === 'protected').length,
+    candidateNodes: (state.nodes || [])
+      .filter((node) => node.status === 'candidate')
+      .slice(0, 12)
+      .map((node) => ({ id: node.id, title: node.title, nodeType: node.nodeType, reason: node.description || '', projectId: node.projectId })),
+    duplicateNodes: duplicateNodePairs(state).slice(0, 8),
+    nodes: (state.nodes || []).filter((node) => node.status !== 'merged').length
   }
 }
 
@@ -2743,6 +3376,10 @@ function saveEntry(store, input) {
   if (input.facts !== undefined) entry.facts = normalizeFacts(input.facts)
   if (input.pinned !== undefined) entry.pinned = Boolean(input.pinned)
   if (input.favorite !== undefined) entry.favorite = Boolean(input.favorite)
+  if (Array.isArray(input.nodeIds)) {
+    entry.nodeIds = uniqueIds(input.nodeIds).filter((id) => findKnowledgeNode(store, id))
+    entry.parentNodeId = entry.nodeIds[0] || ''
+  }
   const after = snapshotOf()
   if (after !== before) {
     if (titleChanged || contentChanged) {
@@ -2772,8 +3409,12 @@ function saveEntry(store, input) {
 function deleteEntry(store, id) {
   const entry = mustEntry(store, id)
   store.entries = store.entries.filter((item) => item.id !== entry.id)
+  for (const node of store.nodes || []) {
+    node.relatedMemoryIds = node.relatedMemoryIds.filter((memoryId) => memoryId !== entry.id)
+    node.sourceMemoryIds = node.sourceMemoryIds.filter((memoryId) => memoryId !== entry.id)
+  }
   store.relations = store.relations.filter(
-    (relation) => relation.sourceMemoryId !== entry.id && relation.targetMemoryId !== entry.id
+    (relation) => !((relation.sourceType || 'memory') === 'memory' && (relation.sourceId || relation.sourceMemoryId) === entry.id) && !((relation.targetType || 'memory') === 'memory' && (relation.targetId || relation.targetMemoryId) === entry.id)
   )
   for (const collection of store.collections) {
     collection.memberIds = collection.memberIds.filter((memberId) => memberId !== entry.id)
@@ -2835,6 +3476,18 @@ function bulkEntries(store, input) {
     }
     return { affected: idset.length, op, value }
   }
+  if (op === 'addTag' || op === 'removeTag') {
+    const tag = cleanLine(input.value, LIMITS.tag)
+    if (!tag) throw httpError(400, 'empty-tag', '标签不能为空')
+    for (const entry of targets) {
+      const has = (entry.tags || []).indexOf(tag) >= 0
+      if (op === 'addTag' && !has) entry.tags = normalizeTags((entry.tags || []).concat([tag]))
+      if (op === 'removeTag' && has) entry.tags = entry.tags.filter((item) => item !== tag)
+      touchEntry(entry, (op === 'addTag' ? '批量加标签「' : '批量移除标签「') + tag + '」')
+    }
+    return { affected: idset.length, op, value: tag }
+  }
+
   if (op === 'addCollection' || op === 'removeCollection') {
     const collection = mustCollection(store, input.value)
     const target = new Set(idset)
@@ -2862,31 +3515,99 @@ function isFrameId(store, id) {
   return store.frames.some((frame) => frame.id === id)
 }
 
-// 关系两端既可以是记忆，也可以是记忆框（框当超级节点用，用来串项目结构路径）。
-function mustNode(store, id, label) {
-  if (isFrameId(store, id)) return { kind: 'frame', id: id }
+function findKnowledgeNode(store, id) {
+  const key = cleanLine(id, 64)
+  if (!key) return null
+  return (store.nodes || []).find((node) => node.id === key) || null
+}
+
+// 关系两端：记忆（memory）或知识对象（node）。
+function mustEnd(store, rawType, rawId, label) {
+  const id = cleanLine(rawId, 64)
+  if (!id) throw httpError(400, 'missing-end', label + '不能为空')
+  const type = rawType === 'node' ? 'node' : 'memory'
+  if (type === 'node') {
+    const node = findKnowledgeNode(store, id)
+    if (node) return { type: 'node', id, node }
+    throw httpError(404, 'not-found', label + '（知识对象）不存在：' + id)
+  }
   const entry = store.entries.find((item) => item.id === id)
-  if (entry) return { kind: 'entry', id: id, entry: entry }
-  throw httpError(404, 'not-found', (label || '记忆') + '不存在：' + id)
+  if (entry) return { type: 'memory', id, entry }
+  if (isFrameId(store, id)) return { type: 'memory', id, frame: true }
+  throw httpError(404, 'not-found', label + '不存在：' + id)
+}
+
+function fullRelationKey(relation) {
+  return [relation.sourceType || 'memory', relation.sourceId, relation.targetType || 'memory', relation.targetId, relation.relationType].join('\u0000')
+}
+
+// 层级关系不能成环：contains / belongs_to / part_of / parentNodeId 一起看。
+function hierarchyCycle(store, relation) {
+  const hierarchy = ['contains', 'belongs_to', 'part_of']
+  if (hierarchy.indexOf(relation.relationType) < 0) return false
+  const adjacency = new Map()
+  const edges = store.relations.filter((item) => hierarchy.indexOf(item.relationType) >= 0)
+  for (const edge of edges) {
+    const from = edge.sourceType === 'node' ? edge.sourceId : null
+    const to = edge.targetType === 'node' ? edge.targetId : null
+    if (!from || !to) continue
+    if (!adjacency.has(from)) adjacency.set(from, [])
+    adjacency.get(from).push(to)
+  }
+  const startId = relation.targetId
+  const targetId = relation.sourceId
+  if (relation.sourceType !== 'node' || relation.targetType !== 'node') return false
+  const stack = [startId]
+  const seen = new Set([startId])
+  while (stack.length) {
+    const current = stack.pop()
+    if (current === targetId) return true
+    for (const next of adjacency.get(current) || []) {
+      if (seen.has(next)) continue
+      seen.add(next)
+      stack.push(next)
+    }
+  }
+  return false
 }
 
 function saveRelation(store, input) {
-  const sourceMemoryId = cleanLine(input.sourceMemoryId || input.id, 64)
-  const targetMemoryId = cleanLine(input.targetMemoryId, 64)
-  const source = mustNode(store, sourceMemoryId, '起点')
-  const target = mustNode(store, targetMemoryId, '终点')
-  if (sourceMemoryId === targetMemoryId) throw httpError(400, 'self-relation', '不能把记忆连到自己身上')
+  const legacySource = cleanLine(input.sourceMemoryId || input.id, 64)
+  const legacyTarget = cleanLine(input.targetMemoryId, 64)
+  const source = mustEnd(store, input.sourceType || (legacySource ? 'memory' : ''), cleanLine(input.sourceId, 64) || legacySource, '起点')
+  const target = mustEnd(store, input.targetType || (legacyTarget ? 'memory' : ''), cleanLine(input.targetId, 64) || legacyTarget, '终点')
+  if (source.type === target.type && source.id === target.id) throw httpError(400, 'self-relation', '不能把对象连到自己身上')
   const relationType = normalizeRelationType(input.relationType)
-  const existing = store.relations.find(
-    (relation) =>
-      relation.sourceMemoryId === sourceMemoryId &&
-      relation.targetMemoryId === targetMemoryId &&
-      relation.relationType === relationType
-  )
+  const check = checkRelationEndpoints(store, relationType, source, target)
+  if (!check.ok) throw httpError(400, 'relation-not-applicable', check.message)
+  const draft = {
+    sourceType: source.type,
+    sourceId: source.id,
+    targetType: target.type,
+    targetId: target.id,
+    relationType
+  }
+  const symmetric = SYMMETRIC_RELATIONS.indexOf(relationType) >= 0
+  const existing = store.relations.find((relation) => {
+    if (relation.relationType !== relationType) return false
+    if (fullRelationKey(relation) === fullRelationKey(draft)) return true
+    return (
+      symmetric &&
+      relation.sourceType === draft.targetType &&
+      relation.sourceId === draft.targetId &&
+      relation.targetType === draft.sourceType &&
+      relation.targetId === draft.sourceId
+    )
+  })
+  if (hierarchyCycle(store, draft)) {
+    throw httpError(400, 'relation-cycle', '这条关系会让层级绕成环：' + source.id + ' → ' + target.id)
+  }
   const status = normalizeRelationStatus(input.status)
   if (existing) {
     if (input.description !== undefined) existing.description = cleanText(input.description, LIMITS.relationNote)
+    if (input.evidence !== undefined) existing.evidence = cleanText(input.evidence, LIMITS.relationNote)
     if (input.status !== undefined) existing.status = status
+    existing.updatedAt = isoNow()
     return { relation: existing, created: false }
   }
   if (store.relations.length >= LIMITS.relations) {
@@ -2894,17 +3615,27 @@ function saveRelation(store, input) {
   }
   const relation = {
     id: newRelationId(),
-    sourceMemoryId,
-    targetMemoryId,
+    sourceType: source.type,
+    sourceId: source.id,
+    targetType: target.type,
+    targetId: target.id,
     relationType,
     description: cleanText(input.description, LIMITS.relationNote),
+    evidence: cleanText(input.evidence, LIMITS.relationNote),
+    confidence: typeof input.confidence === 'number' ? clamp01(input.confidence, 0.8) : status === 'confirmed' ? 0.9 : 0.55,
+    source: cleanLine(input.source, 24) || 'user',
     status,
     createdBy: cleanLine(input.createdBy, 40) || 'user',
-    createdAt: isoNow()
+    createdAt: isoNow(),
+    updatedAt: isoNow(),
+    sourceMemoryId: source.type === 'memory' ? source.id : '',
+    targetMemoryId: target.type === 'memory' ? target.id : ''
   }
   store.relations.push(relation)
-  if (source.kind === 'entry') touchEntry(source.entry, '新增关联（' + RELATION_LABEL[relationType] + '）')
-  if (target.kind === 'entry') touchEntry(target.entry, '新增关联（' + RELATION_LABEL[relationType] + '）')
+  if (source.type === 'memory' && source.entry) touchEntry(source.entry, '新增关联（' + RELATION_LABEL[relationType] + '）')
+  if (target.type === 'memory' && target.entry) touchEntry(target.entry, '新增关联（' + RELATION_LABEL[relationType] + '）')
+  if (source.type === 'node' && source.node) source.node.updatedAt = isoNow()
+  if (target.type === 'node' && target.node) target.node.updatedAt = isoNow()
   return { relation, created: true }
 }
 
@@ -2913,12 +3644,28 @@ function updateRelation(store, input) {
   if (!relation) throw httpError(404, 'relation-not-found', '关联不存在：' + input.id)
   if (input.relationType !== undefined) relation.relationType = normalizeRelationType(input.relationType)
   if (input.description !== undefined) relation.description = cleanText(input.description, LIMITS.relationNote)
+  if (input.evidence !== undefined) relation.evidence = cleanText(input.evidence, LIMITS.relationNote)
   if (input.status !== undefined) relation.status = normalizeRelationStatus(input.status)
-  if (input.targetMemoryId !== undefined) {
-    const target = cleanLine(input.targetMemoryId, 64)
-    mustNode(store, target, '终点')
-    if (target !== relation.sourceMemoryId) relation.targetMemoryId = target
+  if (input.confidence !== undefined) relation.confidence = clamp01(input.confidence, relation.confidence)
+  const target = cleanLine(input.targetId || input.targetMemoryId, 64)
+  if (target) {
+    const end = mustEnd(store, input.targetType || relation.targetType, target, '终点')
+    if (!(end.type === relation.sourceType && end.id === relation.sourceId)) {
+      relation.targetType = end.type
+      relation.targetId = end.id
+      relation.targetMemoryId = end.type === 'memory' ? end.id : ''
+    }
   }
+  const source = cleanLine(input.sourceId || input.sourceMemoryId, 64)
+  if (source) {
+    const end = mustEnd(store, input.sourceType || relation.sourceType, source, '起点')
+    if (!(end.type === relation.targetType && end.id === relation.targetId)) {
+      relation.sourceType = end.type
+      relation.sourceId = end.id
+      relation.sourceMemoryId = end.type === 'memory' ? end.id : ''
+    }
+  }
+  relation.updatedAt = isoNow()
   return { relation }
 }
 
@@ -2927,7 +3674,7 @@ function deleteRelation(store, input) {
   const relation = store.relations.find((item) => item.id === id)
   if (!relation) throw httpError(404, 'relation-not-found', '关联不存在：' + id)
   store.relations = store.relations.filter((item) => item.id !== id)
-  return { deleted: id }
+  return { deleted: id, relation }
 }
 
 function decideRelation(store, input) {
@@ -2939,13 +3686,16 @@ function decideRelation(store, input) {
     return { removed: relation.id, status }
   }
   if (input.status !== undefined) relation.status = status
+  if (input.relationType !== undefined) relation.relationType = normalizeRelationType(input.relationType)
   if (cleanLine(input.description, LIMITS.relationNote)) relation.description = cleanText(input.description, LIMITS.relationNote)
+  relation.updatedAt = isoNow()
   return { relation }
 }
-
 function checkMembers(store, raw) {
   const list = Array.isArray(raw) ? raw : []
   const entryIds = new Set(store.entries.map((entry) => entry.id))
+  // 集合成员既可以是记忆，也可以是知识对象。
+  for (const node of store.nodes || []) entryIds.add(node.id)
   const members = []
   const seen = new Set()
   for (const item of list) {
@@ -2981,7 +3731,7 @@ function saveCollection(store, input) {
       updatedAt: isoNow()
     }
     store.collections.push(created)
-    for (const id of created.memberIds) touchEntry(mustEntry(store, id), '加入集合「' + created.name + '」')
+    for (const id of created.memberIds) { const member = findEntry(store, id); if (member) touchEntry(member, '加入集合「' + created.name + '」') }
     return { collection: created, created: true }
   }
   if (input.name !== undefined) collection.name = cleanLine(input.name, LIMITS.collectionName) || collection.name
@@ -3024,8 +3774,8 @@ function collectionMembers(store, input) {
 }
 
 function mergeCollections(store, input) {
-  const source = mustCollection(store, input.id)
-  const target = mustCollection(store, input.intoId)
+  const source = mustCollection(store, (input && (input.id || input.sourceId)))
+  const target = mustCollection(store, (input && (input.intoId || input.targetId)))
   if (source.id === target.id) throw httpError(400, 'merge-self', '不能把集合合并到自己')
   for (const id of source.memberIds) {
     if (!target.memberIds.includes(id)) target.memberIds.push(id)
@@ -3036,7 +3786,7 @@ function mergeCollections(store, input) {
 }
 
 function splitCollection(store, input) {
-  const source = mustCollection(store, input.id)
+  const source = mustCollection(store, (input && (input.id || input.sourceId)))
   const members = checkMembers(store, input.memberIds)
   if (!members.length) throw httpError(400, 'empty-split', '请选择要拆出去的记忆')
   const created = {
@@ -3206,7 +3956,11 @@ function syncFrames(store, input) {
 function saveLayout(store, input) {
   const nodeIds = new Set(store.entries.map((entry) => entry.id))
   store.frames.forEach((frame) => nodeIds.add(frame.id))
-  const source = (input && input.positions) || {}
+  // 知识对象也在画布上，它的坐标与隐藏状态同样属于布局。
+  store.nodes.forEach((node) => nodeIds.add(node.id))
+  // 只改隐藏状态时不必带上坐标：没传 positions 就沿用已有位置，避免把布局洗掉。
+  const provided = input && input.positions
+  const source = provided || (store.layout && store.layout.positions) || {}
   const positions = {}
   for (const key of Object.keys(source)) {
     if (!nodeIds.has(key)) continue
@@ -3216,14 +3970,27 @@ function saveLayout(store, input) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue
     positions[key] = { x: Math.round(x), y: Math.round(y) }
   }
-  store.layout = { positions, updatedAt: isoNow() }
+  const hidden = []
+  if (input && Array.isArray(input.hidden)) {
+    for (const key of input.hidden) {
+      const id = cleanLine(key, 64)
+      if (!id || !nodeIds.has(id) || hidden.indexOf(id) >= 0) continue
+      hidden.push(id)
+      if (hidden.length >= 4000) break
+    }
+  } else if (store.layout && Array.isArray(store.layout.hidden)) {
+    for (const key of store.layout.hidden) {
+      if (nodeIds.has(key) && hidden.indexOf(key) < 0) hidden.push(key)
+    }
+  }
+  store.layout = { positions, hidden, updatedAt: isoNow() }
   // 坐标变了，框内的成员就跟着变——这是「框」作为空间容器的语义。
   rebuildFrameMembers(store)
   return { layout: store.layout, saved: Object.keys(positions).length, frames: store.frames }
 }
 
 function clearLayout(store) {
-  store.layout = { positions: {}, updatedAt: '' }
+  store.layout = { positions: {}, hidden: [], updatedAt: '' }
   return { cleared: true }
 }
 
@@ -3326,7 +4093,7 @@ function saveView(store, input) {
 }
 
 function deleteView(store, input) {
-  const id = cleanLine(input.id, 64)
+  const id = cleanLine((input && (input.id || input.viewId)), 64)
   store.views = store.views.filter((view) => view.id !== id)
   return { deleted: id }
 }
@@ -3339,18 +4106,30 @@ function serializeState(state) {
       membership.get(id).push(collection.id)
     }
   }
-  const relationsByEntry = new Map()
+  const relationsByEnd = new Map()
+  const pushEnd = (type, id, relation) => {
+    const key = type + ':' + id
+    if (!relationsByEnd.has(key)) relationsByEnd.set(key, [])
+    relationsByEnd.get(key).push(relation)
+  }
   for (const relation of state.relations) {
-    if (!relationsByEntry.has(relation.sourceMemoryId)) relationsByEntry.set(relation.sourceMemoryId, [])
-    relationsByEntry.get(relation.sourceMemoryId).push(relation)
-    if (!relationsByEntry.has(relation.targetMemoryId)) relationsByEntry.set(relation.targetMemoryId, [])
-    relationsByEntry.get(relation.targetMemoryId).push(relation)
+    const sourceType = relation.sourceType || 'memory'
+    const targetType = relation.targetType || 'memory'
+    const sourceId = relation.sourceId || relation.sourceMemoryId
+    const targetId = relation.targetId || relation.targetMemoryId
+    pushEnd(sourceType, sourceId, relation)
+    pushEnd(targetType, targetId, relation)
   }
   const entries = state.entries.map((entry) => ({
     ...entry,
     relatedCollectionIds: membership.get(entry.id) || [],
-    relationIds: (relationsByEntry.get(entry.id) || []).map((relation) => relation.id)
+    relationIds: (relationsByEnd.get('memory:' + entry.id) || []).map((relation) => relation.id)
   }))
+  for (const node of state.nodes) {
+    node.relatedCollectionIds = membership.get(node.id) || []
+    node.relationIds = (relationsByEnd.get('node:' + node.id) || []).map((relation) => relation.id)
+    node.childIds = state.nodes.filter((item) => item.parentNodeId === node.id && item.id !== node.id).map((item) => item.id)
+  }
   const pending = state.proposals.filter((proposal) => proposal.status === 'pending')
   const decided = state.proposals.filter((proposal) => proposal.status !== 'pending').slice(0, 30)
   return {
@@ -3358,6 +4137,7 @@ function serializeState(state) {
     meta: META,
     projects: state.projects,
     entries,
+    nodes: state.nodes,
     relations: state.relations,
     collections: state.collections,
     views: state.views,
@@ -3377,8 +4157,15 @@ function computeStats(state) {
     byStatus[entry.status] = (byStatus[entry.status] || 0) + 1
     for (const domain of entry.domains) byDomain[domain] = (byDomain[domain] || 0) + 1
   }
+  const nodes = state.nodes || []
+  const byNodeType = {}
+  for (const node of nodes) byNodeType[node.nodeType] = (byNodeType[node.nodeType] || 0) + 1
   return {
     entries: state.entries.length,
+    nodes: nodes.length,
+    byNodeType,
+    candidateNodes: nodes.filter((node) => node.status === 'candidate').length,
+    archivedNodes: nodes.filter((node) => node.status === 'archived').length,
     relations: state.relations.length,
     suggestedRelations: state.relations.filter((relation) => relation.status === 'suggested').length,
     confirmedRelations: state.relations.filter((relation) => relation.status === 'confirmed').length,
@@ -3556,6 +4343,491 @@ function decideProposal(state, input) {
       state.collections.unshift(collection)
       return { collection: collection, restored: true }
     }
+// 知识对象（KnowledgeNode）：项目 / 系统 / 子系统 / 业务对象 / 流程 / 偏好 / 原则 / 方法。
+// 记忆负责「具体发生过什么」，知识对象负责「它在知识结构里是什么位置」。
+
+const SYMMETRIC_RELATIONS = ['related_to', 'conflicts_with', 'balanced_against']
+
+// 每种关系对两端对象类型的要求。'*' 表示不限。
+// 只拦明显不合理的组合（例如怪物掉落怪物系统），不做过度限制。
+const RELATION_ENDPOINT_RULES = {
+  contains: { source: ['project', 'system', 'subsystem', '*'], target: ['system', 'subsystem', 'concept', 'workflow', '*'] },
+  belongs_to: { source: ['system', 'subsystem', 'concept', 'workflow', '*'], target: ['project', 'system', 'subsystem', '*'] },
+  part_of: { source: ['*'], target: ['*'] },
+  appears_in: { source: ['concept'], target: ['concept'] },
+  uses: { source: ['*'], target: ['*'] },
+  drops: { source: ['concept'], target: ['concept'] },
+  requires: { source: ['*'], target: ['*'] },
+  crafted_from: { source: ['concept'], target: ['concept'] },
+  affects: { source: ['*'], target: ['*'] },
+  depends_on: { source: ['*'], target: ['*'] },
+  balanced_against: { source: ['concept', 'system', '*'], target: ['concept', 'system', '*'] },
+  follows: { source: ['workflow', '*'], target: ['workflow'] },
+  precedes: { source: ['workflow', '*'], target: ['workflow', '*'] },
+  next_step: { source: ['workflow', '*'], target: ['workflow', '*'] },
+  triggers: { source: ['*'], target: ['*'] },
+  produces: { source: ['*'], target: ['*'] },
+  exception_to: { source: ['*'], target: ['*'] },
+  prefers: { source: ['preference', '*'], target: ['*'] },
+  avoids: { source: ['preference', '*'], target: ['*'] },
+  applies_to: { source: ['*'], target: ['*'] },
+  guides: { source: ['principle', 'method', '*'], target: ['*'] },
+  constrains: { source: ['principle', 'preference', '*'], target: ['*'] },
+  related_to: { source: ['*'], target: ['*'] },
+  derived_from: { source: ['*'], target: ['*'] },
+  references: { source: ['*'], target: ['*'] },
+  conflicts_with: { source: ['*'], target: ['*'] },
+  supersedes: { source: ['*'], target: ['*'] },
+  refines: { source: ['*'], target: ['*'] }
+}
+
+function endpointTypeOf(store, end) {
+  if (!end) return '*'
+  if (end.type === 'memory') return 'memory'
+  return (end.node && end.node.nodeType) || '*'
+}
+
+function checkRelationEndpoints(store, relationType, source, target) {
+  const rule = RELATION_ENDPOINT_RULES[relationType]
+  if (!rule) return { ok: true }
+  const sourceType = endpointTypeOf(store, source)
+  const targetType = endpointTypeOf(store, target)
+  const allow = (list, actual) => list.indexOf('*') >= 0 || list.indexOf(actual) >= 0
+  if (!allow(rule.source, sourceType) || !allow(rule.target, targetType)) {
+    return {
+      ok: false,
+      message:
+        '「' +
+        (KNODE_LABEL[sourceType] || '记忆') +
+        '」不能对「' +
+        (KNODE_LABEL[targetType] || '记忆') +
+        '」使用「' +
+        RELATION_LABEL[relationType] +
+        '」。换一个关系类型，或者先把两端的对象类型理清。'
+    }
+  }
+  return { ok: true }
+}
+
+// 自然语言预览：方向错了用户一眼能看出来。
+function describeRelation(store, relation) {
+  const nameOf = (type, id) => {
+    if (type === 'node') {
+      const node = findKnowledgeNode(store, id)
+      return node ? node.title : id
+    }
+    const entry = store.entries.find((item) => item.id === id)
+    if (entry) return entry.title
+    const frame = store.frames.find((item) => item.id === id)
+    return frame ? '记忆区「' + frame.name + '」' : id
+  }
+  const phrase = RELATION_PHRASE[relation.relationType] || ['关联', '关联']
+  const source = nameOf(relation.sourceType, relation.sourceId)
+  const target = nameOf(relation.targetType, relation.targetId)
+  const text = phrase[0].indexOf('……') >= 0 ? phrase[0].replace('……', target) : phrase[0] + ' ' + target
+  return source + ' ' + text
+}
+
+function nodeMemoryIdsOf(store, node) {
+  return (node.relatedMemoryIds || []).filter((id) => store.entries.some((entry) => entry.id === id))
+}
+
+function syncNodeMemoryLinks(store, node) {
+  node.relatedMemoryIds = (node.relatedMemoryIds || []).filter((id) => store.entries.some((entry) => entry.id === id))
+  for (const entry of store.entries) {
+    const has = entry.nodeIds && entry.nodeIds.indexOf(node.id) >= 0
+    if (has) continue
+  }
+  for (const id of node.relatedMemoryIds) {
+    const entry = store.entries.find((item) => item.id === id)
+    if (!entry) continue
+    if (!Array.isArray(entry.nodeIds)) entry.nodeIds = []
+    if (entry.nodeIds.indexOf(node.id) < 0) entry.nodeIds.push(node.id)
+    if (!entry.parentNodeId) entry.parentNodeId = node.id
+  }
+  for (const entry of store.entries) {
+    if (!Array.isArray(entry.nodeIds)) continue
+    if (!node.relatedMemoryIds.includes(entry.id)) entry.nodeIds = entry.nodeIds.filter((id) => id !== node.id)
+    if (entry.nodeIds.length === 0 && entry.parentNodeId === node.id) entry.parentNodeId = ''
+  }
+}
+
+function findSimilarNodes(store, input) {
+  const title = cleanLine(input.title, LIMITS.nodeTitle)
+  if (!title) return []
+  const nodeType = KNOWLEDGE_NODE_TYPES.indexOf(input.nodeType) >= 0 ? input.nodeType : ''
+  const projectId = cleanLine(input.projectId, 64)
+  const out = []
+  for (const node of store.nodes || []) {
+    if (node.id === cleanLine(input.id, 64)) continue
+    let score = 0
+    if (node.title === title) score += 6
+    else if (node.title.indexOf(title) >= 0 || title.indexOf(node.title) >= 0) score += 4
+    if (nodeType && node.nodeType === nodeType) score += 2
+    if (projectId && node.projectId === projectId) score += 2
+    const aliasHit = (node.aliases || []).some((alias) => alias && (alias === title || title.indexOf(alias) >= 0))
+    if (aliasHit) score += 4
+    if (score >= 4) out.push({ nodeId: node.id, title: node.title, nodeType: node.nodeType, score })
+  }
+  return out.sort((left, right) => right.score - left.score).slice(0, 5)
+}
+
+function saveKnowledgeNode(store, input, options) {
+  const opts = options || {}
+  const id = cleanLine(input && input.id, 64)
+  const existing = id ? findKnowledgeNode(store, id) : null
+  if (id && !existing) throw httpError(404, 'node-not-found', '知识对象不存在：' + id)
+  const title = cleanLine((input && input.title) || (existing ? existing.title : ''), LIMITS.nodeTitle)
+  if (!title) throw httpError(400, 'empty-title', '知识对象需要一个名字')
+  const similar = findSimilarNodes(store, Object.assign({}, input, { id: existing ? existing.id : '' }))
+  if (!existing && similar.length && !opts.allowDuplicate) {
+    return {
+      duplicate: similar,
+      created: false,
+      relation: null,
+      node: null
+    }
+  }
+  const now = isoNow()
+  if (!existing) {
+    if ((store.nodes || []).length >= LIMITS.nodes) {
+      throw httpError(400, 'too-many-nodes', '知识对象数量达到上限 ' + LIMITS.nodes)
+    }
+    const node = normalizeKnowledgeNode(
+      Object.assign({}, input, {
+        id: id || newKnowledgeNodeId(),
+        title,
+        scope: input.scope || 'project',
+        status: NODE_STATUSES.indexOf(input.status) >= 0 ? input.status : 'active',
+        origin: input.origin || (input.createdBy === 'ai' ? 'ai' : 'user'),
+        createdAt: now,
+        updatedAt: now
+      }),
+      new Set(store.projects.map((project) => project.id)),
+      now
+    )
+    if (!node) throw httpError(400, 'invalid-node', '知识对象参数不合法')
+    if (node.parentNodeId) {
+      const parent = findKnowledgeNode(store, node.parentNodeId)
+      if (!parent) node.parentNodeId = ''
+    }
+    store.nodes.push(node)
+    if (!node.projectId) node.projectId = resolveProjectId(store, input.projectId)
+    if (Array.isArray(input.memoryIds)) {
+      for (const memoryId of input.memoryIds) {
+        const entry = store.entries.find((item) => item.id === cleanLine(memoryId, 64))
+        if (!entry) continue
+        if (node.relatedMemoryIds.indexOf(entry.id) < 0) node.relatedMemoryIds.push(entry.id)
+      }
+    }
+    syncNodeMemoryLinks(store, node)
+    return { node, created: true, duplicate: [] }
+  }
+  const before = {
+    title: existing.title,
+    description: existing.description,
+    status: existing.status,
+    nodeType: existing.nodeType,
+    parentNodeId: existing.parentNodeId,
+    scope: existing.scope
+  }
+  if (input.title !== undefined) existing.title = title
+  if (input.description !== undefined) existing.description = cleanText(input.description, LIMITS.nodeDescription)
+  if (input.nodeType !== undefined && KNOWLEDGE_NODE_TYPES.indexOf(input.nodeType) >= 0) {
+    if (input.nodeType !== existing.nodeType && !opts.forceTypeChange) {
+      const affected = store.relations.filter(
+        (relation) => (relation.sourceType === 'node' && relation.sourceId === existing.id) || (relation.targetType === 'node' && relation.targetId === existing.id)
+      )
+      const invalid = affected.filter((relation) => {
+        const next = Object.assign({}, existing, { nodeType: input.nodeType })
+        const other = relation.sourceType === 'node' && relation.sourceId === existing.id ? relation.targetId : relation.sourceId
+        const otherEnd =
+          relation.sourceType === 'node' && relation.sourceId === existing.id
+            ? { type: 'node', id: other, node: findKnowledgeNode(store, other) }
+            : { type: relation.sourceType, id: other }
+        const selfEnd = { type: 'node', id: existing.id, node: next }
+        const pair = relation.sourceType === 'node' && relation.sourceId === existing.id ? [selfEnd, otherEnd] : [otherEnd, selfEnd]
+        return !checkRelationEndpoints(store, relation.relationType, pair[0], pair[1]).ok
+      })
+      if (invalid.length) {
+        return {
+          requiresConfirmation: true,
+          affectedRelations: invalid.map((relation) => ({ id: relation.id, relationType: relation.relationType, description: relation.description })),
+          node: existing
+        }
+      }
+    }
+    existing.nodeType = input.nodeType
+  }
+  if (input.scope !== undefined) existing.scope = normalizeScope(input.scope)
+  if (input.projectId !== undefined) existing.projectId = resolveProjectId(store, input.projectId)
+  if (input.parentNodeId !== undefined) {
+    const parentId = cleanLine(input.parentNodeId, 64)
+    if (parentId && !findKnowledgeNode(store, parentId)) throw httpError(404, 'node-not-found', '父级对象不存在：' + parentId)
+    if (parentId && parentId === existing.id) throw httpError(400, 'self-parent', '不能把自己设成自己的父级')
+    existing.parentNodeId = parentId
+  }
+  if (input.tags !== undefined) existing.tags = normalizeTags(input.tags)
+  if (input.aliases !== undefined) existing.aliases = (input.aliases || []).map((item) => cleanLine(item, LIMITS.nodeAlias)).filter(Boolean).slice(0, LIMITS.nodeAliases)
+  if (input.attributes !== undefined) existing.attributes = normalizeNodeAttributes(input.attributes)
+  if (input.steps !== undefined) existing.steps = normalizeNodeSteps(input.steps)
+  if (input.status !== undefined && NODE_STATUSES.indexOf(input.status) >= 0) existing.status = input.status
+  if (input.confidence !== undefined) existing.confidence = clamp01(input.confidence, existing.confidence)
+  if (input.importance !== undefined) existing.importance = clamp01(input.importance, existing.importance)
+  if (Array.isArray(input.memoryIds)) {
+    existing.relatedMemoryIds = uniqueIds(input.memoryIds).slice(0, LIMITS.nodeMemories)
+  }
+  let changed = before.title !== existing.title || before.nodeType !== existing.nodeType || before.parentNodeId !== existing.parentNodeId || before.scope !== existing.scope
+  if (changed) existing.updatedAt = isoNow()
+  const contentChanged =
+    before.title !== existing.title ||
+    before.description !== existing.description ||
+    before.status !== existing.status ||
+    before.nodeType !== existing.nodeType
+  if (contentChanged) {
+    const changeType =
+      before.nodeType !== existing.nodeType
+        ? 'retyped'
+        : before.status !== existing.status
+        ? existing.status === 'archived'
+          ? 'archived'
+          : 'status'
+        : before.title !== existing.title
+        ? 'renamed'
+        : 'edit'
+    pushNodeVersion(store, existing, changeType, cleanText(input.changeReason || input.note || '', LIMITS.versionNote), input.createdBy === 'ai' ? 'ai' : 'user')
+    changed = true
+  }
+  syncNodeMemoryLinks(store, existing)
+  return { node: existing, created: false, duplicate: [], changed }
+}
+
+function pushNodeVersion(store, node, changeType, reason, createdBy) {
+  const now = isoNow()
+  if (!Array.isArray(node.versions)) node.versions = []
+  const last = node.versions.length ? node.versions[node.versions.length - 1] : null
+  if (
+    last &&
+    last.title === node.title &&
+    last.description === node.description &&
+    last.nodeType === node.nodeType &&
+    last.status === node.status
+  ) {
+    return null
+  }
+  const version = {
+    id: newVersionId(),
+    version: (node.currentVersion || (last ? last.version : 0)) + 1,
+    title: node.title,
+    description: node.description,
+    nodeType: node.nodeType,
+    status: node.status,
+    changeType: changeType || 'edit',
+    changeReason: cleanText(reason || '', LIMITS.versionNote),
+    createdAt: now,
+    createdBy: createdBy || 'user'
+  }
+  node.versions.push(version)
+  while (node.versions.length > LIMITS.versions) node.versions.shift()
+  node.currentVersion = version.version
+  node.updatedAt = now
+  return version
+}
+
+function restoreNodeVersion(store, input) {
+  const nodeId = cleanLine(input && (input.nodeId || input.id), 64)
+  const node = findKnowledgeNode(store, nodeId)
+  if (!node) throw httpError(404, 'node-not-found', '知识对象不存在：' + nodeId)
+  const versionId = cleanLine(input && (input.versionId || input.version), 64)
+  const target = (node.versions || []).find((item) => item.id === versionId || String(item.version) === versionId)
+  if (!target) throw httpError(404, 'version-not-found', '版本不存在：' + versionId)
+  node.title = target.title
+  node.description = target.description
+  if (KNOWLEDGE_NODE_TYPES.indexOf(target.nodeType) >= 0) node.nodeType = target.nodeType
+  const version = pushNodeVersion(store, node, 'restore', (input && input.changeReason) || '回滚到第 ' + target.version + ' 版', 'user')
+  return { node, version, restored: true }
+}
+
+function linkMemoryToNode(store, input) {
+  const node = findKnowledgeNode(store, input.nodeId || input.id)
+  if (!node) throw httpError(404, 'node-not-found', '知识对象不存在：' + (input.nodeId || input.id))
+  const memoryId = cleanLine(input.memoryId, 64)
+  const entry = store.entries.find((item) => item.id === memoryId)
+  if (!entry) throw httpError(404, 'not-found', '记忆不存在：' + memoryId)
+  if (node.relatedMemoryIds.indexOf(entry.id) < 0) node.relatedMemoryIds.push(entry.id)
+  if (!Array.isArray(entry.nodeIds)) entry.nodeIds = []
+  if (entry.nodeIds.indexOf(node.id) < 0) entry.nodeIds.push(node.id)
+  node.updatedAt = isoNow()
+  const role = cleanLine(input.role, 24)
+  if (role === 'source' && node.sourceMemoryIds.indexOf(entry.id) < 0) node.sourceMemoryIds.push(entry.id)
+  touchEntry(entry, '关联到知识对象「' + node.title + '」')
+  return { node, entry }
+}
+
+function unlinkMemoryFromNode(store, input) {
+  const node = findKnowledgeNode(store, input.nodeId || input.id)
+  if (!node) throw httpError(404, 'node-not-found', '知识对象不存在：' + (input.nodeId || input.id))
+  const memoryId = cleanLine(input.memoryId, 64)
+  const entry = store.entries.find((item) => item.id === memoryId)
+  if (!entry) throw httpError(404, 'not-found', '记忆不存在：' + memoryId)
+  node.relatedMemoryIds = node.relatedMemoryIds.filter((id) => id !== entry.id)
+  entry.nodeIds = (entry.nodeIds || []).filter((id) => id !== node.id)
+  if (entry.parentNodeId === node.id) entry.parentNodeId = ''
+  node.sourceMemoryIds = node.sourceMemoryIds.filter((id) => id !== entry.id)
+  node.updatedAt = isoNow()
+  return { node, entry, unlinked: true }
+}
+
+function nodeTargetId(input) {
+  return cleanLine(input && (input.id || input.nodeId), 64)
+}
+
+function archiveKnowledgeNode(store, input) {
+  const id = nodeTargetId(input)
+  const node = findKnowledgeNode(store, id)
+  if (!node) throw httpError(404, 'node-not-found', '知识对象不存在：' + id)
+  const target = input.status && NODE_STATUSES.indexOf(input.status) >= 0 ? input.status : 'archived'
+  node.status = target
+  node.updatedAt = isoNow()
+  return { node }
+}
+
+function deleteKnowledgeNode(store, input) {
+  const id = nodeTargetId(input)
+  const node = findKnowledgeNode(store, id)
+  if (!node) throw httpError(404, 'node-not-found', '知识对象不存在：' + id)
+  if (input.mode === 'hard') {
+    store.relations = store.relations.filter(
+      (relation) => !(relation.sourceType === 'node' && relation.sourceId === node.id) && !(relation.targetType === 'node' && relation.targetId === node.id)
+    )
+    for (const child of store.nodes) {
+      if (child.parentNodeId === node.id) child.parentNodeId = ''
+    }
+    for (const entry of store.entries) {
+      entry.nodeIds = (entry.nodeIds || []).filter((id) => id !== node.id)
+      if (entry.parentNodeId === node.id) entry.parentNodeId = ''
+    }
+    for (const collection of store.collections) {
+      collection.memberIds = collection.memberIds.filter((id) => id !== node.id)
+    }
+    store.nodes = store.nodes.filter((item) => item.id !== node.id)
+    return { deleted: node.id, node, mode: 'hard' }
+  }
+  node.status = 'archived'
+  node.updatedAt = isoNow()
+  return { deleted: node.id, node, mode: 'archive' }
+}
+
+function restoreKnowledgeNode(store, input) {
+  const id = nodeTargetId(input)
+  const node = findKnowledgeNode(store, id)
+  if (node) {
+    node.status = 'active'
+    node.updatedAt = isoNow()
+    return { node, restored: true }
+  }
+  const raw = input && (input.node || (input.entry && input.entry.node))
+  if (!raw) throw httpError(400, 'missing-node', '恢复知识对象需要完整的对象数据')
+  const normalized = normalizeKnowledgeNode(
+    Object.assign({}, raw, { status: 'active' }),
+    new Set(store.projects.map((project) => project.id)),
+    isoNow()
+  )
+  if (!normalized) throw httpError(400, 'invalid-node', '知识对象数据不合法')
+  if (findKnowledgeNode(store, normalized.id)) throw httpError(409, 'conflict', '这个知识对象还在，不需要恢复')
+  store.nodes.push(normalized)
+  syncNodeMemoryLinks(store, normalized)
+  return { node: normalized, restored: true }
+}
+
+function mergeKnowledgeNodes(store, input) {
+  const targetId = cleanLine(input.targetId || input.intoId || input.id, 64)
+  const sourceId = cleanLine(input.sourceId, 64)
+  const target = findKnowledgeNode(store, targetId)
+  const source = findKnowledgeNode(store, sourceId)
+  if (!target) throw httpError(404, 'node-not-found', '主对象不存在：' + targetId)
+  if (!source) throw httpError(404, 'node-not-found', '要合并的对象不存在：' + sourceId)
+  if (target.id === source.id) throw httpError(400, 'self-merge', '不能把自己合并到自己')
+  const kept = {
+    description: target.description || source.description,
+    tags: uniqueIds((target.tags || []).concat(source.tags || [])),
+    aliases: uniqueIds((target.aliases || []).concat(source.aliases || [])).slice(0, LIMITS.nodeAliases),
+    attributes: (target.attributes || []).slice(),
+    steps: (target.steps || []).slice()
+  }
+  for (const attribute of source.attributes || []) {
+    if (!kept.attributes.some((item) => item.label === attribute.label)) kept.attributes.push(attribute)
+  }
+  if (!kept.steps.length) kept.steps = (source.steps || []).slice()
+  const memoryIds = uniqueIds((target.relatedMemoryIds || []).concat(source.relatedMemoryIds || [])).slice(0, LIMITS.nodeMemories)
+  const movedRelations = []
+  store.relations = store.relations.filter((relation) => {
+    if (relation.sourceType === 'node' && relation.sourceId === source.id) {
+      relation.sourceId = target.id
+      movedRelations.push(relation.id)
+    }
+    if (relation.targetType === 'node' && relation.targetId === source.id) {
+      relation.targetId = target.id
+      movedRelations.push(relation.id)
+    }
+    if (relation.sourceType === 'node' && relation.targetType === 'node' && relation.sourceId === relation.targetId) return false
+    return true
+  })
+  const seen = new Set()
+  store.relations = store.relations.filter((relation) => {
+    const key = fullRelationKey(relation)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  for (const node of store.nodes) {
+    if (node.parentNodeId === source.id) node.parentNodeId = target.id
+  }
+  for (const entry of store.entries) {
+    if (entry.parentNodeId === source.id) entry.parentNodeId = target.id
+  }
+  target.description = cleanText(kept.description, LIMITS.nodeDescription)
+  target.tags = normalizeTags(kept.tags)
+  target.aliases = kept.aliases
+  target.attributes = normalizeNodeAttributes(kept.attributes)
+  target.steps = normalizeNodeSteps(kept.steps)
+  target.relatedMemoryIds = memoryIds
+  target.sourceMemoryIds = uniqueIds((target.sourceMemoryIds || []).concat(source.sourceMemoryIds || []))
+  target.updatedAt = isoNow()
+  source.status = 'merged'
+  source.mergedIntoId = target.id
+  source.updatedAt = isoNow()
+  syncNodeMemoryLinks(store, target)
+  return { node: target, mergedFrom: source, movedRelations: movedRelations.length, memoryIds: memoryIds.length }
+}
+
+function nodeSubtree(store, nodeId) {
+  const root = findKnowledgeNode(store, nodeId)
+  if (!root) throw httpError(404, 'node-not-found', '知识对象不存在：' + nodeId)
+  const nodeIds = new Set([root.id])
+  const queue = [root.id]
+  while (queue.length) {
+    const current = queue.shift()
+    for (const node of store.nodes) {
+      if (node.parentNodeId !== current || nodeIds.has(node.id)) continue
+      nodeIds.add(node.id)
+      queue.push(node.id)
+    }
+    for (const relation of store.relations) {
+      if (relation.relationType !== 'contains' || relation.sourceType !== 'node' || relation.sourceId !== current) continue
+      if (relation.targetType !== 'node' || nodeIds.has(relation.targetId)) continue
+      nodeIds.add(relation.targetId)
+      queue.push(relation.targetId)
+    }
+  }
+  const memoryIds = new Set()
+  for (const node of store.nodes) {
+    if (!nodeIds.has(node.id)) continue
+    for (const id of node.relatedMemoryIds || []) memoryIds.add(id)
+  }
+  return { root, nodeIds, memoryIds }
+}
+
 function describeEntry(entry, state) {
   const parts = ['[' + TYPE_LABEL[entry.type] + ' / ' + STATUS_LABEL[entry.status] + '] ' + entry.title]
   parts.push('id=' + entry.id)
@@ -3575,8 +4847,22 @@ function describeEntry(entry, state) {
           .join('、')
     )
   }
+  if (entry.nodeIds && entry.nodeIds.length) {
+    parts.push(
+      '知识对象: ' +
+        entry.nodeIds
+          .map((id) => {
+            const node = findKnowledgeNode(state, id)
+            return node ? '「' + node.title + '」(' + KNODE_LABEL[node.nodeType] + ')' : ''
+          })
+          .filter(Boolean)
+          .join('、')
+    )
+  }
   const relations = state.relations.filter(
-    (relation) => relation.sourceMemoryId === entry.id || relation.targetMemoryId === entry.id
+    (relation) =>
+      (relation.sourceType === 'memory' && relation.sourceId === entry.id) ||
+      (relation.targetType === 'memory' && relation.targetId === entry.id)
   )
   if (relations.length) parts.push('关联: ' + relations.length + ' 条')
   return parts.join('\n  ')
@@ -3599,8 +4885,16 @@ function describeEntryFull(entry, state) {
   if (entry.source && (entry.source.kind !== 'manual' || entry.source.label)) {
     lines.push('来源: ' + SOURCE_LABEL[entry.source.kind] + (entry.source.label ? ' · ' + entry.source.label : ''))
   }
-  const outgoing = state.relations.filter((relation) => relation.sourceMemoryId === entry.id)
-  const incoming = state.relations.filter((relation) => relation.targetMemoryId === entry.id)
+  if (entry.nodeIds && entry.nodeIds.length) {
+    lines.push('知识对象:')
+    for (const id of entry.nodeIds) {
+      const node = findKnowledgeNode(state, id)
+      if (!node) continue
+      lines.push('  - [' + KNODE_LABEL[node.nodeType] + '] ' + node.title + '（id=' + node.id + '）')
+    }
+  }
+  const outgoing = state.relations.filter((relation) => (relation.sourceType || 'memory') === 'memory' && (relation.sourceId || relation.sourceMemoryId) === entry.id)
+  const incoming = state.relations.filter((relation) => (relation.targetType || 'memory') === 'memory' && (relation.targetId || relation.targetMemoryId) === entry.id)
   if (outgoing.length) {
     lines.push('关联到:')
     for (const relation of outgoing) {
@@ -3649,6 +4943,34 @@ function frameSubtree(state, frameId) {
   }
   walk(root)
   return { frame: root, entryIds: entries, frameIds: seen }
+}
+
+function searchKnowledgeNodes(state, query) {
+  const needle = cleanLine(query.query || query.q, 200).toLowerCase()
+  const nodeType = KNOWLEDGE_NODE_TYPES.indexOf(query.nodeType) >= 0 ? query.nodeType : ''
+  const status = NODE_STATUSES.indexOf(query.status) >= 0 ? query.status : ''
+  const projectId = cleanLine(query.projectId, 64)
+  return (state.nodes || [])
+    .filter((node) => {
+      if (node.status === 'merged' && !query.includeMerged) return false
+      if (nodeType && node.nodeType !== nodeType) return false
+      if (status && node.status !== status) return false
+      if (projectId && node.projectId !== projectId) return false
+      if (Array.isArray(query.nodeTypes) && query.nodeTypes.length && query.nodeTypes.indexOf(node.nodeType) < 0) return false
+      if (!needle) return true
+      const haystack = [
+        node.title,
+        node.description,
+        (node.aliases || []).join(' '),
+        (node.tags || []).join(' '),
+        (node.attributes || []).map((item) => item.label + ' ' + item.value).join(' '),
+        KNODE_LABEL[node.nodeType]
+      ]
+        .join('\n')
+        .toLowerCase()
+      return haystack.includes(needle)
+    })
+    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
 }
 
 function searchEntries(state, query) {
@@ -3741,10 +5063,17 @@ function writeParameters() {
           'frame-sync',
           'layout-save',
           'layout-clear',
+          'node-save',
+          'node-delete',
+          'node-archive',
+          'node-restore',
+          'node-merge',
+          'node-link-memory',
+          'node-unlink-memory', 'node-version-restore',
           'import'
         ],
         description:
-          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间；project-reorder 调整项目顺序（传 ids 数组）；frame-save / frame-delete 管理关系图上的记忆框（框住一组记忆，方便阅读）；layout-save 保存关系图的手动布局（positions: {记忆id: {x, y}}）；layout-clear 清空手动布局；import 导入外部 JSON（mode: merge / replace）。'
+          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间；project-reorder 调整项目顺序（传 ids 数组）；frame-save / frame-delete 管理关系图上的记忆框（框住一组记忆，方便阅读）；layout-save 保存关系图的手动布局（positions: {记忆id: {x, y}}）；layout-clear 清空手动布局；import 导入外部 JSON（mode: merge / replace）；node-save 新建或更新知识对象（nodeType: project/system/subsystem/concept/workflow/preference/principle/method）；node-delete 归档或删除知识对象（mode: hard 才真删）；node-archive / node-restore；node-merge 合并重复对象（targetId 保留、sourceId 并入）；node-link-memory / node-unlink-memory 关联或解除关联记忆。'
       },
       id: { type: 'string', description: '记忆 / 集合 / 关联 / 项目的 id（更新时必填）' },
       title: { type: 'string', description: '记忆标题，一句话说清是什么' },
@@ -3785,6 +5114,7 @@ function writeParameters() {
       },
       level: { type: 'string', enum: PROTECTION_LEVELS, description: 'entry-protect: 目标保护级别' },
       versionId: { type: 'string', description: 'entry-version-restore: 要回滚到的版本 id' },
+        changeReason: { type: 'string', description: '这次修改的原因、依据或来源，会写进对象的历史版本' },
       decision: { type: 'string', description: 'proposal-decide: accept 或 reject' },
       evidence: { type: 'string', description: '新增证据内容（entry-save / evidence-add）' },
       evidenceType: { type: 'string', enum: EVIDENCE_TYPES, description: '证据类型' },
@@ -3820,11 +5150,41 @@ function writeParameters() {
       remove: { type: 'array', items: { type: 'string' }, description: 'collection-members: 要移出的记忆 id' },
       intoId: { type: 'string', description: 'collection-merge: 合并进哪个集合 id' },
       field: { type: 'string', description: 'entry-flag: favorite 或 pinned' },
-      op: { type: 'string', description: 'entry-bulk: status / project / favorite / pin / addCollection / removeCollection / delete' },
+      op: { type: 'string', description: 'entry-bulk: status / project / favorite / pin / addTag / removeTag / addCollection / removeCollection / delete' },
       collectionId: { type: 'string', description: 'entry-bulk: 目标集合 id' },
       kind: { type: 'string', description: 'view-save: 视图类型，目前为 graph' },
       config: { type: 'object', description: 'view-save: 视图配置（筛选与折叠状态）' },
       viewId: { type: 'string', description: 'view-delete: 视图 id' },
+      nodeId: { type: 'string', description: '知识对象 id（node-save 更新、node-link-memory 等）' },
+      memoryId: { type: 'string', description: 'node-link-memory / node-unlink-memory: 记忆 id' },
+      nodeType: {
+        type: 'string',
+        enum: KNOWLEDGE_NODE_TYPES,
+        description: '知识对象类型：project 项目 / system 系统 / subsystem 子系统 / concept 业务对象 / workflow 工作流程 / preference 用户偏好 / principle 设计原则 / method 设计方法'
+      },
+      parentNodeId: { type: 'string', description: '父级知识对象 id' },
+      sourceType: { type: 'string', enum: RELATION_ENDS, description: '关系起点类型：memory / node' },
+      targetType: { type: 'string', enum: RELATION_ENDS, description: '关系终点类型：memory / node' },
+      sourceId: { type: 'string', description: '关系起点 id（配合 sourceType）' },
+      aliases: { type: 'array', items: { type: 'string' }, description: '知识对象的别名，用于模糊匹配与复用' },
+      attributes: {
+        type: 'object',
+        description: '知识对象扩展属性，键值对，例如 { "阵营": "中立", "战斗定位": "远程" }',
+        additionalProperties: true
+      },
+      steps: {
+        type: 'array',
+        description: '工作流程的步骤（按顺序）',
+        items: {
+          type: 'object',
+          properties: { title: { type: 'string' }, note: { type: 'string' } },
+          additionalProperties: true
+        }
+      },
+      memoryIds: { type: 'array', items: { type: 'string' }, description: '知识对象关联的记忆 id 列表' },
+      allowDuplicate: { type: 'boolean', description: 'node-save: 允许创建与已有对象相似的新对象' },
+      forceTypeChange: { type: 'boolean', description: 'node-save: 改类型会影响已有关系时，确认后强制修改' },
+      includeMerged: { type: 'boolean', description: '搜索时是否包含已合并的对象' },
       entry: {
         type: 'object',
         description: 'entry-restore: 要恢复的记忆快照（保留 id / createdAt / updatedAt）',
@@ -3922,8 +5282,27 @@ function applyAction(state, input) {
     }
     case 'memory-tidy':
       return tidyReport(state)
+    case 'node-save':
+      return saveKnowledgeNode(state, input, {
+        allowDuplicate: input.allowDuplicate === true,
+        forceTypeChange: input.forceTypeChange === true
+      })
+    case 'node-delete':
+      return deleteKnowledgeNode(state, input)
+    case 'node-archive':
+      return archiveKnowledgeNode(state, { ...input, status: input.status || 'archived' })
+    case 'node-restore':
+      return restoreKnowledgeNode(state, input)
+    case 'node-merge':
+      return mergeKnowledgeNodes(state, input)
+    case 'node-link-memory':
+      return linkMemoryToNode(state, input)
+    case 'node-unlink-memory':
+      return unlinkMemoryFromNode(state, input)
+    case 'node-version-restore':
+      return restoreNodeVersion(state, input)
     case 'relation-create':
-      return saveRelation(state, { ...input, targetMemoryId: input.targetMemoryId || input.targetId })
+      return saveRelation(state, input)
     case 'relation-update':
       return updateRelation(state, input)
     case 'relation-decide':
@@ -3968,6 +5347,35 @@ function applyAction(state, input) {
 }
 
 function formatWriteResult(result, state) {
+  if (result.node && (result.created || result.changed !== undefined || result.mergedFrom !== undefined)) {
+    const node = result.node
+    const lines = [
+      (result.mergedFrom ? '已合并知识对象：「' + result.mergedFrom.title + '」并入「' + node.title + '」' : result.created ? '已新建知识对象：' + node.title : '已更新知识对象：' + node.title),
+      'id=' + node.id + ' · ' + KNODE_LABEL[node.nodeType] + ' · ' + NODE_STATUS_LABEL[node.status],
+      '关联记忆 ' + (node.relatedMemoryIds || []).length + ' 条' + (node.children && node.children.length ? ' · 子对象 ' + node.children.length + ' 个' : '')
+    ]
+    if (result.mergedFrom) lines.push('已迁移关系 ' + (result.movedRelations || 0) + ' 条，记忆 ' + (result.memoryIds || 0) + ' 条')
+    return lines.join('\n')
+  }
+  if (result.duplicate && result.duplicate.length) {
+    return (
+      '已有相似的知识对象，先确认是同一个还是新对象：\n' +
+      result.duplicate.map((item) => '- ' + item.title + '（' + KNODE_LABEL[item.nodeType] + '，id=' + item.nodeId + '）').join('\n') +
+      '\n如果确认是新对象，重试时带 allowDuplicate: true。'
+    )
+  }
+  if (result.requiresConfirmation) {
+    return '改类型会影响 ' + result.affectedRelations.length + ' 条已有关系：\n' + result.affectedRelations.map((item) => '- [' + RELATION_LABEL[item.relationType] + '] ' + (item.description || item.id)).join('\n') + '\n确认后带 forceTypeChange: true 再保存。'
+  }
+  if (result.unlinked) {
+    return '已解除关联：「' + result.node.title + '」与「' + result.entry.title + '」不再关联，记忆本身仍然保留。'
+  }
+  if (result.deleted && result.mode) {
+    return result.mode === 'hard' ? '已删除知识对象：' + result.deleted + '（相关关系与关联已清理）' : '已归档知识对象：' + result.deleted + '（历史仍可查看，可恢复）'
+  }
+  if (result.restored && result.node) {
+    return '已恢复知识对象：' + result.node.title + '\nid=' + result.node.id
+  }
   if (result.restored && result.entry) {
     return (
       '已恢复记忆：' + result.entry.title + '\nid=' + result.entry.id +
@@ -4155,38 +5563,73 @@ export function apply(ctx) {
     }
   }
 
-  // 只有宿主真的注册了 llm 服务时才可用；没有就老老实实用本地启发式。
+  // 宿主把模型能力注册成 cordis 服务 `llm`；通过 inject 拿到它，拿不到就只用本地启发式。
+  let llmRuntime = null
+  try {
+    ctx.inject(['llm'], (llmCtx) => {
+      llmRuntime = llmCtx.llm || null
+    })
+  } catch (error) {
+    llmRuntime = null
+  }
+
   function llmService() {
-    try {
-      const llm = ctx.llm
-      return llm && typeof llm.stream === 'function' ? llm : null
-    } catch (error) {
-      return null
-    }
+    const llm = llmRuntime
+    if (!llm) return null
+    if (typeof llm.prepareCall !== 'function' && typeof llm.stream !== 'function') return null
+    return llm
   }
 
   async function listModelChoices() {
     const llm = llmService()
-    if (!llm) return { available: false, providers: [], models: [] }
+    if (!llm) return { available: false, providers: [], models: [], reason: 'no-llm-service' }
     const providers = []
     const models = []
     try {
       const routes = await llm.listProviders()
       for (const route of routes || []) {
-        providers.push({ id: route.id, name: route.name || route.displayName || route.id })
+        const id = cleanLine(route && (route.id || route.provider), 80)
+        if (!id) continue
+        providers.push({ id, name: cleanLine(route.name || route.displayName || id, 80) })
         try {
-          const list = await llm.listModels(route)
+          const list = await llm.listModels(id)
           for (const item of list || []) {
-            models.push({ provider: route.id, id: item.id, name: item.name || item.id })
+            const modelId = cleanLine(item && item.id, 120)
+            if (!modelId) continue
+            models.push({ provider: id, id: modelId, name: cleanLine(item.name || item.displayName || modelId, 120) })
           }
         } catch (error) {
-          // 某个 provider 查不到模型就跳过
+          // 某个 provider 查不到模型就跳过，不影响其他 provider
         }
       }
     } catch (error) {
-      return { available: false, providers: [], models: [] }
+      return { available: false, providers: [], models: [], reason: 'list-failed', message: String((error && error.message) || error) }
     }
     return { available: models.length > 0, providers, models }
+  }
+
+  function makeUserMessage(text) {
+    return {
+      id: 'zwm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+      role: 'user',
+      content: [{ type: 'text', text: String(text == null ? '' : text) }],
+      source: { kind: 'design-memory' }
+    }
+  }
+
+  function collectChunkText(chunk) {
+    if (!chunk || typeof chunk !== 'object') return ''
+    if (typeof chunk.text === 'string') return chunk.text
+    if (typeof chunk.delta === 'string') return chunk.delta
+    if (chunk.content && typeof chunk.content.text === 'string') return chunk.content.text
+    if (Array.isArray(chunk.content)) {
+      let out = ''
+      for (const part of chunk.content) {
+        if (part && part.type === 'text' && typeof part.text === 'string') out += part.text
+      }
+      return out
+    }
+    return ''
   }
 
   // 用宿主模型跑一次文本生成；拿不到模型或出错都返回空字符串，由调用方回退。
@@ -4196,25 +5639,32 @@ export function apply(ctx) {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 45000)
     try {
-      const stream = llm.stream({
+      const messages = [makeUserMessage(userText)]
+      const base = {
         provider: modelRoute.provider,
         model: modelRoute.model,
-        sessionId: 'design-memory',
-        purpose: 'zhiwei-organize',
-        maxTokens: maxTokens || 1200,
-        signal: controller.signal,
-        system: systemText,
-        messages: [
-          { id: 'zw-' + Date.now().toString(36), role: 'user', content: [{ type: 'text', text: userText }] }
-        ]
-      })
+        maxTokens: maxTokens || 1400
+      }
       let text = ''
-      for await (const chunk of stream) {
-        const delta = chunk && (chunk.text || chunk.delta || (chunk.content && chunk.content.text))
-        if (typeof delta === 'string') text += delta
-        else if (chunk && Array.isArray(chunk.content)) {
-          for (const part of chunk.content) if (part && part.type === 'text' && typeof part.text === 'string') text += part.text
-        }
+      if (typeof llm.prepareCall === 'function') {
+        const call = await llm.prepareCall(base, controller.signal, (controls) => ({ ...controls }))
+        const options = Object.assign({}, call.config, {
+          messages,
+          system: systemText,
+          sessionId: 'design-memory',
+          purpose: 'zhiwei-organize',
+          signal: controller.signal
+        })
+        for await (const chunk of call.stream(options)) text += collectChunkText(chunk)
+      } else {
+        const options = Object.assign({}, base, {
+          messages,
+          system: systemText,
+          sessionId: 'design-memory',
+          purpose: 'zhiwei-organize',
+          signal: controller.signal
+        })
+        for await (const chunk of llm.stream(options)) text += collectChunkText(chunk)
       }
       clearTimeout(timer)
       return text.trim()
@@ -4233,7 +5683,6 @@ export function apply(ctx) {
       available: Boolean(llmService())
     }
   }
-
   async function load() {
     await readConfig()
     let parsed = null
@@ -4265,6 +5714,7 @@ export function apply(ctx) {
     state.views = migrated.views
     state.proposals = migrated.proposals || []
     state.recalls = migrated.recalls || []
+    state.nodes = migrated.nodes || []
     state.frames = migrated.frames || []
     state.layout = migrated.layout || { positions: {}, updatedAt: '' }
     pruneStore(state)
@@ -4331,6 +5781,11 @@ export function apply(ctx) {
         collectionId: { type: 'string', description: '只看某个集合里的记忆' },
         frameId: { type: 'string', description: '只看某个记忆区（关系图上的框，含嵌套子框）里的记忆' },
         favorites: { type: 'boolean', description: '只看收藏' },
+        nodeType: {
+          type: 'string',
+          enum: KNOWLEDGE_NODE_TYPES,
+          description: '只看某类知识对象（project/system/subsystem/concept/workflow/preference/principle/method）'
+        },
         limit: { type: 'number', description: '返回条数，默认 12，最多 40' }
       },
       additionalProperties: false
@@ -4345,14 +5800,33 @@ export function apply(ctx) {
         return describeEntryFull(entry, state)
       }
       const limit = Math.max(1, Math.min(40, Number(params && params.limit) || 12))
-      const results = searchEntries(state, params || {})
-      if (!results.length) return '没有找到匹配的记忆。'
-      const head = '共 ' + results.length + ' 条，显示前 ' + Math.min(limit, results.length) + ' 条：\n'
-      const body = results
-        .slice(0, limit)
-        .map((entry, index) => index + 1 + '. ' + describeEntry(entry, state))
-        .join('\n\n')
-      return head + body + '\n\n（用 id 读取单条全文）'
+      const wantNodes = params && (params.nodeType || params.nodesOnly === true || params.kind === 'node')
+      const nodes = searchKnowledgeNodes(state, params || {}).slice(0, limit)
+      const results = wantNodes ? [] : searchEntries(state, params || {})
+      const blocks = []
+      if (nodes.length) {
+        blocks.push(
+          '知识对象 ' +
+            nodes.length +
+            ' 个：\n' +
+            nodes.map((node, index) => index + 1 + '. [' + KNODE_LABEL[node.nodeType] + '] ' + node.title + '（' + node.status + '）\n   id=' + node.id + ' · 关联记忆 ' + (node.relatedMemoryIds || []).length + ' 条' + (node.projectId ? ' · 项目 ' + node.projectId : '')).join('\n')
+        )
+      }
+      if (results.length) {
+        blocks.push(
+          '记忆 ' +
+            results.length +
+            ' 条，显示前 ' +
+            Math.min(limit, results.length) +
+            ' 条：\n' +
+            results
+              .slice(0, limit)
+              .map((entry, index) => index + 1 + '. ' + describeEntry(entry, state))
+              .join('\n\n')
+        )
+      }
+      if (!blocks.length) return '没有找到匹配的知识对象或记忆。'
+      return blocks.join('\n\n') + '\n\n（用 id 读取单条全文；node-save 可新建知识对象，node-link-memory 可把记忆挂到对象上）'
     }
   })
 
@@ -4723,8 +6197,13 @@ export function apply(ctx) {
   // 静态提示：告诉模型「知微」存在，以及什么时候该召回、什么时候该沉淀。
   // 真实调用仍然通过 design_memory_recall / design_memory_observe 工具完成，
   // 不伪造自动注入，也不在用户不知情时改库。
-  ctx.inject(['systemPrompt'], (promptCtx) => {
-    promptCtx.systemPrompt.section({
+  // 宿主契约万一变了（没有 systemPrompt 服务，或 section 签名不同），只该少一段提示，
+  // 不能连累工具与 HTTP 路由注册 —— 所以整体包一层 try/catch。
+  try {
+    ctx.inject(['systemPrompt'], (promptCtx) => {
+      const prompt = promptCtx && promptCtx.systemPrompt
+      if (!prompt || typeof prompt.section !== "function") return
+      prompt.section({
       name: 'design-memory:zhiwei',
       order: 700,
       text: [
@@ -4733,8 +6212,11 @@ export function apply(ctx) {
         '取回的内容里，保护级别为「固有约定」的记忆必须遵守，除非用户明确要求改变；历史方案和已废弃记忆不能当作当前规则。',
         '完成一段讨论、评审、排期或排查后，用 design_memory_observe 把稳定的结论沉淀进去，而不是把聊天记录整段存下来。',
         '不要替用户确认新的约定，也不要在没有用户依据时修改固有约定；不确定的内容交给用户判断。'
-      ].join('\n')
+        ].join('\n')
+      })
     })
-  })
+  } catch (error) {
+    console.warn('[design-memory] system prompt section skipped:', error && error.message)
+  }
 }
 

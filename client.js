@@ -120,6 +120,7 @@ window.__ModuleLoader__.load({
       'nav.graph': '关系图',
       'nav.projects': '项目空间',
       'nav.savedViews': '保存的视图',
+      'nav.deleteView': '删除这个视图',
       'nav.savedViewsEmpty': '在关系图里可以保存当前视角',
       'nav.collapse': '收起导航',
       'nav.expand': '展开导航',
@@ -130,7 +131,6 @@ window.__ModuleLoader__.load({
       'action.delete': '删除',
       'action.rename': '重命名',
       'project.namePlaceholder': '项目空间名称',
-      'settings.title': '设置',
       'graph.saveLayout': '保存布局',
       'graph.layoutSaved': '已保存当前布局',
       'toast.projectSaved': '已保存项目',
@@ -150,19 +150,17 @@ window.__ModuleLoader__.load({
       'settings.modelTitle': '整理用的模型',
       'settings.modelHint': '选定后，AI 整理、摘要与归类会先走这个模型；模型不可用时自动回退到本地启发式整理。',
       'settings.modelUnavailable': '当前环境没有可用的模型服务，只能使用本地整理。',
-      'settings.modelProvider': '服务商',
       'settings.modelName': '模型',
       'settings.modelEnable': '使用模型来整理',
       'settings.modelSaved': '已保存模型设置',
       'settings.modelNone': '不指定（只用本地整理）',
+      'settings.needPath': '先填一个存储路径',
+      'settings.modelOn': '正在用这个模型整理',
+      'settings.importFailed': '导入失败：',
+      'settings.sectionLabel': '知微',
       'settings.storage': '存储位置',
-      'settings.counts': '当前数据',
-      'settings.entriesUnit': '条记忆',
-      'settings.relationsUnit': '条关系',
-      'settings.collectionsUnit': '个集合',
       'settings.switchTitle': '切换记忆存储区域',
       'settings.switchHint': '填一个目录或 .json 文件路径，知微会把当前记忆写到那里并从那儿读取。原位置的数据会保留一份备份，随时可以切回来。',
-      'settings.switchPlaceholder': 'D:\\我的记忆库\\memories.json',
       'settings.switchApply': '切换到这里',
       'settings.exportTitle': '导出',
       'settings.exportHint': '导出为 JSON 文件，包含记忆、关系、集合、记忆框与布局，可用于备份或迁移到另一台电脑。',
@@ -171,7 +169,6 @@ window.__ModuleLoader__.load({
       'settings.importHint': '选择之前导出的 JSON：合并只补充缺失的记忆，覆盖会用文件内容替换当前库。',
       'settings.importMerge': '合并（只补充）',
       'settings.importReplace': '覆盖（替换现有库）',
-      'settings.importApply': '开始导入',
       'settings.switched': '已切换存储位置',
       'settings.imported': '已导入',
       'settings.exported': '已导出',
@@ -371,6 +368,17 @@ window.__ModuleLoader__.load({
       'graph.clusterHint': '同一集合的节点会被气泡包住',
 
       'batch.clear': '取消选择',
+        'batch.archive': '归档',
+        'batch.tag': '加标签',
+        'batch.delete': '删除',
+        'batch.tagTitle': '批量加标签',
+        'batch.tagHint': '选中的记忆都会加上这个标签，不会覆盖已有标签。',
+        'batch.tagPlaceholder': '标签名',
+        'batch.tagApply': '加上',
+        'batch.deleteTitle': '删除选中的记忆',
+        'batch.deleteText': '会删除这些记忆本身，以及它们的关系；被删记忆里的内容会保留在撤销记录里一会儿，想恢复请在提示里点撤销。',
+        'toast.tagged': '已加上标签',
+        'toast.archived': '已归档',
 
       'toast.saved': '已保存',
       'toast.deleted': '已删除',
@@ -392,6 +400,8 @@ window.__ModuleLoader__.load({
       'view.graph': '关系图',
       'app.title': '知微 · AI 知识工作台',
       'app.loading': '加载中…',
+      'common.close': '关闭',
+      'common.cancel': '取消',
       'common.name': '名称',
 
       'action.star': '收藏',
@@ -438,6 +448,14 @@ window.__ModuleLoader__.load({
       'collections.project': '所属项目',
       'collections.selected': '已选择',
       'collections.deleted': '集合已删除',
+      'collections.manage': '管理集合',
+      'collections.editTitle': '编辑集合',
+      'collections.manageHint': '在这里改名、调成员、合并或删除集合',
+      'collections.open': '打开集合',
+      'collections.mergeAction': '合并',
+      'collections.mergeConfirm': '确认合并',
+      'collections.membersChanged': '集合成员已更新',
+      'toast.viewDeleted': '视图已删除',
 
       'graph.toolSelect': '选择',
       'graph.toolLink': '划线',
@@ -528,7 +546,130 @@ window.__ModuleLoader__.load({
       'evidence.inference': 'AI 推测',
       'evidence.temporary': '临时上下文',
       'scope.global': '跨项目',
-      'scope.project': '项目内',
+      'nav.knowledge': '知识网络',
+      'kn.saved': '知识对象已更新',
+      'kn.created': '知识对象已创建',
+      'kn.archived': '已归档，可以随时恢复',
+      'kn.restored': '已恢复',
+      'kn.linked': '已关联这条记忆',
+      'kn.unlinked': '已解除关联，记忆本身还在',
+      'kn.merged': '已合并到主对象',
+      'kn.new': '新建知识对象',
+      'kn.edit': '编辑知识对象',
+      'kn.objects': '知识对象',
+      'search.collections': '主题集合',
+      'search.projects': '项目',
+      'kn.tab.project': '项目视图',
+      'kn.tab.work': '工作视图',
+      'kn.tab.preference': '偏好视图',
+      'kn.tab.global': '全局视图',
+      'common.saving': '保存中',
+      'kn.title': '名称',
+      'kn.titlePlaceholder': '例如：哥布林',
+      'kn.type': '类型',
+      'kn.parent': '上级对象',
+      'kn.noParent': '不指定上级',
+      'kn.scope': '适用范围',
+      'kn.description': '描述',
+      'kn.descriptionHint': '说清它是什么、管什么',
+      'kn.descriptionPlaceholder': '写清这个对象的定义和约束',
+      'kn.aliases': '别名',
+      'kn.aliasesHint': '逗号分隔，用于自动识别和搜索',
+      'kn.aliasesPlaceholder': '例如：Goblin, 哥布',
+      'kn.attributes': '属性',
+      'kn.attrKey': '属性名',
+      'kn.attrValue': '属性值',
+      'kn.addAttr': '添加属性',
+      'kn.steps': '流程步骤',
+      'kn.addStep': '添加步骤',
+      'kn.stepTitle': '步骤名称',
+      'kn.stepNote': '说明',
+      'kn.noSteps': '还没有步骤',
+      'kn.structure': '结构',
+      'kn.archive': '归档 / 恢复',
+      'kn.noAttributes': '还没有属性',
+      'kn.memories': '关联记忆',
+      'kn.linkMemory': '关联记忆',
+      'kn.unlinkHint': '仅解除关联，不会删除记忆',
+      'kn.noMemories': '还没有关联记忆',
+      'kn.relations': '关系',
+      'kn.createRelation': '建立关系',
+      'kn.noRelations': '还没有关系',
+      'kn.needTitle': '请先填写名称',
+      'kn.duplicate': '可能已经存在相似对象：',
+      'kn.useExisting': '用这个',
+      'kn.createAnyway': '确认没问题就再点一次保存，会新建一个对象。',
+      'kn.merge': '合并到其他对象',
+      'kn.versionRestored': '已回滚到选中的版本，旧内容也留在历史里',
+      'kn.restore': '回到这一版',
+      'kn.versionCurrent': '当前',
+      'change.create': '新建',
+      'change.edit': '修改',
+      'change.renamed': '改名',
+      'change.retyped': '改类型',
+      'change.status': '改状态',
+      'change.archived': '归档',
+      'change.restore': '回滚',
+      'change.merge': '合并',
+      'change.merged': '被合并',
+      'kn.versionsHint': '对象的每次改名、改描述、改类型、改状态都留一版，可回滚',
+      'kn.versions': '历史版本',
+      'kn.mergeTitle': '合并相似的知识对象',
+      'kn.mergeHint': '合并后保留主对象的 ID 与历史，另一边的关联记忆和关系会迁过来；被合并的对象标记为已合并，不会真的被删掉。',
+      'kn.mergeTarget': '保留哪个对象',
+      'kn.mergeNone': '没有同类型的可合并对象',
+      'kn.mergePreview': '合并后的主对象：',
+      'kn.mergeKeep': '合并前请确认上面两列内容；合并后可以在历史里查到操作记录。',
+      'kn.mergeConfirm': '确认合并',
+      'kn.title2': '名称',
+      'kn.status': '状态',
+      'kn.typeChangeTitle': '修改类型会影响已有关系',
+      'kn.typeChangeText': '改成新类型后，下面这些关系可能不再符合语义。确认的话会保留关系，但需要你之后检查一遍。',
+      'kn.typeChangeConfirm': '仍然修改',
+      'kn.stepUp': '上移',
+      'kn.stepDown': '下移',
+      'kn.correct': '纠正 AI 的理解',
+      'kn.correctHint': 'AI 对你的判断可能不准：你可以缩小范围、标记不再适用，或说明这只是一次性要求。',
+      'kn.narrow': '缩小适用范围',
+      'kn.widen': '扩大适用范围',
+      'kn.obsolete': '标记不再适用',
+      'kn.oneOff': '这只是一次性要求',
+      'kn.correctNote': '补充说明（会记进这条知识对象）',
+      'kn.correctNotePlaceholder': '例如：只在某一个项目里这样要求，其他项目不必遵守。',
+      'kn.correctDone': '已按你的纠正更新',
+      'kn.deleteTitle': '处理这个知识对象',
+      'kn.deleteText': '归档后它不再出现在默认视图里，但关系、关联记忆和历史都保留；彻底删除会同时移除它的关系和关联（历史记录仍写进日志）。',
+      'kn.deleteArchiveHint': '想保留就先归档：随时可以恢复。',
+      'kn.archiveAction': '归档',
+      'kn.deleteHard': '彻底删除',
+      'kn.deleted': '知识对象已删除',
+      'kn.start': '起点',
+      'kn.end': '终点',
+      'kn.target': '目标',
+      'kn.searchPlaceholder': '搜索对象或记忆',
+      'relGroup.hierarchy': '层级',
+      'relGroup.business': '业务',
+      'relGroup.workflow': '流程',
+      'relGroup.principle': '偏好与原则',
+      'relGroup.knowledge': '知识',
+      'graph.expandAll': '展开全部',
+      'graph.expandLimit': '节点比较多，已展开全部；建议用「记忆区」或筛选收窄范围。',
+      'tidy.confirmAllNodes': '全部确认',
+      'tidy.confirmAllDone': '已确认候选对象',
+      'kn.hide': '从视图隐藏',
+      'kn.show': '取消隐藏',
+      'kn.shown': '已恢复显示',
+      'kn.hiddenDone': '已从视图隐藏，可在关系图右上角恢复',
+      'graph.hiddenCount': '已隐藏',
+      'graph.restoreHidden': '恢复全部隐藏节点',
+      'graph.showHidden': '显示隐藏节点',
+      'kn.relationType': '关系类型',
+      'kn.preview': '预览',
+      'kn.swap': '反向',
+      'kn.note': '说明',
+      'kn.notePlaceholder': '为什么要建立这条关系',
+      'action.search': '搜索',
+      'search.openHint': 'Ctrl/Cmd + K 搜索',
       'detail.protection': '保护级别',
       'detail.protectionLocked': '固有约定不会被自动改动，修改需你明确要求',
       'detail.confidence': '置信度',
@@ -566,6 +707,11 @@ window.__ModuleLoader__.load({
       'tidy.relations': '待确认的关系',
       'tidy.relationsHint': 'AI 依据语义发现，确认后进入关系网',
       'tidy.empty': '目前没有需要整理的内容',
+      'tidy.nodeCandidates': '候选知识对象',
+      'tidy.nodeCandidatesHint': '自动观察识别到的新对象，确认后成为正式知识对象。',
+      'tidy.duplicateNodes': '疑似重复的知识对象',
+      'tidy.duplicateNodesHint': '同类且名称/描述高度重合，建议合并主对象。',
+      'tidy.confirmNode': '确认',
       'tidy.merge': '合并',
       'tidy.protectedCount': '固有约定',
       'tidy.openEntry': '查看',
@@ -575,7 +721,9 @@ window.__ModuleLoader__.load({
       'recall.outcome.served': '已提供',
       'recall.outcome.ignored': '未采用',
       'recall.outcome.conflict': '有冲突',
+      'recall.path': '召回路径',
       'recall.items': '取用记忆',
+      'recall.nodes': '命中的知识对象',
       'nav.tidy': '整理中心',
       'nav.recall': '调用记录',
       'toast.merged': '已合并记忆',
@@ -627,6 +775,7 @@ window.__ModuleLoader__.load({
       'nav.graph': 'Graph',
       'nav.projects': 'Projects',
       'nav.savedViews': 'Saved views',
+      'nav.deleteView': 'Delete this view',
       'nav.savedViewsEmpty': 'Save a view from the graph',
       'nav.collapse': 'Collapse navigation',
       'nav.expand': 'Expand navigation',
@@ -637,7 +786,6 @@ window.__ModuleLoader__.load({
       'action.delete': 'Delete',
       'action.rename': 'Rename',
       'project.namePlaceholder': 'Project space name',
-      'settings.title': 'Settings',
       'graph.saveLayout': 'Save layout',
       'graph.layoutSaved': 'Layout saved',
       'toast.projectSaved': 'Project saved',
@@ -657,19 +805,17 @@ window.__ModuleLoader__.load({
       'settings.modelTitle': 'Model for organizing',
       'settings.modelHint': 'Once picked, AI organize, summaries and grouping go through this model first; if it fails, Zhiwei falls back to local heuristics.',
       'settings.modelUnavailable': 'No model service is available here, so only local organizing works.',
-      'settings.modelProvider': 'Provider',
       'settings.modelName': 'Model',
       'settings.modelEnable': 'Use the model to organize',
       'settings.modelSaved': 'Model settings saved',
       'settings.modelNone': 'None (local only)',
+      'settings.needPath': 'Enter a storage path first',
+      'settings.modelOn': 'This model is used for organizing',
+      'settings.importFailed': 'Import failed: ',
+      'settings.sectionLabel': 'Zhiwei',
       'settings.storage': 'Storage',
-      'settings.counts': 'Current data',
-      'settings.entriesUnit': 'memories',
-      'settings.relationsUnit': 'relations',
-      'settings.collectionsUnit': 'collections',
       'settings.switchTitle': 'Switch memory storage',
       'settings.switchHint': 'Point at a folder or a .json file; Zhiwei will write there and read from there. The previous location keeps a backup, so you can switch back anytime.',
-      'settings.switchPlaceholder': 'D:\\my-memory\\memories.json',
       'settings.switchApply': 'Switch here',
       'settings.exportTitle': 'Export',
       'settings.exportHint': 'Export a JSON file with memories, relations, collections, frames and layout — for backup or moving to another machine.',
@@ -678,7 +824,6 @@ window.__ModuleLoader__.load({
       'settings.importHint': 'Pick a JSON exported earlier: merge only adds missing memories, replace overwrites the current store.',
       'settings.importMerge': 'Merge (add only)',
       'settings.importReplace': 'Replace (overwrite)',
-      'settings.importApply': 'Start import',
       'settings.switched': 'Storage switched',
       'settings.imported': 'Imported',
       'settings.exported': 'Exported',
@@ -878,6 +1023,17 @@ window.__ModuleLoader__.load({
       'graph.clusterHint': 'Nodes in the same collection are wrapped in a hull',
 
       'batch.clear': 'Clear selection',
+        'batch.archive': 'Archive',
+        'batch.tag': 'Add tag',
+        'batch.delete': 'Delete',
+        'batch.tagTitle': 'Add a tag to the selection',
+        'batch.tagHint': 'Every selected memory gets this tag; existing tags stay.',
+        'batch.tagPlaceholder': 'Tag name',
+        'batch.tagApply': 'Add',
+        'batch.deleteTitle': 'Delete the selected memories',
+        'batch.deleteText': 'The memories and their relations are removed; the content stays in the undo entry for a while, so use undo in the toast if this was a mistake.',
+        'toast.tagged': 'Tag added',
+        'toast.archived': 'Archived',
 
       'toast.saved': 'Saved',
       'toast.deleted': 'Deleted',
@@ -899,6 +1055,8 @@ window.__ModuleLoader__.load({
       'view.graph': 'Relation graph',
       'app.title': 'Zhiwei · AI knowledge workbench',
       'app.loading': 'Loading…',
+      'common.close': 'Close',
+      'common.cancel': 'Cancel',
       'common.name': 'Name',
 
       'action.star': 'Star',
@@ -945,6 +1103,14 @@ window.__ModuleLoader__.load({
       'collections.project': 'Project',
       'collections.selected': 'selected',
       'collections.deleted': 'Collection deleted',
+      'collections.manage': 'Manage collections',
+      'collections.editTitle': 'Edit collection',
+      'collections.manageHint': 'Rename, change members, merge or delete collections here',
+      'collections.open': 'Open collection',
+      'collections.mergeAction': 'Merge',
+      'collections.mergeConfirm': 'Confirm merge',
+      'collections.membersChanged': 'Collection members updated',
+      'toast.viewDeleted': 'View deleted',
 
       'graph.toolSelect': 'Select',
       'graph.toolLink': 'Link',
@@ -1035,7 +1201,130 @@ window.__ModuleLoader__.load({
       'evidence.inference': 'Inference',
       'evidence.temporary': 'Temporary',
       'scope.global': 'Global',
-      'scope.project': 'Project',
+      'nav.knowledge': 'Knowledge network',
+      'kn.saved': 'Object updated',
+      'kn.created': 'Object created',
+      'kn.archived': 'Archived — you can restore it anytime',
+      'kn.restored': 'Restored',
+      'kn.linked': 'Memory linked',
+      'kn.unlinked': 'Unlinked — the memory itself remains',
+      'kn.merged': 'Merged into the main object',
+      'kn.new': 'New object',
+      'kn.edit': 'Edit object',
+      'kn.objects': 'Objects',
+      'search.collections': 'Collections',
+      'search.projects': 'Projects',
+      'kn.tab.project': 'Project',
+      'kn.tab.work': 'Work',
+      'kn.tab.preference': 'Preference',
+      'kn.tab.global': 'Global',
+      'common.saving': 'Saving',
+      'kn.title': 'Name',
+      'kn.titlePlaceholder': 'e.g. Goblin',
+      'kn.type': 'Type',
+      'kn.parent': 'Parent',
+      'kn.noParent': 'No parent',
+      'kn.scope': 'Scope',
+      'kn.description': 'Description',
+      'kn.descriptionHint': 'What it is and what it governs',
+      'kn.descriptionPlaceholder': 'Describe the object and its constraints',
+      'kn.aliases': 'Aliases',
+      'kn.aliasesHint': 'Comma separated, used for matching',
+      'kn.aliasesPlaceholder': 'e.g. Goblin, Gob',
+      'kn.attributes': 'Attributes',
+      'kn.attrKey': 'Key',
+      'kn.attrValue': 'Value',
+      'kn.addAttr': 'Add attribute',
+      'kn.steps': 'Steps',
+      'kn.addStep': 'Add step',
+      'kn.stepTitle': 'Step title',
+      'kn.stepNote': 'Note',
+      'kn.noSteps': 'No steps yet',
+      'kn.structure': 'Structure',
+      'kn.archive': 'Archive / restore',
+      'kn.noAttributes': 'No attributes yet',
+      'kn.memories': 'Linked memories',
+      'kn.linkMemory': 'Link memory',
+      'kn.unlinkHint': 'Unlink only — the memory stays',
+      'kn.noMemories': 'No linked memories',
+      'kn.relations': 'Relations',
+      'kn.createRelation': 'Create relation',
+      'kn.noRelations': 'No relations yet',
+      'kn.needTitle': 'Name is required',
+      'kn.duplicate': 'Similar objects already exist:',
+      'kn.useExisting': 'Use this',
+      'kn.createAnyway': 'Press save again to create a new object anyway.',
+      'kn.merge': 'Merge into another object',
+      'kn.versionRestored': 'Rolled back — the previous content stays in history',
+      'kn.restore': 'Restore this version',
+      'kn.versionCurrent': 'current',
+      'change.create': 'created',
+      'change.edit': 'edited',
+      'change.renamed': 'renamed',
+      'change.retyped': 'retyped',
+      'change.status': 'status',
+      'change.archived': 'archived',
+      'change.restore': 'restored',
+      'change.merge': 'merged',
+      'change.merged': 'merged in',
+      'kn.versionsHint': 'Every rename, description, type or status change keeps a version you can roll back to',
+      'kn.versions': 'History',
+      'kn.mergeTitle': 'Merge similar knowledge objects',
+      'kn.mergeHint': 'The main object keeps its id and history; memories and relations move over. The merged object is marked as merged instead of being deleted.',
+      'kn.mergeTarget': 'Which object to keep',
+      'kn.mergeNone': 'No object of the same type to merge',
+      'kn.mergePreview': 'Merged object:',
+      'kn.mergeKeep': 'Check both columns before confirming. The action is recorded in history.',
+      'kn.mergeConfirm': 'Merge',
+      'kn.title2': 'Name',
+      'kn.status': 'Status',
+      'kn.typeChangeTitle': 'Changing the type affects existing relations',
+      'kn.typeChangeText': 'These relations may no longer make sense with the new type. If you continue, they are kept and you should review them later.',
+      'kn.typeChangeConfirm': 'Change anyway',
+      'kn.stepUp': 'Move up',
+      'kn.stepDown': 'Move down',
+      'kn.correct': 'Correct what the AI thinks',
+      'kn.correctHint': 'The AI may be wrong about you: narrow the scope, mark it as no longer applicable, or say it was a one-off request.',
+      'kn.narrow': 'Narrow the scope',
+      'kn.widen': 'Widen the scope',
+      'kn.obsolete': 'No longer applicable',
+      'kn.oneOff': 'This was a one-off',
+      'kn.correctNote': 'Notes (stored on this object)',
+      'kn.correctNotePlaceholder': 'For example: only required in one project, not in others.',
+      'kn.correctDone': 'Preference updated from your correction',
+      'kn.deleteTitle': 'Remove this knowledge object',
+      'kn.deleteText': 'Archiving hides it from the default view but keeps its relations, memories and history. Deleting removes relations and links too (the action is still recorded).',
+      'kn.deleteArchiveHint': 'Prefer archiving: it can be restored later.',
+      'kn.archiveAction': 'Archive',
+      'kn.deleteHard': 'Delete permanently',
+      'kn.deleted': 'Knowledge object deleted',
+      'kn.start': 'From',
+      'kn.end': 'To',
+      'kn.target': 'Target',
+      'kn.searchPlaceholder': 'Search objects or memories',
+      'relGroup.hierarchy': 'Hierarchy',
+      'relGroup.business': 'Business',
+      'relGroup.workflow': 'Workflow',
+      'relGroup.principle': 'Preference & principle',
+      'relGroup.knowledge': 'Knowledge',
+      'graph.expandAll': 'Expand all',
+      'graph.expandLimit': 'A lot of nodes — everything is expanded now; use a memory area or filters to narrow it down.',
+      'tidy.confirmAllNodes': 'Confirm all',
+      'tidy.confirmAllDone': 'Confirmed candidate objects',
+      'kn.hide': 'Hide from view',
+      'kn.show': 'Unhide',
+      'kn.shown': 'Shown again',
+      'kn.hiddenDone': 'Hidden from the view — restore it from the graph panel',
+      'graph.hiddenCount': 'hidden',
+      'graph.restoreHidden': 'Restore all hidden nodes',
+      'graph.showHidden': 'Show hidden nodes',
+      'kn.relationType': 'Relation type',
+      'kn.preview': 'Preview',
+      'kn.swap': 'Reverse',
+      'kn.note': 'Note',
+      'kn.notePlaceholder': 'Why this relation exists',
+      'action.search': 'Search',
+      'search.openHint': 'Ctrl/Cmd + K to search',
       'detail.protection': 'Protection',
       'detail.protectionLocked': 'Protected memories never change on their own — only an explicit request from you can edit them',
       'detail.confidence': 'Confidence',
@@ -1073,6 +1362,11 @@ window.__ModuleLoader__.load({
       'tidy.relations': 'Relations to confirm',
       'tidy.relationsHint': 'Found semantically by the AI; confirm to enter the graph',
       'tidy.empty': 'Nothing needs tidying right now',
+      'tidy.nodeCandidates': 'Candidate objects',
+      'tidy.nodeCandidatesHint': 'Objects found by automatic observation. Confirm to turn them into knowledge objects.',
+      'tidy.duplicateNodes': 'Possible duplicate objects',
+      'tidy.duplicateNodesHint': 'Same type with overlapping names or descriptions — consider merging into the main object.',
+      'tidy.confirmNode': 'Confirm',
       'tidy.merge': 'Merge',
       'tidy.protectedCount': 'Protected',
       'tidy.openEntry': 'Open',
@@ -1082,7 +1376,9 @@ window.__ModuleLoader__.load({
       'recall.outcome.served': 'Served',
       'recall.outcome.ignored': 'Not used',
       'recall.outcome.conflict': 'Conflict',
+      'recall.path': 'Recall path',
       'recall.items': 'Memories used',
+      'recall.nodes': 'knowledge objects hit',
       'nav.tidy': 'Tidy up',
       'nav.recall': 'Recall log',
       'toast.merged': 'Memories merged',
@@ -1343,14 +1639,26 @@ window.__ModuleLoader__.load({
       display: flex; flex-direction: column; gap: 2px;
     }
     .zw-savedView {
-      display: flex; align-items: center; gap: 7px; width: 100%; height: 26px; padding: 0 8px;
-      border: 0; border-radius: 7px; background: transparent; cursor: pointer;
+      display: flex; align-items: center; gap: 2px; width: 100%; height: 26px; padding: 0 4px 0 0;
+      border: 0; border-radius: 7px; background: transparent;
       color: var(--zw-text-2); font-size: 12px; text-align: left;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    .zw-savedOpen {
+      display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; height: 26px;
+      padding: 0 6px 0 8px; border: 0; background: transparent; cursor: pointer;
+      color: inherit; font: inherit; text-align: left; border-radius: 7px;
+    }
+    .zw-savedDel {
+      display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+      width: 20px; height: 20px; border: 0; border-radius: 6px; background: transparent;
+      color: var(--zw-text-3); cursor: pointer; opacity: 0; transition: opacity .12s ease;
+    }
+    .zw-savedView:hover .zw-savedDel, .zw-savedDel:focus-visible { opacity: 1; }
+    .zw-savedDel:hover { background: var(--zw-bg-sunken); color: var(--zw-danger); }
+    .zw-savedView:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+
     .zw-savedLabel,
     .zw-railToggleLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .zw-savedView:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
     .zw-savedEmpty { padding: 4px 8px 6px; font-size: 11px; color: var(--zw-text-3); line-height: 1.45; }
     .zw-railToggle {
       display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 8px;
@@ -1360,6 +1668,7 @@ window.__ModuleLoader__.load({
     .zw-railToggle:hover { background: var(--zw-bg-sunken); color: var(--zw-text-2); }
     .zw-rail[data-collapsed='true'] .zw-railToggle { justify-content: center; padding: 0; }
     .zw-rail[data-collapsed='true'] .zw-savedEmpty { display: none; }
+    .zw-rail[data-collapsed='true'] .zw-savedDel { display: none; }
 
     /* ================= 中栏 ================= */
     .zw-center { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
@@ -2520,7 +2829,10 @@ window.__ModuleLoader__.load({
     .zw-tidyLink:hover {
       color: var(--zw-accent-text);
     }
-    .zw-recallList {
+    .zw-versionTitle { font-size: 12px; color: var(--zw-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zw-versionNow { font-size: 11px; color: var(--zw-accent); }
+.zw-recallNodes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: var(--zw-text-2); }
+.zw-recallList {
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -2683,7 +2995,88 @@ window.__ModuleLoader__.load({
       .zw-detailTitle { font-size: 14px; }
       .zw-assistBar { gap: 5px; }
       .zw-assistAction { font-size: 11.5px; padding: 5px 8px; }
-    }`
+    }
+    /* ================= 集合管理 ================= */
+    .zw-manageHint { padding: 2px 2px 8px; font-size: 11.5px; color: var(--zw-text-3); }
+    .zw-manageList { display: flex; flex-direction: column; gap: 4px; }
+    .zw-manageRow {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 7px 9px; border: 1px solid var(--zw-border); border-radius: 9px;
+      background: var(--zw-bg-soft); min-width: 0;
+    }
+    .zw-manageName {
+      border: 0; background: transparent; padding: 0; cursor: pointer;
+      font-size: 12.5px; font-weight: 600; color: var(--zw-text); text-align: left;
+      max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .zw-manageName:hover { text-decoration: underline; }
+    .zw-manageCount { font-size: 11px; color: var(--zw-text-3); }
+    .zw-manageDesc {
+      flex: 1 1 160px; min-width: 0; font-size: 11.5px; color: var(--zw-text-2);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .zw-manageActions { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+    .zw-mergeBox { display: flex; align-items: center; gap: 4px; }
+    .zw-mergeBox .zw-selectWrap { min-width: 118px; }
+    /* 知识对象节点：比记忆更稳、更"结"的圆形，用内圈字符标类型。 */
+    .zw-gnodeKn .zw-gnodeCoreKn { transition: stroke-width 120ms ease; }
+    .zw-gnodeKn:hover .zw-gnodeCoreKn { stroke-width: 2.6; }
+    .zw-gnodeKnGlyph { font-size: 11px; font-weight: 700; fill: var(--zw-accent); pointer-events: none; user-select: none; }
+    .zw-gnodeKnCount { font-size: 9px; font-weight: 700; fill: var(--zw-text-3); pointer-events: none; }
+    .zw-gnodeKn .zw-gnodeLabel { font-weight: 650; }
+    .zw-knTabs { display: flex; gap: 4px; padding: 2px; background: var(--zw-bg-sunken); border-radius: 8px; }
+    .zw-knTab { border: none; background: transparent; color: var(--zw-text-2); font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+    .zw-knTab:hover { color: var(--zw-text); }
+    .zw-knTabOn { background: var(--zw-surface); color: var(--zw-text); box-shadow: var(--zw-shadow-sm); }
+    .zw-nodeMeta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .zw-nodeAttr { display: grid; grid-template-columns: minmax(64px, auto) minmax(0, 1fr); gap: 2px 10px; font-size: 12px; }
+    .zw-nodeAttrKey { color: var(--zw-text-3); }
+    .zw-nodeAttrValue { color: var(--zw-text); min-width: 0; overflow-wrap: anywhere; }
+    .zw-stepList { display: flex; flex-direction: column; gap: 4px; }
+    .zw-stepRow { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; border-top: 1px dashed var(--zw-border); }
+    .zw-stepNo { flex: 0 0 18px; height: 18px; border-radius: 50%; background: var(--zw-bg-sunken); color: var(--zw-text-3); font-size: 11px; display: flex; align-items: center; justify-content: center; }
+    .zw-stepBody { min-width: 0; flex: 1; }
+    .zw-stepTitle { font-size: 12px; font-weight: 600; }
+    .zw-stepNote { font-size: 11.5px; color: var(--zw-text-3); overflow-wrap: anywhere; }
+    .zw-preview { border-radius: 8px; background: var(--zw-accent-soft); color: var(--zw-text); padding: 8px 10px; font-size: 12.5px; line-height: 1.6; }
+    .zw-dupWarn { border-radius: 8px; border: 1px solid var(--zw-warn); padding: 8px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+    .zw-dupRow { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+
+    .zw-knWrap { min-height: 0; }
+    .zw-knBar { flex: 0 0 auto; }
+    .zw-detailInner { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 26px; min-width: 0; }
+
+    .zw-mergeTable { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--zw-border); border-radius: 10px; padding: 6px 10px; }
+    .zw-mergeRow { display: grid; grid-template-columns: 92px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--zw-border); font-size: 12px; }
+    .zw-mergeRow:last-child { border-bottom: none; }
+    .zw-mergeKey { color: var(--zw-text-3); }
+    .zw-mergeVal { color: var(--zw-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-mergeValMain { color: var(--zw-text); font-weight: 600; }
+  
+
+    .zw-knHits { flex: 0 0 auto; border-bottom: 1px solid var(--zw-border); padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .zw-knHitsHead { font-size: 11px; color: var(--zw-text-3); }
+    .zw-knHit { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: transparent; color: var(--zw-text); padding: 4px 6px; border-radius: 7px; cursor: pointer; font-size: 12px; }
+    .zw-knHit:hover { background: var(--zw-bg-soft); }
+    .zw-knHitTitle { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+    .zw-stepEditRow { align-items: flex-start; flex-wrap: wrap; gap: 6px; }
+    .zw-stepTools { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
+    .zw-stepTools .zw-iconBtn { width: 20px; height: 16px; }
+    .zw-relGroups { display: flex; flex-direction: column; gap: 6px; }
+    .zw-relGroup { display: flex; flex-direction: column; gap: 3px; }
+    .zw-relGroupLabel { font-size: 11px; font-weight: 650; color: var(--zw-text-3); letter-spacing: .02em; }
+    .zw-relGroup .zw-chipPicker { gap: 4px; }
+.zw-recallPath { display: flex; gap: 6px; align-items: baseline; font-size: 11px; color: var(--zw-text-2); min-width: 0; }
+.zw-recallPath > span { min-width: 0; overflow-wrap: anywhere; }
+
+        .zw-hitGroups {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 0 2px 6px;
+        }
+`
 
     const ICONS = {
       search: [
@@ -3619,7 +4012,8 @@ window.__ModuleLoader__.load({
             item('collections', t('nav.collections'), 'folder', stats.collections),
             item('favorites', t('nav.favorites'), 'star', stats.favorites),
             item('recent', t('nav.recent'), 'clock'),
-            item('recall', t('nav.recall'), 'history', stats.recalls)
+            item('recall', t('nav.recall'), 'history', stats.recalls),
+      item('knowledge', t('nav.knowledge'), 'layers', stats.nodes)
           ),
           props.projects.length
             ? h(
@@ -3701,16 +4095,28 @@ window.__ModuleLoader__.load({
           props.views.length
             ? props.views.map((view) =>
                 h(
-                  'button',
-                  {
-                    key: view.id,
-                    type: 'button',
-                    className: 'zw-savedView',
-                    title: view.name,
-                    onClick: () => props.onOpenView(view)
-                  },
-                  h(Icon, { name: 'target', size: 12 }),
-                  h('span', { className: 'zw-savedLabel' }, view.name)
+                  'div',
+                  { key: view.id, className: 'zw-savedView', title: view.name },
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-savedOpen',
+                      onClick: () => props.onOpenView(view)
+                    },
+                    h(Icon, { name: 'target', size: 12 }),
+                    h('span', { className: 'zw-savedLabel' }, view.name)
+                  ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-savedDel',
+                      title: t('nav.deleteView'),
+                      onClick: () => (props.onDeleteView ? props.onDeleteView(view) : null)
+                    },
+                    h(Icon, { name: 'close', size: 11 })
+                  )
                 )
               )
             : h('div', { className: 'zw-savedEmpty' }, t('nav.savedViewsEmpty')),
@@ -4569,10 +4975,112 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function CollectionManageRow(props) {
+      const t = props.t
+      const collection = props.collection
+      const [mergeInto, setMergeInto] = useState('')
+      const targets = props.collections.filter(
+        (item) => item.id !== collection.id && item.status !== 'suggested'
+      )
+      return h(
+        'div',
+        { className: 'zw-manageRow' },
+        h('span', {
+          className: 'zw-legendDot',
+          style: { background: collectionColor(collection.color) }
+        }),
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'zw-manageName',
+            title: t('collections.open'),
+            onClick: () => props.onOpen(collection.id)
+          },
+          collection.name
+        ),
+        h('span', { className: 'zw-manageCount' }, collection.memberIds.length + ' ' + t('collections.memberCount')),
+        h('span', { className: 'zw-manageDesc' }, collection.description || t('common.empty')),
+        h(
+          'span',
+          { className: 'zw-manageActions' },
+          h(
+            'button',
+            { type: 'button', className: 'zw-btn zw-btnSm', onClick: () => props.onEdit(collection) },
+            h(Icon, { name: 'edit', size: 12 }),
+            t('action.edit')
+          ),
+          h(
+            'button',
+            { type: 'button', className: 'zw-btn zw-btnSm', onClick: () => props.onMembers(collection) },
+            h(Icon, { name: 'layers', size: 12 }),
+            t('collections.members')
+          ),
+          targets.length
+            ? h(
+                'span',
+                { className: 'zw-mergeBox' },
+                h(Select, {
+                  value: mergeInto,
+                  options: targets.map((item) => ({ id: item.id, label: item.name })),
+                  placeholder: t('collections.mergeInto'),
+                  onChange: setMergeInto
+                }),
+                h(ConfirmButton, {
+                  label: t('collections.mergeAction'),
+                  confirmLabel: t('collections.mergeConfirm'),
+                  className: 'zw-btn zw-btnSm',
+                  disabled: !mergeInto,
+                  onConfirm: () => {
+                    if (mergeInto) props.onMerge(collection.id, mergeInto)
+                  }
+                })
+              )
+            : null,
+          h(ConfirmButton, {
+            label: t('action.delete'),
+            confirmLabel: t('action.deleteConfirm'),
+            className: 'zw-btn zw-btnSm zw-btnDanger',
+            onConfirm: () => props.onDelete(collection)
+          })
+        )
+      )
+    }
+
+    function CollectionManage(props) {
+      const t = props.t
+      const rows = props.collections.filter((collection) => collection.status !== 'suggested')
+      return h(
+        'div',
+        { className: 'zw-panelCard' },
+        h(SectionHead, { icon: 'layers', title: t('collections.manage'), count: rows.length }),
+        h('div', { className: 'zw-manageHint' }, t('collections.manageHint')),
+        rows.length
+          ? h(
+              'div',
+              { className: 'zw-manageList' },
+              rows.map((collection) =>
+                h(CollectionManageRow, {
+                  key: collection.id,
+                  t: t,
+                  collection: collection,
+                  collections: props.collections,
+                  onOpen: props.onOpen,
+                  onEdit: props.onEdit,
+                  onMembers: props.onMembers,
+                  onMerge: props.onMerge,
+                  onDelete: props.onDelete
+                })
+              )
+            )
+          : h('div', { className: 'zw-tidyEmpty' }, t('collections.empty'))
+      )
+    }
     function CollectionsView(props) {
       const t = props.t
       const collections = props.collections.filter((collection) => collection.status !== 'suggested')
       const suggestions = props.suggestions
+      const [manage, setManage] = useState(false)
       return h(
         'div',
         { className: 'zw-overview zw-scroll zw-fadeIn' },
@@ -4594,9 +5102,20 @@ window.__ModuleLoader__.load({
           ),
           h(
             'button',
-            { type: 'button', className: 'zw-btn zw-btnSm zw-btnPrimary', onClick: props.onCreate },
+            { type: 'button', className: 'zw-btn zw-btnSm', onClick: props.onCreate },
             h(Icon, { name: 'plus', size: 12 }),
             t('collections.new')
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-btn zw-btnSm' + (manage ? ' zw-btnPrimary' : ''),
+              title: t('collections.manageHint'),
+              onClick: () => setManage(!manage)
+            },
+            h(Icon, { name: 'layers', size: 12 }),
+            t('collections.manage')
           )
         ),
         suggestions.length
@@ -4648,7 +5167,20 @@ window.__ModuleLoader__.load({
               )
             )
           : null,
-        h(
+        manage
+          ? h(CollectionManage, {
+              t: t,
+              collections: props.collections,
+              onOpen: props.onOpen,
+              onEdit: props.onEdit,
+              onMembers: props.onMembers,
+              onMerge: props.onMerge,
+              onDelete: props.onDelete
+            })
+          : null,
+        manage
+          ? null
+          : h(
           'div',
           { className: 'zw-collectionGrid' },
           collections.length
@@ -5099,7 +5631,20 @@ window.__ModuleLoader__.load({
                     { className: 'zw-badge zw-badgeNeutral' },
                     labelOf(t, meta.scopes, entry.scope || 'project', 'scope')
                   ),
-                  (entry.domains || []).map((domain) =>
+                  (props.nodesOf ? props.nodesOf(entry) : []).map((node) =>
+                    h(
+                      'button',
+                      {
+                        key: 'node-' + node.id,
+                        type: 'button',
+                        className: 'zw-tag zw-tagBtn',
+                        title: t('kn.memories'),
+                        onClick: () => (props.onOpenNode ? props.onOpenNode(node) : null)
+                      },
+                      h(Icon, { name: 'layers', size: 10 }),
+                      node.title
+                    )
+                  ),                  (entry.domains || []).map((domain) =>
                     h(
                       'span',
                       { key: domain, className: 'zw-tag' },
@@ -6417,15 +6962,34 @@ window.__ModuleLoader__.load({
           h(
             Field,
             { label: t('relation.type') },
-            h(MultiChips, {
-              options: meta.relationTypes.map((item) => ({
-                id: item.id,
-                label: item.label,
-                color: relationColor(item.id)
-              })),
-              value: [relationType],
-              onToggle: (id) => setRelationType(id)
-            }),
+            h(
+              'div',
+              { className: 'zw-relGroups' },
+              (meta.relationGroups || []).map((group) =>
+                h(
+                  'div',
+                  { key: group.id, className: 'zw-relGroup' },
+                  h(
+                    'span',
+                    { className: 'zw-relGroupLabel' },
+                    {
+                      hierarchy: t('relGroup.hierarchy'),
+                      business: t('relGroup.business'),
+                      workflow: t('relGroup.workflow'),
+                      principle: t('relGroup.principle'),
+                      knowledge: t('relGroup.knowledge')
+                    }[group.id] || group.label
+                  ),
+                  h(MultiChips, {
+                    options: meta.relationTypes
+                      .filter((item) => (group.types || []).indexOf(item.id) >= 0)
+                      .map((item) => ({ id: item.id, label: item.label, color: relationColor(item.id) })),
+                    value: [relationType],
+                    onToggle: (id) => setRelationType(id)
+                  })
+                )
+              )
+            ),
             h('div', { className: 'zw-hint' }, hintOf(meta.relationTypes, relationType))
           ),
           h(
@@ -6460,15 +7024,34 @@ window.__ModuleLoader__.load({
 
     function CollectionCreate(props) {
       const t = props.t
-      const [name, setName] = useState('')
-      const [description, setDescription] = useState('')
-      const [color, setColor] = useState(COLLECTION_COLORS[0])
-      const [projectId, setProjectId] = useState(props.defaultProjectId)
+      const editing = Boolean(props.collection)
+      const base = props.collection || null
+      const [name, setName] = useState(base ? base.name : '')
+      const [description, setDescription] = useState(base ? base.description || '' : '')
+      const [color, setColor] = useState(base && base.color ? base.color : COLLECTION_COLORS[0])
+      const [projectId, setProjectId] = useState(base ? base.projectId : props.defaultProjectId)
       const [error, setError] = useState('')
+      const submit = () => {
+        if (!name.trim()) {
+          setError(t('collections.needName'))
+          return
+        }
+        const patch = {
+          name: name.trim(),
+          description: description.trim(),
+          color: color,
+          projectId: projectId
+        }
+        if (editing) {
+          if (props.onSave) props.onSave(patch)
+          return
+        }
+        if (props.onCreate) props.onCreate(Object.assign({ memberIds: [] }, patch))
+      }
       return h(
         Modal,
         {
-          title: t('collections.new'),
+          title: editing ? t('collections.editTitle') : t('collections.new'),
           icon: 'folder',
           onClose: props.onClose,
           closeLabel: t('action.close'),
@@ -6487,19 +7070,7 @@ window.__ModuleLoader__.load({
                 type: 'button',
                 className: 'zw-btn zw-btnSm zw-btnPrimary',
                 disabled: props.saving,
-                onClick: () => {
-                  if (!name.trim()) {
-                    setError(t('collections.needName'))
-                    return
-                  }
-                  props.onCreate({
-                    name: name.trim(),
-                    description: description.trim(),
-                    color: color,
-                    projectId: projectId,
-                    memberIds: []
-                  })
-                }
+                onClick: submit
               },
               t('action.save')
             )
@@ -6554,7 +7125,7 @@ window.__ModuleLoader__.load({
             { label: t('collections.project') },
             h(Select, {
               value: projectId,
-              options: props.projects.map((item) => ({ id: item.id, label: item.name })),
+              options: (props.projects || []).map((item) => ({ id: item.id, label: item.name })),
               onChange: setProjectId
             })
           ),
@@ -6562,8 +7133,58 @@ window.__ModuleLoader__.load({
         )
       )
     }
+    function BatchTagDialog(props) {
+  const [tag, setTag] = useState('')
 
-    function CollectionPicker(props) {
+  const submit = () => {
+    const value = tag.trim()
+    if (!value || props.saving) return
+    props.onApply(value)
+  }
+
+  return h(
+    Modal,
+    {
+      title: props.t('batch.tagTitle'),
+      icon: 'tag',
+      onClose: props.onClose,
+      footer: [
+        h('button', { key: 'cancel', type: 'button', className: 'zw-btn zw-btnGhost', onClick: props.onClose }, props.t('action.cancel')),
+        h(
+          'button',
+          {
+            key: 'ok',
+            type: 'button',
+            className: 'zw-btn zw-btnPrimary',
+            disabled: props.saving || !tag.trim(),
+            onClick: submit
+          },
+          props.t('batch.tagApply')
+        )
+      ]
+    },
+    h(
+      'div',
+      { className: 'zw-form' },
+      h('p', { className: 'zw-hint' }, props.t('batch.tagHint')),
+      h('input', {
+        className: 'zw-input',
+        value: tag,
+        placeholder: props.t('batch.tagPlaceholder'),
+        autoFocus: true,
+        onChange: (event) => setTag(event.target.value),
+        onKeyDown: (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            submit()
+          }
+        }
+      })
+    )
+  )
+}
+
+function CollectionPicker(props) {
       const t = props.t
       const [picked, setPicked] = useState(() => unique((props.value || []).slice()))
       const [newName, setNewName] = useState('')
@@ -6864,128 +7485,6 @@ window.__ModuleLoader__.load({
               },
               item.icon ? h(Icon, { name: item.icon, size: 13 }) : null,
               h('span', null, item.label)
-            )
-          )
-        )
-      )
-    }
-
-    function SettingsDialog(props) {
-      const t = props.t
-      const settings = props.settings || {}
-      const stats = props.stats || {}
-      const [target, setTarget] = useState('')
-      const [mode, setMode] = useState('merge')
-      const [importNote, setImportNote] = useState('')
-      const switching = Boolean(props.busy)
-
-      function pickFile(event) {
-        const file = event && event.target && event.target.files && event.target.files[0]
-        if (!file) return
-        const reader = new FileReader()
-        reader.onload = () => {
-          setImportNote(String(reader.result || ''))
-        }
-        reader.readAsText(file)
-      }
-
-      return h(
-        Modal,
-        {
-          title: t('settings.title'),
-          icon: 'settings',
-          onClose: props.onClose,
-          wide: true,
-          closeLabel: t('action.close'),
-          footer: h('button', { type: 'button', className: 'zw-btn', onClick: props.onClose }, t('action.close'))
-        },
-        h(
-          'div',
-          { className: 'zw-settings' },
-          h('div', { className: 'zw-settingsRow' }, h('span', { className: 'zw-settingsKey' }, t('settings.storage')), h('code', { className: 'zw-settingsPath' }, props.storagePath || '-')),
-          h('div', { className: 'zw-settingsRow' }, h('span', { className: 'zw-settingsKey' }, t('settings.counts')), h('span', null, (stats.entries || 0) + ' ' + t('settings.entriesUnit') + ' · ' + (stats.relations || 0) + ' ' + t('settings.relationsUnit') + ' · ' + (stats.collections || 0) + ' ' + t('settings.collectionsUnit'))),
-          h(
-            'div',
-            { className: 'zw-settingsBlock' },
-            h('div', { className: 'zw-settingsTitle' }, t('settings.modelTitle')),
-            h('div', { className: 'zw-settingsHint' }, t('settings.modelHint')),
-            props.modelChoices && props.modelChoices.available === false
-              ? h('div', { className: 'zw-settingsHint' }, t('settings.modelUnavailable'))
-              : null,
-            h(
-              'div',
-              { className: 'zw-settingsForm' },
-              h(Select, {
-                value: (props.model && props.model.provider) || '',
-                label: t('settings.modelProvider'),
-                placeholder: t('settings.modelNone'),
-                options: [{ id: '', label: t('settings.modelNone') }].concat(
-                  ((props.modelChoices && props.modelChoices.providers) || []).map((item) => ({ id: item.id, label: item.name }))
-                ),
-                onChange: (value) => props.onPickModel(value, '', false)
-              }),
-              h(Select, {
-                value: (props.model && props.model.model) || '',
-                label: t('settings.modelName'),
-                placeholder: t('settings.modelNone'),
-                options: [{ id: '', label: t('settings.modelNone') }].concat(
-                  ((props.modelChoices && props.modelChoices.models) || [])
-                    .filter((item) => !props.model || !props.model.provider || item.provider === props.model.provider)
-                    .map((item) => ({ id: item.id, label: item.name }))
-                ),
-                onChange: (value) => props.onPickModel((props.model && props.model.provider) || '', value, Boolean(value))
-              }),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'zw-segBtn' + (props.model && props.model.enabled ? ' zw-segBtnOn' : ''),
-                  disabled: switching,
-                  onClick: () => props.onPickModel((props.model && props.model.provider) || '', (props.model && props.model.model) || '', !(props.model && props.model.enabled))
-                },
-                t('settings.modelEnable')
-              )
-            )
-          ),
-          h('div', { className: 'zw-settingsBlock' },
-            h('div', { className: 'zw-settingsTitle' }, t('settings.switchTitle')),
-            h('div', { className: 'zw-settingsHint' }, t('settings.switchHint')),
-            h('div', { className: 'zw-settingsForm' },
-              h('input', {
-                className: 'zw-input',
-                value: target,
-                placeholder: t('settings.switchPlaceholder'),
-                onChange: (event) => setTarget(event.target.value)
-              }),
-              h('button', {
-                type: 'button',
-                className: 'zw-btn zw-btnPrimary',
-                disabled: switching || !target.trim(),
-                onClick: () => props.onSwitch(target.trim())
-              }, t('settings.switchApply'))
-            )
-          ),
-          h('div', { className: 'zw-settingsBlock' },
-            h('div', { className: 'zw-settingsTitle' }, t('settings.exportTitle')),
-            h('div', { className: 'zw-settingsHint' }, t('settings.exportHint')),
-            h('button', { type: 'button', className: 'zw-btn', onClick: props.onExport }, h(Icon, { name: 'bookmark', size: 13 }), t('settings.export'))
-          ),
-          h('div', { className: 'zw-settingsBlock' },
-            h('div', { className: 'zw-settingsTitle' }, t('settings.importTitle')),
-            h('div', { className: 'zw-settingsHint' }, t('settings.importHint')),
-            h('div', { className: 'zw-settingsForm' },
-              h('input', { className: 'zw-fileInput', type: 'file', accept: '.json,application/json', onChange: pickFile }),
-              h(Select, {
-                value: mode,
-                onChange: setMode,
-                options: [{ id: 'merge', label: t('settings.importMerge') }, { id: 'replace', label: t('settings.importReplace') }]
-              }),
-              h('button', {
-                type: 'button',
-                className: 'zw-btn zw-btnPrimary',
-                disabled: switching || !importNote,
-                onClick: () => props.onImport(importNote, mode)
-              }, t('settings.importApply'))
             )
           )
         )
@@ -7888,6 +8387,23 @@ window.__ModuleLoader__.load({
       return positions
     }
 
+    function nodeGlyph(nodeType) {
+      const map = {
+        project: '项',
+        system: '系',
+        subsystem: '子',
+        concept: '象',
+        workflow: '流',
+        preference: '好',
+        principle: '则',
+        method: '法'
+      }
+      return map[nodeType] || '知'
+    }
+
+    function typeLabelOfNode(nodeType) {
+      return nodeType
+    }
     function GraphView(props) {
       const t = props.t
       const meta = props.meta
@@ -7910,6 +8426,8 @@ window.__ModuleLoader__.load({
       const [hiddenProjects, setHiddenProjects] = useState(seed.hiddenProjects || [])
       const [collapsed, setCollapsed] = useState(seed.collapsed || [])
       const [hiddenCollections, setHiddenCollections] = useState(seed.hiddenCollections || [])
+      const [hiddenNodeTypes, setHiddenNodeTypes] = useState(seed.hiddenNodeTypes || [])
+      const [showArchivedNodes, setShowArchivedNodes] = useState(Boolean(seed.showArchivedNodes))
       const [search, setSearch] = useState(seed.search || '')
       const [linkDraft, setLinkDraft] = useState(null)
       const [boxDraft, setBoxDraft] = useState(null)
@@ -7919,6 +8437,8 @@ window.__ModuleLoader__.load({
       const [hoverEdge, setHoverEdge] = useState('')
       const [flash, setFlash] = useState('')
       const [tick, setTick] = useState(0)
+      const [collapsedNodes, setCollapsedNodes] = useState(seed.collapsedNodes || [])
+      const [spaceDown, setSpaceDown] = useState(false)
       const selection = props.selection || []
 
       useEffect(() => {
@@ -7941,25 +8461,48 @@ window.__ModuleLoader__.load({
         return () => clearTimeout(timer)
       }, [flash])
 
-      // 选中一块记忆区后，Delete / Backspace 直接删掉它（记忆本身保留）。
+      // 键盘：Space 平移画布；Esc 取消选择；Delete 对选中对象发起删除 / 归档确认。
       useEffect(() => {
-        if (!activeFrame) return undefined
+        const typing = (target) => {
+          const tag = target && target.tagName ? String(target.tagName).toLowerCase() : ""
+          return tag === "input" || tag === "textarea" || tag === "select" || Boolean(target && target.isContentEditable)
+        }
         const onKeyDown = (event) => {
           const key = event && event.key
-          if (key === 'Escape') {
-            setActiveFrame('')
+          if (key === " " && !typing(event.target)) {
+            setSpaceDown(true)
+            if (event.preventDefault) event.preventDefault()
             return
           }
-          if (key !== 'Delete' && key !== 'Backspace') return
-          const frame = (props.frames || []).find((item) => item.id === activeFrame)
-          if (!frame || !props.onDeleteFrame) return
+          if (key === "Escape") {
+            setActiveFrame("")
+            if (props.onClearSelection) props.onClearSelection()
+            return
+          }
+          if (key !== "Delete" && key !== "Backspace") return
+          if (typing(event.target)) return
           if (event.preventDefault) event.preventDefault()
-          setActiveFrame('')
-          props.onDeleteFrame(frame)
+          if (activeFrame) {
+            const frame = (props.frames || []).find((item) => item.id === activeFrame)
+            setActiveFrame("")
+            if (frame && props.onDeleteFrame) props.onDeleteFrame(frame)
+            return
+          }
+          const picked = (props.selection || [])
+            .map((id) => (props.knowledgeNodes || []).find((node) => node.id === id))
+            .filter(Boolean)
+          if (picked.length && props.onRequestDeleteNode) props.onRequestDeleteNode(picked[0])
         }
-        window.addEventListener('keydown', onKeyDown)
-        return () => window.removeEventListener('keydown', onKeyDown)
-      }, [activeFrame, props.frames, props.onDeleteFrame])
+        const onKeyUp = (event) => {
+          if (event && event.key === " ") setSpaceDown(false)
+        }
+        window.addEventListener("keydown", onKeyDown)
+        window.addEventListener("keyup", onKeyUp)
+        return () => {
+          window.removeEventListener("keydown", onKeyDown)
+          window.removeEventListener("keyup", onKeyUp)
+        }
+      }, [activeFrame, props.frames, props.deleteFrameGuard, props.selection, props.knowledgeNodes, props.onDeleteFrame, props.onRequestDeleteNode, props.onClearSelection])
 
       useEffect(() => {
         if (typeof props.onState !== 'function') return
@@ -7971,6 +8514,8 @@ window.__ModuleLoader__.load({
           hiddenDomains: hiddenDomains,
           hiddenProjects: hiddenProjects,
           hiddenCollections: hiddenCollections,
+          hiddenNodeTypes: hiddenNodeTypes,
+          showArchivedNodes: showArchivedNodes,
           collapsed: collapsed,
           search: search
         })
@@ -7987,7 +8532,10 @@ window.__ModuleLoader__.load({
         search
       ])
 
-      const model = useMemo(() => {
+      const hiddenSet = useMemo(() => new Set(props.hiddenNodes || []), [props.hiddenNodes])
+  const showHidden = Boolean(props.showHidden)
+
+  const model = useMemo(() => {
         const entryById = new Map(props.entries.map((entry) => [entry.id, entry]))
         const clusters = props.collections
           .filter((collection) => collection.status !== 'suggested')
@@ -8050,13 +8598,56 @@ window.__ModuleLoader__.load({
           visibleIds.add(node.id)
           nodes.push(node)
         })
+        // 知识对象是知识网络的主节点，记忆按需挂在它们周围。
+        const allKnowledge = (props.knowledgeNodes || [])
+        const knowledgeMap = new Map(allKnowledge.map((node) => [node.id, node]))
+        const collapsedNodeSet = new Set(collapsedNodes)
+        const childrenOf = (id) => allKnowledge.filter((node) => node.parentNodeId === id && node.status !== "merged")
+        const isUnderCollapsed = (node) => {
+          let guard = 0
+          let parentId = node.parentNodeId
+          while (parentId && guard < 32) {
+            if (collapsedNodeSet.has(parentId)) return true
+            const parent = knowledgeMap.get(parentId)
+            parentId = parent ? parent.parentNodeId : ""
+            guard += 1
+          }
+          return false
+        }
+        const countHidden = (id) => {
+          const kids = childrenOf(id)
+          return kids.reduce((sum, kid) => sum + 1 + countHidden(kid.id), 0)
+        }
+        const knowledgeNodes = allKnowledge
+          .filter((node) => node.status !== "merged")
+          .filter((node) => !hiddenNodeTypes.includes(node.nodeType))
+          .filter((node) => !hiddenProjects.includes(node.projectId))
+          .filter((node) => showArchivedNodes || node.status !== "archived")
+          .filter((node) => !isUnderCollapsed(node))
+          .map((node) => {
+            visibleIds.add(node.id)
+            const childCount = childrenOf(node.id).length
+            const isCollapsed = collapsedNodeSet.has(node.id)
+            return {
+              id: node.id,
+              knowledge: node,
+              knowledgeNode: true,
+              label: node.title,
+              nodeTypeLabel: typeLabelOfNode(node.nodeType),
+              childCount: childCount,
+              collapsedNode: isCollapsed,
+              hiddenChildCount: isCollapsed ? countHidden(node.id) : childCount,
+              count: (node.relatedMemoryIds || []).length + (isCollapsed ? countHidden(node.id) : 0)
+            }
+          })
+        knowledgeNodes.forEach((node) => nodes.push(node))
         const edges = []
         props.relations
           .filter((relation) => showSuggested || relation.status !== 'suggested')
           .filter((relation) => !hiddenRelations.includes(relation.relationType))
           .forEach((relation) => {
-            let source = relation.sourceMemoryId
-            let target = relation.targetMemoryId
+            let source = relation.sourceType === 'node' ? relation.sourceId : relation.sourceId || relation.sourceMemoryId
+            let target = relation.targetType === 'node' ? relation.targetId : relation.targetId || relation.targetMemoryId
             const sourceCluster = clusterOf.get(source)
             const targetCluster = clusterOf.get(target)
             if (sourceCluster && collapsedSet.has(sourceCluster)) source = sourceCluster
@@ -8085,6 +8676,11 @@ window.__ModuleLoader__.load({
             node.frameHeight = 26
             return
           }
+          if (node.knowledgeNode) {
+            node.radius = 15 + Math.min(node.degree, 8) * 1.8
+            node.nodeStatus = node.knowledge.status
+            return
+          }
           node.radius = node.clusterCollapsed
             ? 24 + Math.min(node.count, 12) * 1.4
             : 11 + Math.min(node.degree, 9) * 1.5 + (node.entry.status === 'active' ? 0 : 0)
@@ -8100,7 +8696,10 @@ window.__ModuleLoader__.load({
         hiddenDomains.join(','),
         hiddenProjects.join(','),
         hiddenCollections.join(','),
-        collapsed.join(',')
+        collapsed.join(','),
+        (props.knowledgeNodes || []).map((node) => node.id + ':' + node.status + ':' + node.updatedAt).join(','),
+        hiddenNodeTypes.join(','),
+        showArchivedNodes
       ])
 
       const clusterAnchors = useMemo(
@@ -8393,10 +8992,11 @@ window.__ModuleLoader__.load({
         if (!drag) return
         if (drag.kind === 'node') {
           if (!drag.moved) {
+            const additive = Boolean(event && (event.shiftKey || event.ctrlKey || event.metaKey))
             if (drag.node && drag.node.frameNode && props.onSelectFrame) {
-              props.onSelectFrame(drag.node.frame, Boolean(event && event.shiftKey))
+              props.onSelectFrame(drag.node.frame, additive)
             } else {
-              props.onSelect(drag.id, Boolean(event && event.shiftKey))
+              props.onSelect(drag.id, additive)
             }
           } else if (drag.node && drag.node.frameNode) {
             pinnedFrames.current.add(drag.id)
@@ -8853,6 +9453,10 @@ window.__ModuleLoader__.load({
                 return
               }
               if (event.target === svgRef.current) {
+                if (event.shiftKey) {
+                  startBox(event)
+                  return
+                }
                 setActiveFrame('')
                 startPan(event)
               }
@@ -9043,6 +9647,76 @@ window.__ModuleLoader__.load({
                     )
                   )
                 }
+                if (node.knowledgeNode) {
+                  const knowledge = node.knowledge
+                  return h(
+                    'g',
+                    {
+                      key: node.id,
+                      className:
+                        'zw-gnode zw-gnodeKn' +
+                        (selected ? ' zw-gnodeOn' : '') +
+                        (dim ? ' zw-gnodeDim' : '') +
+                        impactClass(node.id),
+                      transform: 'translate(' + point.x + ',' + point.y + ')',
+                      onPointerDown: (event) => startNodeDrag(event, node),
+                      onDoubleClick: () => (props.onFocusNode ? props.onFocusNode(knowledge) : null),
+                      style: { cursor: tool === 'link' ? 'crosshair' : 'pointer' }
+                    },
+                    h('circle', {
+                      className: 'zw-gnodeHalo' + (selected ? ' zw-gnodeHaloOn' : ''),
+                      r: node.radius + 10,
+                      style: { fill: 'var(--zw-accent)' }
+                    }),
+                    h('circle', {
+                      className: 'zw-gnodeCore zw-gnodeCoreKn',
+                      r: node.radius,
+                      style: {
+                        fill: 'var(--zw-surface)',
+                        stroke: 'var(--zw-accent)',
+                        strokeWidth: 2,
+                        strokeDasharray: knowledge.status === 'candidate' ? '4 3' : '',
+                        opacity: knowledge.status === 'archived' ? 0.5 : 1
+                      }
+                    }),
+                    h(
+                      'text',
+                      { className: 'zw-gnodeKnGlyph', y: 4, textAnchor: 'middle' },
+                      nodeGlyph(knowledge.nodeType)
+                    ),
+                    h(
+                      'text',
+                      {
+                        className: 'zw-gnodeLabel' + (selected ? ' zw-gnodeLabelOn' : ''),
+                        y: node.radius + 15,
+                        textAnchor: 'middle'
+                      },
+                      truncate(knowledge.title, 14)
+                    ),
+                    node.hiddenChildCount
+                      ? h(
+                          "text",
+                          {
+                            className: "zw-gnodeKnCount" + (node.collapsedNode ? " zw-gnodeKnCountOn" : ""),
+                            y: -node.radius - 6,
+                            textAnchor: "middle",
+                            style: { cursor: "pointer" },
+                            onPointerDown: (event) => {
+                              if (event && event.stopPropagation) event.stopPropagation()
+                            },
+                            onClick: (event) => {
+                              if (event && event.stopPropagation) event.stopPropagation()
+                              setCollapsedNodes((prev) =>
+                                prev.indexOf(node.id) >= 0 ? prev.filter((id) => id !== node.id) : prev.concat([node.id])
+                              )
+                            }
+                          },
+                          "+" + node.hiddenChildCount
+                        )
+                      : null,
+                    h('title', null, knowledge.title + ' · ' + labelOf(t, meta.nodeTypes, knowledge.nodeType, 'type'))
+                  )
+                }
                 const entry = node.entry
                 return h(
                   'g',
@@ -9190,7 +9864,20 @@ window.__ModuleLoader__.load({
             h(Icon, { name: 'bookmark', size: 14 })
           )
         ),
-        h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edges.length),
+                h(
+          'button',
+          {
+            type: 'button',
+            className: 'zw-iconBtn',
+            title: t('graph.expandAll'),
+            onClick: () => {
+              setCollapsedNodes(new Set())
+              if ((props.knowledgeNodes || []).length > 120) flash(t('graph.expandLimit'))
+            }
+          },
+          h(Icon, { name: 'expand', size: 15 })
+        ),
+h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edges.length),
         flash ? h('span', { className: 'zw-graphHint' }, flash) : null,
         panelOpen
           ? h(
@@ -9240,6 +9927,31 @@ window.__ModuleLoader__.load({
                     )
                   : null
               ),
+              hiddenSet.size
+                ? h(
+                    'div',
+                    { className: 'zw-graphSection' },
+                    h('div', { className: 'zw-blockHint' }, t('graph.hiddenCount') + ' ' + hiddenSet.size),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnGhost zw-btnSm',
+                        onClick: () => props.onRestoreHidden && props.onRestoreHidden()
+                      },
+                      t('graph.restoreHidden')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: showHidden ? 'zw-btn zw-btnPrimary zw-btnSm' : 'zw-btn zw-btnGhost zw-btnSm',
+                        onClick: () => props.onShowHidden && props.onShowHidden(!showHidden)
+                      },
+                      t('graph.showHidden')
+                    )
+                  )
+                : null,
               h(
                 'div',
                 { className: 'zw-graphSection' },
@@ -9629,6 +10341,8 @@ window.__ModuleLoader__.load({
       const orphans = report.orphans || []
       const proposals = report.pendingProposals || []
       const relations = report.suggestedRelations || []
+      const candidateNodes = report.candidateNodes || []
+      const duplicateNodes = report.duplicateNodes || []
 
       return h(
         'div',
@@ -9850,6 +10564,108 @@ window.__ModuleLoader__.load({
                   )
                 )
               : h(TidyEmptyRow, { text: t('tidy.empty') })
+          ),
+          h(
+            TidyCard,
+            {
+              t: t,
+              icon: 'layers',
+              title: t('tidy.nodeCandidates'),
+              count: candidateNodes.length,
+              hint: t('tidy.nodeCandidatesHint'),
+              action:
+                candidateNodes.length > 1
+                  ? h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnGhost zw-btnSm',
+                        disabled: props.busy,
+                        onClick: () => props.onConfirmAllNodes(candidateNodes.map((node) => node.id))
+                      },
+                      t('tidy.confirmAllNodes')
+                    )
+                  : null
+            },
+            candidateNodes.length
+              ? candidateNodes.map((node) =>
+                  h(
+                    'div',
+                    { key: node.id, className: 'zw-tidyRow' },
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowBody' },
+                      h('div', { className: 'zw-tidyRowTitle' }, node.title),
+                      h('div', { className: 'zw-tidyRowMeta' }, labelOf(t, meta.nodeTypes, node.nodeType, 'type'))
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowActions' },
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnPrimary',
+                          onClick: () => props.onConfirmNode && props.onConfirmNode(node)
+                        },
+                        t('tidy.confirmNode')
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnGhost',
+                          onClick: () => props.onOpenNode && props.onOpenNode(node.id)
+                        },
+                        t('tidy.openEntry')
+                      )
+                    )
+                  )
+                )
+              : h(TidyEmptyRow, { text: t('tidy.empty') })
+          ),
+          h(
+            TidyCard,
+            {
+              t: t,
+              icon: 'copy',
+              title: t('tidy.duplicateNodes'),
+              count: duplicateNodes.length,
+              hint: t('tidy.duplicateNodesHint')
+            },
+            duplicateNodes.length
+              ? duplicateNodes.map((pair, index) =>
+                  h(
+                    'div',
+                    { key: index, className: 'zw-tidyRow' },
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowBody' },
+                      h(
+                        'div',
+                        { className: 'zw-tidyRowTitle' },
+                        pair.a.title,
+                        h(Icon, { name: 'arrowRight', size: 11 }),
+                        pair.b.title
+                      ),
+                      h('div', { className: 'zw-tidyRowMeta' }, pair.reason)
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowActions' },
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnPrimary',
+                          onClick: () => props.onMergeNodes && props.onMergeNodes(pair.a.id, pair.b.id)
+                        },
+                        t('tidy.merge')
+                      )
+                    )
+                  )
+                )
+              : h(TidyEmptyRow, { text: t('tidy.empty') })
           )
         )
       )
@@ -9889,6 +10705,41 @@ window.__ModuleLoader__.load({
               ),
               h('span', { className: 'zw-rowDate' }, formatDateTime(recall.at))
             ),
+            (recall.paths || []).length
+              ? h(
+                  'div',
+                  { className: 'zw-recallPath' },
+                  h('span', { className: 'zw-blockHint' }, t('recall.path')),
+                  h(
+                    'span',
+                    null,
+                    recall.paths
+                      .slice(0, 3)
+                      .map((item) =>
+                        (item.hops || [])
+                          .map((hop) => hop.title || (hop.relationType ? '[' + hop.relationType + ']' : ''))
+                          .filter(Boolean)
+                          .join(' → ')
+                      )
+                      .filter(Boolean)
+                      .join('；')
+                  )
+                )
+              : null,
+            (recall.nodes || []).length
+              ? h(
+                  'div',
+                  { className: 'zw-recallNodes', title: t('recall.nodes') },
+                  t('recall.nodes') + '：',
+                  recall.nodes.map((node) =>
+                    h(
+                      'span',
+                      { key: node.id, className: 'zw-tag' },
+                      node.title + (node.nodeType ? ' · ' + node.nodeType : '')
+                    )
+                  )
+                )
+              : null,
             h(
               'div',
               { className: 'zw-recallIds', title: t('recall.items') },
@@ -9911,6 +10762,1449 @@ window.__ModuleLoader__.load({
             )
           )
         )
+      )
+    }
+
+    // ---------------------------------------------------------------------
+    // 知识对象（KnowledgeNode）：多维知识网络的骨架。
+    // 记忆负责「具体发生过什么」，知识对象负责「这些东西属于谁、谁和谁有关系」。
+    // ---------------------------------------------------------------------
+
+    const KNODE_VIEWS = [
+      { id: 'project', types: ['project', 'system', 'subsystem', 'concept'] },
+      { id: 'work', types: ['workflow', 'method'] },
+      { id: 'preference', types: ['preference', 'principle'] },
+      { id: 'global', types: [] }
+    ]
+
+    function nodeTypesForView(view) {
+      const found = KNODE_VIEWS.find((item) => item.id === view)
+      return found ? found.types : []
+    }
+
+    function nodesForView(nodes, view) {
+      const types = nodeTypesForView(view)
+      const list = (nodes || []).filter((node) => node.status !== 'merged')
+      if (!types.length) return list
+      return list.filter((node) => types.indexOf(node.nodeType) >= 0)
+    }
+
+    function nodeById(nodes, id) {
+      return (nodes || []).find((node) => node.id === id) || null
+    }
+
+    function KnowledgeView(props) {
+      const t = props.t
+      const meta = props.meta
+      const nodes = props.nodes || []
+      const view = props.view || 'project'
+      const types = nodeTypesForView(view)
+      const visibleNodes = nodesForView(nodes, view)
+      const visibleIds = new Set(visibleNodes.map((node) => node.id))
+      const entries = (props.entries || []).filter((entry) => {
+        if (!types.length) return true
+        const linked = entry.nodeIds || []
+        if (linked.some((id) => visibleIds.has(id))) return true
+        return false
+      })
+      const relations = (props.relations || []).filter((relation) => {
+        const ends = [relation.sourceType === 'node' ? relation.sourceId : '', relation.targetType === 'node' ? relation.targetId : '']
+        if (!types.length) return true
+        return ends.some((id) => id && visibleIds.has(id))
+      })
+      return h(
+        'div',
+        { className: 'zw-knWrap', style: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } },
+        h(
+          'div',
+          { className: 'zw-knBar', style: { display: 'flex', gap: '8px', alignItems: 'center', padding: '0 12px 8px' } },
+          h(
+            'div',
+            { className: 'zw-knTabs' },
+            [{ id: 'project', title: t('kn.tab.project') }, { id: 'work', title: t('kn.tab.work') }, { id: 'preference', title: t('kn.tab.preference') }, { id: 'global', title: t('kn.tab.global') }].map((item) =>
+              h(
+                'button',
+                {
+                  key: item.id,
+                  type: 'button',
+                  className: 'zw-knTab' + (item.id === view ? ' zw-knTabOn' : ''),
+                  onClick: () => props.onView(item.id)
+                },
+                item.title
+              )
+            )
+          ),
+          h(
+            'span',
+            { className: 'zw-viewSub' },
+            visibleNodes.length + ' ' + t('kn.objects') + ' · ' + entries.length + ' ' + t('common.items')
+          ),
+          h('span', { style: { flex: 1 } }),
+          h(
+            'button',
+            { type: 'button', className: 'zw-btn zw-btnPrimary zw-btnSm', onClick: () => props.onCreate(null) },
+            h(Icon, { name: 'plus', size: 13 }),
+            t('kn.new')
+          )
+        ),
+        h(
+          'div',
+          { style: { flex: 1, minHeight: 0 } },
+          h(GraphView, {
+            key: 'knowledge:' + view,
+            t: t,
+            meta: meta,
+            entries: entries,
+            knowledgeNodes: visibleNodes,
+            relations: relations,
+            collections: props.collections,
+            projects: props.projects,
+            stats: props.stats,
+            selection: props.selection,
+            initialConfig: props.initialConfig,
+            onSelect: props.onSelect,
+            onFocusNode: props.onOpenNode,
+            onMultiSelect: props.onMultiSelect,
+            onClearSelection: props.onClearSelection,
+            onCreateRelation: props.onCreateRelation,
+            onDecideRelation: props.onDecideRelation,
+            frames: props.frames,
+            layout: props.layout,
+            onSaveFrame: props.onSaveFrame,
+            onSaveLayout: props.onSaveLayout,
+            onLayoutChange: props.onLayoutChange,
+            onBatchAction: props.onBatchAction,
+            onOpenTidy: props.onOpenTidy,
+            onState: props.onState,
+            onRequestDeleteNode: props.onRequestDeleteNode
+          })
+        )
+      )
+    }
+
+    function NodeAttrList(props) {
+      const attributes = props.attributes || []
+      if (!attributes.length) return null
+      return h(
+        'div',
+        { className: 'zw-nodeAttr' },
+        attributes.map((item, index) =>
+          h(
+            React.Fragment,
+            { key: item.label + ':' + index },
+            h('div', { className: 'zw-nodeAttrKey' }, item.label),
+            h('div', { className: 'zw-nodeAttrValue' }, item.value)
+          )
+        )
+      )
+    }
+
+    function NodeDetail(props) {
+      const t = props.t
+      const meta = props.meta
+      const node = props.node
+      const isHidden = (props.hiddenIds || []).indexOf(node.id) >= 0
+      if (!node) return null
+      const entries = props.entries || []
+      const nodes = props.nodes || []
+      const memories = entries.filter((entry) => (node.relatedMemoryIds || []).indexOf(entry.id) >= 0)
+      const children = nodes.filter((item) => item.parentNodeId === node.id && item.status !== 'merged')
+      const parent = node.parentNodeId ? nodeById(nodes, node.parentNodeId) : null
+      const project = (props.projects || []).find((item) => item.id === node.projectId) || null
+      const relations = props.relations || []
+      const typeLabel = labelOf(t, meta.nodeTypes, node.nodeType, 'type')
+      return h(
+        'div',
+        { className: 'zw-detailInner' },
+        h(
+          'div',
+          { className: 'zw-detailMeta' },
+          h('span', { className: 'zw-badge zw-badgeType' }, typeLabel),
+          h('span', { className: statusTone(node.status) }, labelOf(t, meta.nodeStatuses, node.status, 'knStatus')),
+          node.scope === 'global' ? h('span', { className: 'zw-badge zw-badgeNeutral' }, t('scope.global')) : null,
+          project ? h('span', { className: 'zw-badge zw-badgeNeutral' }, project.name) : null
+        ),
+        h(
+          'div',
+          { className: 'zw-detailHead' },
+          h('div', { className: 'zw-detailTitleWrap' }, h('h2', { className: 'zw-detailTitle' }, node.title)),
+          h(
+            'div',
+            { className: 'zw-detailActions' },
+            h(
+              'button',
+              { type: 'button', className: 'zw-iconBtn', title: t('action.edit'), onClick: () => props.onEdit(node) },
+              h(Icon, { name: 'edit', size: 15 })
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-iconBtn',
+                title: isHidden ? t('kn.show') : t('kn.hide'),
+                onClick: () => props.onToggleHidden && props.onToggleHidden(node)
+              },
+              h(Icon, { name: isHidden ? 'eye' : 'eyeOff', size: 15 })
+            ),
+            h(
+              'button',
+              { type: 'button', className: 'zw-iconBtn', title: t('kn.merge'), onClick: () => props.onMerge(node) },
+              h(Icon, { name: 'layers', size: 15 })
+            ),
+            h(
+              'button',
+              { type: 'button', className: 'zw-iconBtn', title: t('kn.archive'), onClick: () => props.onArchive(node) },
+              h(Icon, { name: node.status === 'archived' ? 'refresh' : 'box', size: 15 })
+            ),
+            h(
+              'button',
+              { type: 'button', className: 'zw-iconBtn', title: t('action.close'), onClick: props.onClose },
+              h(Icon, { name: 'close', size: 15 })
+            )
+          )
+        ),
+        h(
+          'div',
+          { className: 'zw-detailScroll' },
+          node.description
+            ? h('div', { className: 'zw-block' }, h('div', { className: 'zw-prose' }, renderProse(node.description)))
+            : null,
+          h(
+            'div',
+            { className: 'zw-block' },
+            h('div', { className: 'zw-blockHead' }, h('div', { className: 'zw-blockTitle' }, t('kn.attributes'))),
+            node.attributes && node.attributes.length
+              ? h(NodeAttrList, { attributes: node.attributes })
+              : h('div', { className: 'zw-hint' }, t('kn.noAttributes'))
+          ),
+          node.nodeType === 'workflow'
+            ? h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('div', { className: 'zw-blockTitle' }, t('kn.steps')),
+                  h(
+                    'button',
+                    { type: 'button', className: 'zw-iconBtn', title: t('kn.addStep'), onClick: () => props.onEdit(node) },
+                    h(Icon, { name: 'plus', size: 13 })
+                  )
+                ),
+                (node.steps || []).length
+                  ? h(
+                      'div',
+                      { className: 'zw-stepList' },
+                      node.steps.map((step, index) =>
+                        h(
+                          'div',
+                          { key: step.id || 'step-' + index, className: 'zw-stepRow' },
+                          h('span', { className: 'zw-stepNo' }, String(index + 1)),
+                          h(
+                            'div',
+                            { className: 'zw-stepBody' },
+                            h('div', { className: 'zw-stepTitle' }, step.title),
+                            step.note ? h('div', { className: 'zw-stepNote' }, step.note) : null
+                          )
+                        )
+                      )
+                    )
+                  : h('div', { className: 'zw-hint' }, t('kn.noSteps'))
+              )
+            : null,
+          node.nodeType === 'preference'
+            ? h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('div', { className: 'zw-blockTitle' }, t('kn.correct')),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-iconBtn',
+                      title: t('kn.correct'),
+                      onClick: () => props.onCorrect(node)
+                    },
+                    h(Icon, { name: 'edit', size: 13 })
+                  )
+                ),
+                h('div', { className: 'zw-hint' }, t('kn.correctHint'))
+              )
+            : null,
+          parent || children.length
+            ? h(
+                'div',
+                { className: 'zw-block' },
+                h('div', { className: 'zw-blockHead' }, h('div', { className: 'zw-blockTitle' }, t('kn.structure'))),
+                parent
+                  ? h(
+                      'div',
+                      { className: 'zw-relRow' },
+                      h(Icon, { name: 'layers', size: 12 }),
+                      h('button', { type: 'button', className: 'zw-tagBtn', onClick: () => props.onOpenNode(parent) }, parent.title),
+                      h('span', { className: 'zw-hint' }, t('kn.parent'))
+                    )
+                  : null,
+                children.length
+                  ? h(
+                      'div',
+                      { className: 'zw-tagRow' },
+                      children.map((child) =>
+                        h(
+                          'button',
+                          {
+                            key: child.id,
+                            type: 'button',
+                            className: 'zw-tag zw-tagBtn',
+                            onClick: () => props.onOpenNode(child)
+                          },
+                          child.title
+                        )
+                      )
+                    )
+                  : null
+              )
+            : null,
+          h(
+            'div',
+            { className: 'zw-block' },
+            h(
+              'div',
+              { className: 'zw-blockHead' },
+              h('div', { className: 'zw-blockTitle' }, t('kn.memories'), h('span', { className: 'zw-count' }, String(memories.length))),
+              h(
+                'button',
+                { type: 'button', className: 'zw-btn zw-btnGhost zw-btnSm', onClick: () => props.onLinkMemory(node) },
+                h(Icon, { name: 'link', size: 12 }),
+                t('kn.linkMemory')
+              )
+            ),
+            memories.length
+              ? h(
+                  'div',
+                  { className: 'zw-relList' },
+                  memories.map((entry) =>
+                    h(
+                      'div',
+                      { key: entry.id, className: 'zw-relRow' },
+                      h('span', { className: 'zw-rowDot', style: { background: typeColor(entry.type) } }),
+                      h(
+                        'button',
+                        { type: 'button', className: 'zw-relName', onClick: () => props.onOpenEntry(entry.id) },
+                        entry.title
+                      ),
+                      h('span', { className: 'zw-hint' }, labelOf(t, meta.entryTypes, entry.type, 'type')),
+                      h('span', { style: { flex: 1 } }),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-iconBtn',
+                          title: t('kn.unlinkHint'),
+                          onClick: () => props.onUnlinkMemory(node, entry)
+                        },
+                        h(Icon, { name: 'close', size: 12 })
+                      )
+                    )
+                  )
+                )
+              : h('div', { className: 'zw-hint' }, t('kn.noMemories'))
+          ),
+          h(
+            'div',
+            { className: 'zw-block' },
+            h(
+              'div',
+              { className: 'zw-blockHead' },
+              h('div', { className: 'zw-blockTitle' }, t('kn.relations')),
+              h(
+                'button',
+                { type: 'button', className: 'zw-btn zw-btnGhost zw-btnSm', onClick: () => props.onCreateRelation(node) },
+                h(Icon, { name: 'link', size: 12 }),
+                t('kn.createRelation')
+              )
+            ),
+            relations.length
+              ? h(
+                  'div',
+                  { className: 'zw-relList' },
+                  relations.map((relation) => {
+                    const outgoing = relation.sourceId === node.id
+                    const otherId = outgoing ? relation.targetId : relation.sourceId
+                    const otherNode = nodeById(nodes, otherId)
+                    const otherEntry = entries.find((entry) => entry.id === otherId)
+                    const otherTitle = otherNode ? otherNode.title : otherEntry ? otherEntry.title : otherId
+                    return h(
+                      'div',
+                      { key: relation.id, className: 'zw-relRow' },
+                      h('span', { className: 'zw-relGlyph', style: { color: relationColor(relation.relationType) } }, outgoing ? '→' : '←'),
+                      h(
+                        'div',
+                        { className: 'zw-relBody' },
+                        h(
+                          'div',
+                          { className: 'zw-relName' },
+                          h('span', { className: 'zw-tag' }, labelOf(t, meta.relationTypes, relation.relationType, 'relation')),
+                          h(
+                            'button',
+                            {
+                              type: 'button',
+                              className: 'zw-tagBtn',
+                              onClick: () => (otherNode ? props.onOpenNode(otherNode) : props.onOpenEntry(otherId))
+                            },
+                            otherTitle
+                          )
+                        ),
+                        relation.description ? h('div', { className: 'zw-relNote' }, relation.description) : null
+                      ),
+                      h('span', { style: { flex: 1 } }),
+                      relation.status === 'suggested'
+                        ? h(
+                            'div',
+                            { className: 'zw-relActions' },
+                            h(
+                              'button',
+                              { type: 'button', className: 'zw-btn zw-btnGhost zw-btnSm', onClick: () => props.onDecideRelation(relation.id, 'confirmed') },
+                              t('relation.confirm')
+                            ),
+                            h(
+                              'button',
+                              { type: 'button', className: 'zw-btn zw-btnGhost zw-btnSm', onClick: () => props.onDecideRelation(relation.id, 'rejected') },
+                              t('relation.reject')
+                            )
+                          )
+                        : h(
+                            'button',
+                            {
+                              type: 'button',
+                              className: 'zw-iconBtn',
+                              title: t('action.delete'),
+                              onClick: () => props.onDeleteRelation(relation)
+                            },
+                            h(Icon, { name: 'trash', size: 12 })
+                          )
+                    )
+                  })
+                )
+              : h('div', { className: 'zw-hint' }, t('kn.noRelations'))
+          ),
+          (node.versions || []).length > 1
+            ? h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('div', { className: 'zw-blockTitle' }, t('kn.versions')),
+                  h('div', { className: 'zw-blockHint' }, t('kn.versionsHint'))
+                ),
+                h(
+                  'div',
+                  { className: 'zw-versionList' },
+                  (node.versions || [])
+                    .slice()
+                    .reverse()
+                    .map((version) =>
+                      h(
+                        'div',
+                        { key: version.id, className: 'zw-version' },
+                        h(
+                          'div',
+                          { className: 'zw-versionTop' },
+                          h('span', { className: 'zw-versionNo' }, 'v' + version.version),
+                          h('span', { className: 'zw-tag' }, t('change.' + version.changeType)),
+                          h('span', { className: 'zw-rowDate' }, formatDay(version.createdAt)),
+                          version.version === node.currentVersion
+                            ? h('span', { className: 'zw-versionNow' }, t('kn.versionCurrent'))
+                            : h(
+                                'button',
+                                {
+                                  type: 'button',
+                                  className: 'zw-btn zw-btnGhost zw-btnSm',
+                                  onClick: () => props.onRestoreVersion(node, version)
+                                },
+                                t('kn.restore')
+                              )
+                        ),
+                        h('div', { className: 'zw-versionTitle' }, version.title),
+                        version.changeReason
+                          ? h('div', { className: 'zw-versionNote' }, version.changeReason)
+                          : null
+                      )
+                    )
+                )
+              )
+            : null,
+          h(
+            'div',
+            { className: 'zw-hint', style: { padding: '6px 2px 18px' } },
+            t('detail.meta') + ' · ' + formatDay(node.updatedAt) + ' · ' + (node.id || '')
+          )
+        )
+      )
+    }
+
+    function AttributeEditor(props) {
+      const t = props.t
+      const rows = props.value || []
+      const change = (next) => props.onChange(next)
+      return h(
+        'div',
+        { className: 'zw-facts' },
+        rows.map((row, index) =>
+          h(
+            'div',
+            { key: 'attr-' + index, className: 'zw-factRow' },
+            h('input', {
+              className: 'zw-input',
+              value: row.label,
+              placeholder: t('kn.attrKey'),
+              onChange: (event) => {
+                const next = rows.slice()
+                next[index] = { label: event.target.value, value: row.value }
+                change(next)
+              }
+            }),
+            h('input', {
+              className: 'zw-input',
+              value: row.value,
+              placeholder: t('kn.attrValue'),
+              onChange: (event) => {
+                const next = rows.slice()
+                next[index] = { label: row.label, value: event.target.value }
+                change(next)
+              }
+            }),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-iconBtn',
+                title: t('action.delete'),
+                onClick: () => change(rows.filter((_, at) => at !== index))
+              },
+              h(Icon, { name: 'trash', size: 13 })
+            )
+          )
+        ),
+        h(
+          'button',
+          { type: 'button', className: 'zw-btn zw-btnGhost zw-btnSm', onClick: () => change(rows.concat([{ label: '', value: '' }])) },
+          h(Icon, { name: 'plus', size: 12 }),
+          t('kn.addAttr')
+        )
+      )
+    }
+
+    function NodeDialog(props) {
+      const t = props.t
+      const meta = props.meta
+      const editing = Boolean(props.node)
+      const [form, setForm] = useState(() => ({
+        title: props.node ? props.node.title : '',
+        description: props.node ? props.node.description : '',
+        nodeType: props.node ? props.node.nodeType : props.defaultType || 'concept',
+        projectId: props.node ? props.node.projectId : (props.defaultProjectId || ''),
+        scope: props.node ? props.node.scope : 'project',
+        parentNodeId: props.node ? props.node.parentNodeId : props.defaultParentId || '',
+        aliases: props.node && props.node.aliases ? props.node.aliases.join(', ') : '',
+        attributes: props.node && props.node.attributes ? props.node.attributes.map((item) => ({ label: item.label, value: item.value })) : [],
+        steps: props.node && props.node.steps ? props.node.steps.map((step) => ({ id: step.id, title: step.title, note: step.note })) : []
+      }))
+      const [error, setError] = useState('')
+      const [duplicate, setDuplicate] = useState(null)
+      const valueRef = useRef(form)
+      valueRef.current = form
+      const patch = (next) => setForm(Object.assign({}, valueRef.current, next))
+      const moveStep = (index, delta) => {
+        const list = (form.steps || []).slice()
+        const to = index + delta
+        if (to < 0 || to >= list.length) return
+        const picked = list.splice(index, 1)[0]
+        list.splice(to, 0, picked)
+        patch({ steps: list })
+      }
+      const parents = (props.nodes || []).filter((node) => node.status !== 'merged' && (!props.node || node.id !== props.node.id))
+      const submit = () => {
+        const current = valueRef.current
+        const title = String(current.title || '').trim()
+        if (!title) {
+          setError(t('kn.needTitle'))
+          return
+        }
+        setError('')
+        props.onSave({
+          id: props.node ? props.node.id : undefined,
+          title: title,
+          description: current.description,
+          nodeType: current.nodeType,
+          projectId: props.node ? props.node.projectId : current.projectId,
+          scope: current.scope,
+          parentNodeId: current.parentNodeId,
+          aliases: String(current.aliases || '')
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean),
+          attributes: (current.attributes || []).filter((row) => row.label && row.value),
+          steps: (current.steps || []).filter((step) => step.title),
+          allowDuplicate: Boolean(duplicate)
+        })
+      }
+      return h(
+        Modal,
+        {
+          title: editing ? t('kn.edit') : t('kn.new'),
+          icon: 'graph',
+          onClose: props.onClose,
+          wide: true,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h('button', { type: 'button', className: 'zw-btn zw-btnGhost', onClick: props.onClose }, t('action.cancel')),
+            h(
+              'button',
+              { type: 'button', className: 'zw-btn zw-btnPrimary', disabled: props.saving, onClick: submit },
+              props.saving ? t('common.saving') : t('action.save')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h(
+            'div',
+            { className: 'zw-formRow' },
+            h(
+              Field,
+              { label: t('kn.title') },
+              h('input', {
+                className: 'zw-input',
+                value: form.title,
+                placeholder: t('kn.titlePlaceholder'),
+                onChange: (event) => patch({ title: event.target.value })
+              })
+            ),
+            h(
+              Field,
+              { label: t('kn.type') },
+              h(Select, {
+                value: form.nodeType,
+                options: meta.nodeTypes.map((item) => ({ id: item.id, label: item.label })),
+                onChange: (value) => patch({ nodeType: value })
+              })
+            )
+          ),
+          h(
+            'div',
+            { className: 'zw-formRow' },
+            h(
+              Field,
+              { label: t('kn.parent') },
+              h(Select, {
+                value: form.parentNodeId,
+                placeholder: t('kn.noParent'),
+                options: parents.map((node) => ({ id: node.id, label: node.title })),
+                onChange: (value) => patch({ parentNodeId: value })
+              })
+            ),
+            h(
+              Field,
+              { label: t('kn.scope') },
+              h(Select, {
+                value: form.scope,
+                options: meta.scopes.map((item) => ({ id: item.id, label: item.label })),
+                onChange: (value) => patch({ scope: value })
+              })
+            )
+          ),
+          h(
+            Field,
+            { label: t('kn.description'), hint: t('kn.descriptionHint') },
+            h('textarea', {
+              className: 'zw-textarea',
+              rows: 4,
+              value: form.description,
+              placeholder: t('kn.descriptionPlaceholder'),
+              onChange: (event) => patch({ description: event.target.value })
+            })
+          ),
+          h(
+            Field,
+            { label: t('kn.aliases'), hint: t('kn.aliasesHint') },
+            h('input', {
+              className: 'zw-input',
+              value: form.aliases,
+              placeholder: t('kn.aliasesPlaceholder'),
+              onChange: (event) => patch({ aliases: event.target.value })
+            })
+          ),
+          h(Field, { label: t('kn.attributes') }, h(AttributeEditor, { t: t, value: form.attributes, onChange: (next) => patch({ attributes: next }) })),
+          form.nodeType === 'workflow'
+            ? h(
+                Field,
+                { label: t('kn.steps') },
+                h(
+                  'div',
+                  { className: 'zw-facts' },
+                  (form.steps || []).map((step, index) =>
+                    h(
+                      'div',
+                      { key: 'step-' + index, className: 'zw-factRow zw-stepEditRow' },
+                      h(
+                        'div',
+                        { className: 'zw-stepTools' },
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'zw-iconBtn',
+                            title: t('kn.stepUp'),
+                            disabled: index === 0,
+                            onClick: () => moveStep(index, -1)
+                          },
+                          h(Icon, { name: 'chevronDown', size: 12, style: { transform: 'rotate(180deg)' } })
+                        ),
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'zw-iconBtn',
+                            title: t('kn.stepDown'),
+                            disabled: index === form.steps.length - 1,
+                            onClick: () => moveStep(index, 1)
+                          },
+                          h(Icon, { name: 'chevronDown', size: 12 })
+                        )
+                      ),
+                      h('input', {
+                        className: 'zw-input',
+                        value: step.title,
+                        placeholder: t('kn.stepTitle'),
+                        onChange: (event) => {
+                          const next = form.steps.slice()
+                          next[index] = Object.assign({}, step, { title: event.target.value })
+                          patch({ steps: next })
+                        }
+                      }),
+                      h('input', {
+                        className: 'zw-input',
+                        value: step.note || '',
+                        placeholder: t('kn.stepNote'),
+                        onChange: (event) => {
+                          const next = form.steps.slice()
+                          next[index] = Object.assign({}, step, { note: event.target.value })
+                          patch({ steps: next })
+                        }
+                      }),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-iconBtn',
+                          title: t('action.delete'),
+                          onClick: () => patch({ steps: form.steps.filter((_, at) => at !== index) })
+                        },
+                        h(Icon, { name: 'trash', size: 13 })
+                      )
+                    )
+                  ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-btn zw-btnGhost zw-btnSm',
+                      onClick: () => patch({ steps: (form.steps || []).concat([{ title: '', note: '' }]) })
+                    },
+                    h(Icon, { name: 'plus', size: 12 }),
+                    t('kn.addStep')
+                  )
+                )
+              )
+            : null,
+          duplicate && duplicate.length
+            ? h(
+                'div',
+                { className: 'zw-dupWarn' },
+                h('div', null, t('kn.duplicate')),
+                duplicate.map((item) =>
+                  h(
+                    'div',
+                    { key: item.id, className: 'zw-dupRow' },
+                    h('span', null, item.title + ' · ' + labelOf(t, meta.nodeTypes, item.nodeType, 'type')),
+                    h(
+                      'button',
+                      { type: 'button', className: 'zw-btn zw-btnGhost zw-btnSm', onClick: () => props.onOpenNode(item) },
+                      t('kn.useExisting')
+                    )
+                  )
+                ),
+                h('div', { className: 'zw-hint' }, t('kn.createAnyway'))
+              )
+            : null,
+          error ? h('div', { className: 'zw-error' }, error) : null
+        )
+      )
+    }
+
+    function PreferenceFixDialog(props) {
+      const t = props.t
+      const [choice, setChoice] = useState('')
+      const [note, setNote] = useState('')
+      const options = [
+        { id: 'narrow', label: t('kn.narrow') },
+        { id: 'widen', label: t('kn.widen') },
+        { id: 'obsolete', label: t('kn.obsolete') },
+        { id: 'oneOff', label: t('kn.oneOff') }
+      ]
+      const canSave = Boolean(choice) && !props.saving
+      return h(
+        Modal,
+        {
+          title: t('kn.correct'),
+          icon: 'edit',
+          onClose: props.onClose,
+          closeLabel: t('common.close'),
+          footer: h(
+            'div',
+            { className: 'zw-modalFoot' },
+            h('div', { className: 'zw-modalFootSpacer' }),
+            h('button', { type: 'button', className: 'zw-btn zw-btnGhost', onClick: props.onClose }, t('common.cancel')),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnPrimary',
+                disabled: !canSave,
+                onClick: () => props.onSave({ kind: choice, note: note })
+              },
+              t('action.save')
+            )
+          )
+        },
+        h('div', { className: 'zw-form' }, h('div', { className: 'zw-hint' }, t('kn.correctHint'))),
+        h(MultiChips, {
+          label: t('kn.correct'),
+          options: options,
+          value: choice ? [choice] : [],
+          onToggle: (id) => setChoice((prev) => (prev === id ? '' : id))
+        }),
+        h(
+          Field,
+          { label: t('kn.correctNote') },
+          h('textarea', {
+            className: 'zw-textarea',
+            rows: 3,
+            value: note,
+            placeholder: t('kn.correctNotePlaceholder'),
+            onChange: (event) => setNote(event.target.value)
+          })
+        )
+      )
+    }
+
+    function NodeMergeDialog(props) {
+      const t = props.t
+      const meta = props.meta
+      const node = props.node
+      const nodes = props.nodes || []
+      const entries = props.entries || []
+      const candidates = nodes
+        .filter((item) => item.id !== node.id)
+        .filter((item) => item.status !== 'merged')
+        .filter((item) => item.nodeType === node.nodeType)
+      const preferred = props.defaultTargetId && candidates.some((item) => item.id === props.defaultTargetId)
+        ? props.defaultTargetId
+        : candidates.length
+        ? candidates[0].id
+        : ''
+      const [targetId, setTargetId] = useState(preferred)
+      const target = nodes.find((item) => item.id === targetId) || null
+      const memoryCount = (item) => (item ? (item.relatedMemoryIds || []).length : 0)
+      const rows = target
+        ? [
+            { key: t('kn.title2'), left: node.title, right: target.title },
+            { key: t('kn.type'), left: labelOf(t, meta.nodeTypes, node.nodeType, 'type'), right: labelOf(t, meta.nodeTypes, target.nodeType, 'type') },
+            { key: t('kn.status'), left: node.status, right: target.status },
+            { key: t('kn.memories'), left: String(memoryCount(node)), right: String(memoryCount(target)) },
+            { key: t('kn.description'), left: truncate(node.description || '-', 60), right: truncate(target.description || '-', 60) }
+          ]
+        : []
+      return h(
+        Modal,
+        {
+          title: t('kn.mergeTitle'),
+          icon: 'layers',
+          wide: true,
+          onClose: props.onClose,
+          footer: h(
+            'div',
+            { className: 'zw-modalFoot' },
+            h('button', { className: 'zw-btn zw-btnGhost', type: 'button', onClick: props.onClose }, t('action.cancel')),
+            h(
+              'button',
+              {
+                className: 'zw-btn zw-btnPrimary',
+                type: 'button',
+                disabled: props.saving || !target,
+                onClick: () => props.onSave(target.id, node.id)
+              },
+              t('kn.mergeConfirm')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h('div', { className: 'zw-hint' }, t('kn.mergeHint')),
+          h(
+            Field,
+            { label: t('kn.mergeTarget') },
+            h(Select, {
+              value: targetId,
+              placeholder: t('kn.mergeNone'),
+              options: candidates.map((item) => ({ id: item.id, label: item.title + ' · ' + truncate(item.description || '', 24) })),
+              onChange: (next) => setTargetId(next)
+            })
+          ),
+          target
+            ? h(
+                'div',
+                { className: 'zw-mergeTable' },
+                rows.map((row) =>
+                  h(
+                    'div',
+                    { className: 'zw-mergeRow', key: row.key },
+                    h('div', { className: 'zw-mergeKey' }, row.key),
+                    h('div', { className: 'zw-mergeVal' }, row.left),
+                    h('div', { className: 'zw-mergeVal zw-mergeValMain' }, row.right)
+                  )
+                )
+              )
+            : null,
+          target
+            ? h(
+                'div',
+                { className: 'zw-preview' },
+                t('kn.mergePreview') + ' ' + target.title,
+                ' · ' + t('kn.memories') + ' ' + (memoryCount(node) + memoryCount(target))
+              )
+            : null,
+          h('div', { className: 'zw-hint' }, t('kn.mergeKeep'))
+        )
+      )
+    }
+
+
+    function NodeRelationDialog(props) {
+      const t = props.t
+      const meta = props.meta
+      const source = props.source
+      const [targetType, setTargetType] = useState('node')
+      const [targetId, setTargetId] = useState('')
+      const [relationType, setRelationType] = useState('related_to')
+      const [description, setDescription] = useState('')
+      const [swapped, setSwapped] = useState(false)
+      const [query, setQuery] = useState('')
+      const nodes = (props.nodes || []).filter((node) => node.id !== source.id && node.status !== 'merged')
+      const entries = props.entries || []
+      const needle = query.trim().toLowerCase()
+      const nodeOptions = nodes.filter((node) => !needle || node.title.toLowerCase().indexOf(needle) >= 0)
+      const entryOptions = entries.filter((entry) => !needle || entry.title.toLowerCase().indexOf(needle) >= 0)
+      const target = targetType === 'node' ? nodes.find((node) => node.id === targetId) : entries.find((entry) => entry.id === targetId)
+      const phrases = { related_to: '关联于', depends_on: '依赖于', affects: '影响', contains: '包含', belongs_to: '属于', uses: '使用', drops: '掉落', requires: '需要', applies_to: '适用于', guides: '指导', prefers: '偏好', avoids: '避免', conflicts_with: '与…冲突', supersedes: '替代', refines: '细化', derived_from: '来源于', references: '参考', appears_in: '出现在', crafted_from: '由…制作', balanced_against: '与…平衡', follows: '遵循', precedes: '先于', next_step: '下一步', triggers: '触发', produces: '产出', exception_to: '是…的例外', constrains: '约束', part_of: '是…的一部分' }
+      const phrase = phrases[relationType] || labelOf(t, meta.relationTypes, relationType, 'relation')
+      const fromTitle = swapped ? (target ? target.title : t('kn.target')) : source.title
+      const toTitle = swapped ? source.title : target ? target.title : t('kn.target')
+      return h(
+        Modal,
+        {
+          title: t('kn.createRelation'),
+          icon: 'link',
+          onClose: props.onClose,
+          footer: h(
+            React.Fragment,
+            null,
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h('button', { type: 'button', className: 'zw-btn zw-btnGhost', onClick: props.onClose }, t('action.cancel')),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnPrimary',
+                disabled: !target || props.saving,
+                onClick: () =>
+                  props.onSave({
+                    sourceType: swapped ? targetType : 'node',
+                    sourceId: swapped ? targetId : source.id,
+                    targetType: swapped ? 'node' : targetType,
+                    targetId: swapped ? source.id : targetId,
+                    relationType: relationType,
+                    description: description
+                  })
+              },
+              t('action.save')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h(
+            'div',
+            { className: 'zw-formRow' },
+            h(Field, { label: t('kn.start') }, h('div', { className: 'zw-preview' }, swapped ? (target ? target.title : '—') : source.title)),
+            h(Field, { label: t('kn.end') }, h('div', { className: 'zw-preview' }, swapped ? source.title : target ? target.title : '—'))
+          ),
+          h(
+            'div',
+            { className: 'zw-formRow' },
+            h(
+              Field,
+              { label: t('kn.target') },
+              h(Select, {
+                value: targetType,
+                options: [
+                  { id: 'node', label: t('kn.objects') },
+                  { id: 'memory', label: t('kn.memories') }
+                ],
+                onChange: (value) => {
+                  setTargetType(value)
+                  setTargetId('')
+                }
+              })
+            ),
+            h(
+              Field,
+              { label: t('action.search') },
+              h('input', {
+                className: 'zw-input',
+                value: query,
+                placeholder: t('kn.searchPlaceholder'),
+                onChange: (event) => setQuery(event.target.value)
+              })
+            )
+          ),
+          targetType === 'node'
+            ? h(
+                'div',
+                { className: 'zw-pickList' },
+                nodeOptions.slice(0, 40).map((node) =>
+                  h(
+                    'button',
+                    {
+                      key: node.id,
+                      type: 'button',
+                      className: 'zw-pickRow' + (node.id === targetId ? ' zw-pickRowOn' : ''),
+                      onClick: () => setTargetId(node.id)
+                    },
+                    h('span', { className: 'zw-badge zw-badgeNeutral' }, labelOf(t, meta.nodeTypes, node.nodeType, 'type')),
+                    node.title
+                  )
+                )
+              )
+            : h(
+                'div',
+                { className: 'zw-pickList' },
+                entryOptions.slice(0, 40).map((entry) =>
+                  h(
+                    'button',
+                    {
+                      key: entry.id,
+                      type: 'button',
+                      className: 'zw-pickRow' + (entry.id === targetId ? ' zw-pickRowOn' : ''),
+                      onClick: () => setTargetId(entry.id)
+                    },
+                    h('span', { className: 'zw-badge zw-badgeNeutral' }, labelOf(t, meta.entryTypes, entry.type, 'type')),
+                    entry.title
+                  )
+                )
+              ),
+          h(
+            Field,
+            { label: t('kn.relationType') },
+            h(
+              'div',
+              { className: 'zw-relGroups' },
+              (meta.relationGroups || []).map((group) =>
+                h(
+                  'div',
+                  { key: group.id, className: 'zw-relGroup' },
+                  h(
+                    'span',
+                    { className: 'zw-relGroupLabel' },
+                    {
+                      hierarchy: t('relGroup.hierarchy'),
+                      business: t('relGroup.business'),
+                      workflow: t('relGroup.workflow'),
+                      principle: t('relGroup.principle'),
+                      knowledge: t('relGroup.knowledge')
+                    }[group.id] || group.label
+                  ),
+                  h(MultiChips, {
+                    options: meta.relationTypes
+                      .filter((item) => (group.types || []).indexOf(item.id) >= 0)
+                      .map((item) => ({ id: item.id, label: item.label, color: relationColor(item.id) })),
+                    value: [relationType],
+                    onToggle: (id) => setRelationType(id)
+                  })
+                )
+              )
+            )
+          ),
+          h(
+            Field,
+            { label: t('kn.preview') },
+            h('div', { className: 'zw-preview' }, fromTitle + ' ' + phrase + ' ' + toTitle),
+            h(
+              'button',
+              { type: 'button', className: 'zw-btn zw-btnGhost zw-btnSm', onClick: () => setSwapped(!swapped) },
+              h(Icon, { name: 'shuffle', size: 12 }),
+              t('kn.swap')
+            )
+          ),
+          h(
+            Field,
+            { label: t('kn.note') },
+            h('input', {
+              className: 'zw-input',
+              value: description,
+              placeholder: t('kn.notePlaceholder'),
+              onChange: (event) => setDescription(event.target.value)
+            })
+          )
+        )
+      )
+    }
+
+    function NodeMemoryPicker(props) {
+      const t = props.t
+      const meta = props.meta
+      const node = props.node
+      const linked = node ? node.relatedMemoryIds || [] : []
+      const candidates = (props.entries || []).filter((entry) => linked.indexOf(entry.id) < 0)
+      const [query, setQuery] = useState('')
+      const needle = query.trim().toLowerCase()
+      const shown = candidates.filter((entry) => !needle || entry.title.toLowerCase().indexOf(needle) >= 0)
+      return h(
+        Modal,
+        {
+          title: t('kn.linkMemory'),
+          icon: 'link',
+          onClose: props.onClose,
+          closeLabel: t('action.close')
+        },
+        h(Field, {
+          label: t('action.search'),
+          hint: h('span', null, t('kn.unlinkHint'))
+        }, h('input', {
+          className: 'zw-input',
+          value: query,
+          placeholder: t('kn.searchPlaceholder'),
+          onChange: (event) => setQuery(event.target.value)
+        })),
+        shown.length
+          ? h(
+              'div',
+              { className: 'zw-pickList' },
+              shown.slice(0, 80).map((entry) =>
+                h(
+                  'button',
+                  {
+                    key: entry.id,
+                    type: 'button',
+                    className: 'zw-pickRow',
+                    disabled: props.saving,
+                    onClick: () => props.onPick(entry)
+                  },
+                  h('span', { className: 'zw-badge zw-badgeNeutral' }, labelOf(t, meta.entryTypes, entry.type, 'type')),
+                  entry.title
+                )
+              )
+            )
+          : h('div', { className: 'zw-hint' }, t('kn.noMemories'))
+      )
+    }
+
+    // 「知微」的设置搬进 DSH 自己的设置页：存储位置、整理用的模型、导入导出。
+    // 这个组件不依赖面板 props，自己拉数据、自己写数据。
+    function SettingsSection(props) {
+      const t = props.t
+      const [info, setInfo] = useState(null)
+      const [choices, setChoices] = useState({ available: false, providers: [], models: [] })
+      const [provider, setProvider] = useState('')
+      const [model, setModel] = useState('')
+      const [enabled, setEnabled] = useState(false)
+      const [storageDraft, setStorageDraft] = useState('')
+      const [importMode, setImportMode] = useState('merge')
+      const [busy, setBusy] = useState('')
+      const [message, setMessage] = useState('')
+      const [error, setError] = useState('')
+      const fileRef = useRef(null)
+
+      const applySettings = useCallback((next) => {
+        setInfo(next)
+        if (next && typeof next.storagePath === 'string') setStorageDraft(next.storagePath)
+        const route = (next && next.model) || {}
+        setProvider(route.provider || '')
+        setModel(route.model || '')
+        setEnabled(route.enabled === true)
+      }, [])
+
+      const refresh = useCallback(async () => {
+        try {
+          const [settings, models] = await Promise.all([
+            request(API, { method: 'POST', body: JSON.stringify({ action: 'settings.get' }) }),
+            request(API, { method: 'POST', body: JSON.stringify({ action: 'models.list' }) })
+          ])
+          if (settings && settings.settings) applySettings(settings.settings)
+          if (models) {
+            setChoices({
+              available: models.available === true,
+              providers: models.providers || [],
+              models: models.models || []
+            })
+          }
+          setError('')
+        } catch (err) {
+          setError(errorText(err, t('error.load')))
+        }
+      }, [applySettings, t])
+
+      useEffect(() => {
+        refresh()
+      }, [refresh])
+
+      const modelsForProvider = choices.models.filter(
+        (item) => !provider || item.provider === provider
+      )
+
+      const saveStorage = async () => {
+        const target = storageDraft.trim()
+        if (!target) {
+          setError(t('settings.needPath'))
+          return
+        }
+        setBusy('storage')
+        setError('')
+        try {
+          const result = await request(API, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'settings.storage', path: target })
+          })
+          if (result && result.storagePath) {
+            setInfo(Object.assign({}, info, { storagePath: result.storagePath }))
+            setStorageDraft(result.storagePath)
+          }
+          setMessage(t('settings.switched'))
+        } catch (err) {
+          setError(errorText(err, t('error.write')))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const saveModel = async (nextEnabled) => {
+        const on = nextEnabled === undefined ? enabled : nextEnabled
+        setBusy('model')
+        setError('')
+        try {
+          const result = await request(API, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'settings.model',
+              provider: provider,
+              model: model,
+              enabled: on
+            })
+          })
+          if (result && result.model) {
+            setEnabled(result.model.enabled === true)
+            setInfo(Object.assign({}, info, { model: result.model }))
+          }
+          setMessage(t('settings.modelSaved'))
+        } catch (err) {
+          setError(errorText(err, t('error.write')))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const exportData = async () => {
+        setBusy('export')
+        setError('')
+        try {
+          const result = await request(API, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'export' })
+          })
+          const payload = JSON.stringify(result && result.data ? result.data : result, null, 2)
+          const blob = new Blob([payload], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = 'zhiwei-' + formatDay(new Date()) + '.json'
+          document.body.appendChild(link)
+          link.click()
+          link.remove()
+          setTimeout(() => URL.revokeObjectURL(url), 4000)
+          setMessage(t('settings.exported'))
+        } catch (err) {
+          setError(errorText(err, t('error.write')))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      const importData = async (file) => {
+        if (!file) return
+        setBusy('import')
+        setError('')
+        try {
+          const text = await file.text()
+          const data = JSON.parse(text)
+          const result = await request(API, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'import', mode: importMode, data: data })
+          })
+          const counts = (result && result.imported) || {}
+          setMessage(
+            t('settings.imported') +
+              ' ' +
+              (counts.entries || 0) +
+              ' ' +
+              t('collections.memberCount')
+          )
+          refresh()
+        } catch (err) {
+          setError(t('settings.importFailed') + ' ' + errorText(err, t('error.write')))
+        } finally {
+          setBusy('')
+        }
+      }
+
+      return h(
+        'div',
+        { className: 'zw-settings' },
+        h(
+          'div',
+          { className: 'zw-settingsRow' },
+          h('span', { className: 'zw-settingsKey' }, t('settings.storage')),
+          h('span', { className: 'zw-settingsPath' }, (info && info.storagePath) || t('common.loading'))
+        ),
+        h(
+          'div',
+          { className: 'zw-settingsBlock' },
+          h('div', { className: 'zw-settingsTitle' }, t('settings.switchTitle')),
+          h('div', { className: 'zw-settingsHint' }, t('settings.switchHint')),
+          h(
+            'div',
+            { className: 'zw-settingsForm' },
+            h('input', {
+              className: 'zw-input',
+              value: storageDraft,
+              placeholder: (info && info.defaultPath) || '',
+              onChange: (event) => setStorageDraft(event.target.value)
+            }),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm',
+                disabled: busy === 'storage',
+                onClick: saveStorage
+              },
+              t('settings.switchApply')
+            )
+          )
+        ),
+        h(
+          'div',
+          { className: 'zw-settingsBlock' },
+          h('div', { className: 'zw-settingsTitle' }, t('settings.modelTitle')),
+          h(
+            'div',
+            { className: 'zw-settingsHint' },
+            choices.available ? t('settings.modelHint') : t('settings.modelUnavailable')
+          ),
+          h(
+            'div',
+            { className: 'zw-settingsForm' },
+            h(Select, {
+              value: provider,
+              options: choices.providers.map((item) => ({ id: item.id, label: item.name })),
+              placeholder: t('settings.modelNone'),
+              onChange: (next) => {
+                setProvider(next)
+                setModel('')
+              }
+            }),
+            h(Select, {
+              value: model,
+              options: modelsForProvider.map((item) => ({ id: item.id, label: item.name })),
+              placeholder: t('settings.modelName'),
+              disabled: !provider,
+              onChange: setModel
+            }),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm' + (enabled ? ' zw-btnPrimary' : ''),
+                disabled: busy === 'model' || !provider || !model,
+                onClick: () => saveModel(!enabled)
+              },
+              enabled ? t('settings.modelOn') : t('settings.modelEnable')
+            )
+          )
+        ),
+        h(
+          'div',
+          { className: 'zw-settingsBlock' },
+          h('div', { className: 'zw-settingsTitle' }, t('settings.exportTitle')),
+          h('div', { className: 'zw-settingsHint' }, t('settings.exportHint')),
+          h(
+            'div',
+            { className: 'zw-settingsForm' },
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm',
+                disabled: busy === 'export',
+                onClick: exportData
+              },
+              h(Icon, { name: 'copy', size: 12 }),
+              t('settings.export')
+            ),
+            h('div', { className: 'zw-settingsTitle' }, t('settings.importTitle')),
+            h('div', { className: 'zw-settingsHint' }, t('settings.importHint')),            h(Select, {
+              value: importMode,
+              options: [
+                { id: 'merge', label: t('settings.importMerge') },
+                { id: 'replace', label: t('settings.importReplace') }
+              ],
+              onChange: setImportMode
+            }),
+            h('input', {
+              ref: fileRef,
+              className: 'zw-fileInput',
+              type: 'file',
+              accept: '.json,application/json',
+              onChange: (event) => {
+                const file = event.target.files && event.target.files[0]
+                importData(file)
+                event.target.value = ''
+              }
+            })
+          )
+        ),
+        message ? h('div', { className: 'zw-settingsHint' }, message) : null,
+        error ? h('div', { className: 'zw-error' }, error) : null
       )
     }
 
@@ -9999,6 +12293,8 @@ window.__ModuleLoader__.load({
       const [sort, setSort] = useState('updated')
       const [layout, setLayout] = useState('list')
       const [selectedId, setSelectedId] = useState('')
+      const [selectedNodeId, setSelectedNodeId] = useState('')
+      const [knView, setKnView] = useState('project')
       const [checked, setChecked] = useState([])
       const [graphSelection, setGraphSelection] = useState([])
       // 左栏默认展开（带文字导航），并记住用户自己的展开 / 收起选择。
@@ -10011,8 +12307,7 @@ window.__ModuleLoader__.load({
       const [assist, setAssist] = useState({ entryId: '', action: '', result: null, error: '', busy: false })
       const [tidyReport, setTidyReport] = useState(null)
       const [tidyBusy, setTidyBusy] = useState(false)
-      const [settings, setSettings] = useState(null)
-      const [modelChoices, setModelChoices] = useState({ available: true, providers: [], models: [] })
+      const [showHidden, setShowHidden] = useState(false)
       const [menu, setMenu] = useState(null)
       const dragProject = useRef('')
       const pendingProjects = useRef(null)
@@ -10030,6 +12325,7 @@ window.__ModuleLoader__.load({
           status: 'ready',
           meta: payload.meta || prev.meta || DEFAULT_META,
           entries: payload.entries || [],
+          nodes: payload.nodes || [],
           relations: payload.relations || [],
           collections: payload.collections || [],
           projects: payload.projects || [],
@@ -10084,6 +12380,7 @@ window.__ModuleLoader__.load({
 
       const meta = data.meta || DEFAULT_META
       const entries = data.entries || []
+      const nodes = data.nodes || []
       const relations = data.relations || []
       const collections = data.collections || []
       const frames = data.frames || []
@@ -10093,7 +12390,19 @@ window.__ModuleLoader__.load({
       const recalls = data.recalls || []
       const defaultProjectId = projects.length ? projects[0].id : 'prj_default'
 
+      const hiddenNodes = (data.layout && data.layout.hidden) || []
+      const hiddenSet = useMemo(() => new Set(hiddenNodes), [data.layout])
+      const visibleEntries = useMemo(
+        () => (showHidden ? entries : entries.filter((entry) => !hiddenSet.has(entry.id))),
+        [entries, showHidden, hiddenSet]
+      )
+      const visibleNodes = useMemo(
+        () => (showHidden ? nodes : nodes.filter((node) => !hiddenSet.has(node.id))),
+        [nodes, showHidden, hiddenSet]
+      )
+
       const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries])
+      const nodeById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes])
       const frameById = useMemo(() => new Map(frames.map((frame) => [frame.id, frame])), [frames])
       const collectionById = useMemo(
         () => new Map(collections.map((collection) => [collection.id, collection])),
@@ -10179,6 +12488,43 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         if (nav.kind === 'tidy' && !tidyReport && !tidyBusy) loadTidy(true)
       }, [nav.kind, tidyReport, tidyBusy, loadTidy])
+
+      const confirmAllCandidateNodes = useCallback(
+        async (ids) => {
+          const list = Array.isArray(ids) ? ids : []
+          if (!list.length) return
+          for (const id of list) {
+            await mutate({ action: 'node-save', id: id, status: 'active' })
+          }
+          notify(t('tidy.confirmAllDone') + ' ' + list.length, 'ok')
+          loadTidy(true)
+        },
+        [mutate, t, notify, loadTidy]
+      )
+
+      const toggleHiddenNode = useCallback(
+        async (node) => {
+          const current = (data.layout && data.layout.hidden) || []
+          const next = current.indexOf(node.id) >= 0 ? current.filter((id) => id !== node.id) : current.concat([node.id])
+          await mutate(
+            { action: 'layout-save', hidden: next },
+            current.indexOf(node.id) >= 0 ? t('kn.shown') : t('kn.hiddenDone')
+          )
+        },
+        [data.layout, mutate, t]
+      )
+
+      const restoreHiddenNodes = useCallback(async () => {
+        await mutate({ action: 'layout-save', hidden: [] }, t('kn.shown'))
+      }, [mutate, t])
+
+      const confirmCandidateNode = useCallback(
+        async (node) => {
+          await mutate({ action: 'node-save', id: node.id, status: 'active' }, t('kn.saved'))
+          loadTidy(true)
+        },
+        [mutate, t, loadTidy]
+      )
 
       const protectEntry = useCallback(
         (id, level) => mutate({ action: 'entry-protect', id: id, level: level }, t('toast.protected')),
@@ -10266,6 +12612,37 @@ window.__ModuleLoader__.load({
         [frameById, entryById]
       )
 
+      const nodeHits = useMemo(() => {
+        const needle = search.trim()
+        return nodes
+          .filter((node) => node.status !== 'merged')
+          .filter((node) => {
+            if (!needle) return true
+            const haystack = [node.title, node.description, (node.aliases || []).join(' '), (node.tags || []).join(' ')].join(' ')
+            return matchesQuery({ title: haystack }, needle)
+          })
+          .slice(0, 20)
+      }, [nodes, search])
+
+      const collectionHits = useMemo(() => {
+        const needle = search.trim()
+        if (!needle) return []
+        return collections
+          .filter((collection) => {
+            const haystack = [collection.name, collection.description, (collection.tags || []).join(' ')].join(' ')
+            return matchesQuery({ title: haystack }, needle)
+          })
+          .slice(0, 6)
+      }, [collections, search])
+
+      const projectHits = useMemo(() => {
+        const needle = search.trim()
+        if (!needle) return []
+        return projects
+          .filter((project) => matchesQuery({ title: [project.name, project.description].join(' ') }, needle))
+          .slice(0, 6)
+      }, [projects, search])
+
       const navEntries = useMemo(() => {
         let list = entries.slice()
         if (nav.kind === 'inbox') {
@@ -10306,6 +12683,7 @@ window.__ModuleLoader__.load({
       )
 
       const selectedEntry = selectedId ? entryById.get(selectedId) || null : null
+      const selectedNode = selectedNodeId ? nodeById.get(selectedNodeId) || null : null
 
       useEffect(() => {
         if (selectedId && !entryById.has(selectedId)) setSelectedId('')
@@ -10321,6 +12699,7 @@ window.__ModuleLoader__.load({
         if (nav.kind === 'graph') return t('view.graph')
         if (nav.kind === 'tidy') return t('tidy.title')
         if (nav.kind === 'recall') return t('recall.title')
+        if (nav.kind === 'knowledge') return t('nav.knowledge')
         if (nav.kind === 'project') {
           const project = projects.find((item) => item.id === nav.id)
           return project ? project.name : t('view.all')
@@ -10341,8 +12720,33 @@ window.__ModuleLoader__.load({
         setSelectedId('')
       }, [nav.kind, nav.id])
 
+      const searchRef = useRef(null)
+
+      // Ctrl/Cmd + K 把焦点送到搜索框；Enter 直接打开结果里的第一条。
+      useEffect(() => {
+        const onKeyDown = (event) => {
+          const key = String(event.key || '')
+          if ((event.ctrlKey || event.metaKey) && (key === 'k' || key === 'K')) {
+            event.preventDefault()
+            const input = searchRef.current
+            if (input && typeof input.focus === 'function') input.focus()
+            if (input && typeof input.select === 'function') input.select()
+          }
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+      }, [])
+
       const openEntry = useCallback((id) => {
         setSelectedId(id)
+        setSelectedNodeId('')
+        setDetailCollapsed(false)
+      }, [])
+
+      const openKnowledgeNode = useCallback((node) => {
+        if (!node) return
+        setSelectedNodeId(node.id)
+        setSelectedId('')
         setDetailCollapsed(false)
       }, [])
 
@@ -10377,10 +12781,15 @@ window.__ModuleLoader__.load({
             setNav({ kind: 'collection', id: id })
             return
           }
+          if (nodeById.has(id)) {
+            setGraphSelection([id])
+            openKnowledgeNode(nodeById.get(id))
+            return
+          }
           setGraphSelection([id])
           openEntry(id)
         },
-        [collectionById, openEntry, graphView]
+        [collectionById, openEntry, graphView, nodeById, openKnowledgeNode]
       )
 
       const toggleChecked = useCallback((id) => {
@@ -10460,13 +12869,21 @@ window.__ModuleLoader__.load({
 
       const createRelation = useCallback(
         async (payload) => {
-          const result = await mutate(
-            Object.assign({ action: 'relation-create' }, payload),
-            t('toast.relationCreated')
-          )
-          if (result) setModal(null)
+          const result = await mutate(Object.assign({ action: 'relation-create' }, payload))
+          if (result) {
+            if (result.relation && result.relation.id) {
+              notify(t('toast.relationCreated'), 'ok', {
+                label: t('action.undo'),
+                onClick: () =>
+                  mutate({ action: 'relation-delete', id: result.relation.id }, t('toast.relationDeleted'))
+              })
+            } else {
+              notify(t('toast.relationCreated'), 'ok')
+            }
+            setModal(null)
+          }
         },
-        [mutate, t]
+        [mutate, notify, t]
       )
 
       const decideRelation = useCallback(
@@ -10478,11 +12895,164 @@ window.__ModuleLoader__.load({
 
       const deleteRelation = useCallback(
         async (id) => {
-          await mutate({ action: 'relation-delete', id: id }, t('toast.relationDeleted'))
+          const relation = relations.find((item) => item.id === id)
+          const snapshot = relation
+            ? {
+                sourceType: relation.sourceType,
+                sourceId: relation.sourceId,
+                targetType: relation.targetType,
+                targetId: relation.targetId,
+                relationType: relation.relationType,
+                description: relation.description,
+                status: relation.status === 'suggested' ? 'confirmed' : relation.status
+              }
+            : null
+          await mutate({ action: 'relation-delete', id: id })
+          notify(t('toast.relationDeleted'), 'ok', snapshot
+            ? {
+                label: t('action.undo'),
+                onClick: () =>
+                  mutate(Object.assign({ action: 'relation-create' }, snapshot), t('toast.relationCreated'))
+              }
+            : null)
+        },
+        [mutate, notify, t, relations]
+      )
+
+      // 知识对象：新建 / 编辑 / 归档 / 关联记忆 / 建立关系 / 合并。
+      const correctPreference = useCallback(
+        async (node, fix) => {
+          const patch = { action: 'node-save', id: node.id }
+          if (fix.kind === 'narrow') patch.scope = 'project'
+          if (fix.kind === 'widen') patch.scope = 'global'
+          if (fix.kind === 'obsolete' || fix.kind === 'oneOff') patch.status = 'archived'
+          const note = String(fix.note || '').trim()
+          const label =
+            fix.kind === 'oneOff'
+              ? t('kn.oneOff')
+              : fix.kind === 'obsolete'
+              ? t('kn.obsolete')
+              : fix.kind === 'narrow'
+              ? t('kn.narrow')
+              : t('kn.widen')
+          patch.attributes = (node.attributes || []).concat([
+            { label: t('kn.correct'), value: note ? label + '：' + note : label }
+          ])
+          setModal(null)
+          await mutate(patch, t('kn.correctDone'))
         },
         [mutate, t]
       )
 
+      const saveNode = useCallback(
+        async (payload) => {
+          const body = Object.assign({ action: 'node-save' }, payload)
+          setBusy('node')
+          try {
+            const result = await mutateState(body)
+            applyState(result)
+            if (result.requiresConfirmation) {
+              setModal({ type: 'nodeTypeConfirm', payload: payload, affected: result.affectedRelations || [] })
+              return
+            }
+            if (result.duplicate && result.duplicate.length > 0) {
+              notify(t('kn.duplicate'), 'warn')
+              setModal({ type: 'node', node: null, duplicate: result.duplicate })
+              return
+            }
+            const saved = result.node
+            if (saved) {
+              setSelectedNodeId(saved.id)
+              setSelectedId('')
+              setDetailCollapsed(false)
+            }
+            setModal(null)
+            notify(payload.id ? t('kn.saved') : t('kn.created'), 'ok')
+          } catch (err) {
+            notify(errorText(err, t('error.write')), 'error')
+          } finally {
+            setBusy('')
+          }
+        },
+        [applyState, notify, t]
+      )
+
+      const archiveNode = useCallback(
+        async (node) => {
+          const next = node.status === 'archived' ? 'node-restore' : 'node-archive'
+          await mutate({ action: next, id: node.id }, node.status === 'archived' ? t('kn.restored') : t('kn.archived'))
+        },
+        [mutate, t]
+      )
+
+      const deleteNode = useCallback(
+        async (node) => {
+          const result = await mutate({ action: 'node-delete', id: node.id, mode: 'archive' }, t('kn.archived'))
+          if (result) setSelectedNodeId('')
+        },
+        [mutate, t]
+      )
+
+      const requestDeleteNode = useCallback((node) => {
+        if (node) setModal({ type: "nodeDelete", node: node })
+      }, [])
+
+      const hardDeleteNode = useCallback(
+        async (node) => {
+          const result = await mutate({ action: "node-delete", id: node.id, mode: "hard" }, t('kn.deleted'))
+          if (result) {
+            setSelectedNodeId("")
+            setModal(null)
+          }
+        },
+        [mutate, t]
+      )
+
+      const restoreNodeVersion = useCallback(
+        async (node, version) => {
+          if (!node || !version) return
+          await mutate(
+            { action: 'node-version-restore', nodeId: node.id, versionId: version.id },
+            t('kn.versionRestored')
+          )
+        },
+        [mutate, t]
+      )
+
+      const linkMemoryToNode = useCallback(
+        async (node, memoryId) => {
+          const result = await mutate({ action: 'node-link-memory', nodeId: node.id, memoryId: memoryId }, t('kn.linked'))
+          if (result) setModal(null)
+        },
+        [mutate, t]
+      )
+
+      const unlinkMemoryFromNode = useCallback(
+        async (node, entry) => {
+          const result = await mutate(
+            { action: 'node-unlink-memory', nodeId: node.id, memoryId: entry.id },
+            t('kn.unlinked')
+          )
+          if (result) setModal(null)
+        },
+        [mutate, t]
+      )
+
+      const createNodeRelation = useCallback(
+        async (payload) => {
+          const result = await mutate(Object.assign({ action: 'relation-create' }, payload), t('toast.relationCreated'))
+          if (result) setModal(null)
+        },
+        [mutate, t]
+      )
+
+      const mergeKnowledgeNodes = useCallback(
+        async (targetId, sourceId) => {
+          const result = await mutate({ action: 'node-merge', targetId: targetId, sourceId: sourceId }, t('kn.merged'))
+          if (result) setModal(null)
+        },
+        [mutate, t]
+      )
       const quickSave = useCallback(
         async (payload) => {
           setBusy('quick')
@@ -10735,13 +13305,17 @@ window.__ModuleLoader__.load({
 
       const addMembers = useCallback(
         async (collectionId, ids) => {
-          const result = await mutate(
-            { action: 'collection-members', id: collectionId, add: ids },
-            t('toast.membersAdded')
-          )
-          if (result) setModal(null)
+          const result = await mutate({ action: 'collection-members', id: collectionId, add: ids })
+          if (result) {
+            notify(t('toast.membersAdded'), 'ok', {
+              label: t('action.undo'),
+              onClick: () =>
+                mutate({ action: 'collection-members', id: collectionId, remove: ids }, t('toast.saved'))
+            })
+            setModal(null)
+          }
         },
-        [mutate, t]
+        [mutate, notify, t]
       )
 
       const removeMember = useCallback(
@@ -10749,6 +13323,27 @@ window.__ModuleLoader__.load({
           await mutate({ action: 'collection-members', id: collectionId, remove: [entryId] })
         },
         [mutate]
+      )
+
+      // 管理界面里勾选成员是「最终状态」，这里换算成增/删两个动作。
+      const syncMembers = useCallback(
+        async (collectionId, ids) => {
+          const collection = collectionById.get(collectionId)
+          const current = collection ? collection.memberIds : []
+          const next = Array.isArray(ids) ? ids : []
+          const add = next.filter((id) => !current.includes(id))
+          const remove = current.filter((id) => !next.includes(id))
+          if (!add.length && !remove.length) {
+            setModal(null)
+            return
+          }
+          const result = await mutate(
+            { action: 'collection-members', id: collectionId, add: add, remove: remove },
+            t('collections.membersChanged')
+          )
+          if (result) setModal(null)
+        },
+        [mutate, t, collectionById]
       )
 
       const mergeCollections = useCallback(
@@ -10805,6 +13400,14 @@ window.__ModuleLoader__.load({
         if (kind !== 'graph') setGraphSelection([])
       }, [])
 
+      const deleteView = useCallback(
+        async (view) => {
+          if (!view) return
+          const result = await mutate({ action: 'view-delete', viewId: view.id }, t('toast.viewDeleted'))
+          if (result && nav.kind === 'graph' && nav.id === view.id) setNav({ kind: 'graph', id: '' })
+        },
+        [mutate, t, nav]
+      )
       const restoreView = useCallback((view) => {
         const config = view.config || {}
         setGraphView(config)
@@ -10827,88 +13430,6 @@ window.__ModuleLoader__.load({
         graphStateRef.current = state
         setGraphView(state)
       }, [])
-
-      const openSettings = useCallback(async () => {
-        setModal({ type: 'settings' })
-        try {
-          const [choice, info] = await Promise.all([request(API, { body: JSON.stringify({ action: 'models.list' }) }), request(API, { body: JSON.stringify({ action: 'settings.get' }) })])
-          setModelChoices({
-            available: choice && choice.available !== false,
-            providers: (choice && choice.providers) || [],
-            models: (choice && choice.models) || []
-          })
-          setSettings((info && info.settings) || null)
-        } catch (err) {
-          setModelChoices({ available: false, providers: [], models: [] })
-          notify(errorText(err), 'error')
-        }
-      }, [notify])
-
-      const switchStorage = useCallback(
-        async (target) => {
-          try {
-            setBusy('storage')
-            const info = await request(API, { body: JSON.stringify({ action: 'settings.storage', storagePath: target }) })
-            setSettings((info && info.settings) || null)
-            await load()
-            notify(t('settings.switched'))
-          } catch (err) {
-            notify(errorText(err), 'error')
-          } finally {
-            setBusy('')
-          }
-        },
-        [load, notify, t]
-      )
-
-      const exportData = useCallback(async () => {
-        try {
-          const result = await request(API, { body: JSON.stringify({ action: 'export' }) })
-          const text = JSON.stringify(result.data || result, null, 2)
-          const blob = new Blob([text], { type: 'application/json' })
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = 'zhiwei-' + new Date().toISOString().slice(0, 10) + '.json'
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          setTimeout(() => URL.revokeObjectURL(url), 2000)
-          notify(t('settings.exported'))
-        } catch (err) {
-          notify(errorText(err), 'error')
-        }
-      }, [notify, t])
-
-      const importData = useCallback(
-        async (text, mode) => {
-          try {
-            setBusy('import')
-            const data = JSON.parse(text)
-            await mutate({ action: 'import', mode: mode, data: data }, t('settings.imported'))
-          } catch (err) {
-            notify(errorText(err), 'error')
-          } finally {
-            setBusy('')
-          }
-        },
-        [mutate, notify, t]
-      )
-
-      const pickModel = useCallback(
-        async (provider, model, enabled) => {
-          try {
-            const result = await request(API, {
-              body: JSON.stringify({ action: 'settings.model', provider: provider, model: model, enabled: Boolean(enabled) })
-            })
-            setSettings((prev) => Object.assign({}, prev || {}, { model: result.model }))
-            notify(t('settings.modelSaved'))
-          } catch (err) {
-            notify(errorText(err), 'error')
-          }
-        },
-        [notify, t]
-      )
 
       const saveFrame = useCallback(
         (payload) =>
@@ -11024,7 +13545,7 @@ window.__ModuleLoader__.load({
           )
         )
       }
-      const batchIds = nav.kind === 'graph' ? graphSelection : checked
+      const batchIds = nav.kind === 'graph' || nav.kind === 'knowledge' ? graphSelection : checked
       const clearBatch = () => {
         if (nav.kind === 'graph') setGraphSelection([])
         else setChecked([])
@@ -11073,7 +13594,12 @@ window.__ModuleLoader__.load({
             },
             onCreate: () => setModal({ type: 'collection' }),
             onAccept: acceptSuggestion,
-            onOpen: (id) => setNav({ kind: 'collection', id: id })
+            onOpen: (id) => setNav({ kind: 'collection', id: id }),
+            onEdit: (collection) => setModal({ type: 'collection', collection: collection }),
+            onMembers: (collection) =>
+              setModal({ type: 'members', collectionId: collection.id, sync: true }),
+            onMerge: (sourceId, targetId) => mergeCollections(sourceId, targetId),
+            onDelete: (collection) => deleteCollection(collection.id)
           })
         }
         if (nav.kind === 'collection') {
@@ -11101,6 +13627,19 @@ window.__ModuleLoader__.load({
         }
         if (nav.kind === 'tidy') {
           return h(TidyView, {
+            onConfirmNode: confirmCandidateNode,
+            onConfirmAllNodes: confirmAllCandidateNodes,
+            onOpenNode: (id) => {
+              const node = nodeById.get(id)
+              if (node) {
+                setNav({ kind: 'knowledge', id: '' })
+                openKnowledgeNode(node)
+              }
+            },
+            onMergeNodes: (aId, bId) => {
+              const node = nodeById.get(aId)
+              if (node) setModal({ type: 'nodeMerge', node: node, defaultTargetId: bId })
+            },
             t: t,
             meta: meta,
             report: tidyReport,
@@ -11121,13 +13660,62 @@ window.__ModuleLoader__.load({
             onOpen: openEntry
           })
         }
-        if (nav.kind === 'graph') {
+        if (nav.kind === 'knowledge') {
+          return h(KnowledgeView, {
+            key: 'knowledge',
+            t: t,
+            meta: meta,
+            entries: visibleEntries,
+            nodes: visibleNodes,
+            hiddenNodes: hiddenNodes,
+            showHidden: showHidden,
+            onShowHidden: setShowHidden,
+            onRestoreHidden: restoreHiddenNodes,
+            relations: relations,
+            collections: collections,
+            projects: projects,
+            stats: stats,
+            view: knView,
+            onView: setKnView,
+            selection: graphSelection,
+            initialConfig: graphView,
+            onSelect: onSelectGraphNode,
+            onOpenNode: openKnowledgeNode,
+            onMultiSelect: setGraphSelection,
+            onClearSelection: () => {
+              setSelectedNodeId('')
+              setSelectedId('')
+              setGraphSelection([])
+            },
+            onCreate: (parent) =>
+              setModal({
+                type: 'node',
+                node: null,
+                defaultParentId: parent && parent.id ? parent.id : '',
+                defaultType: parent && parent.id ? 'concept' : 'concept'
+              }),
+            onCreateRelation: (node) => setModal({ type: 'nodeRelation', sourceId: node.id }),
+            onDecideRelation: decideRelation,
+            frames: frames,
+            layout: data.layout || { positions: {}, updatedAt: '' },
+            onSaveFrame: saveFrame,
+            onSaveLayout: saveLayout,
+            onLayoutChange: saveLayoutQuiet,
+            onBatchAction: batchAction,
+            onOpenTidy: () => setNav({ kind: 'tidy', id: '' }),
+            onRequestDeleteNode: requestDeleteNode,
+            onState: onGraphState
+          })
+        }        if (nav.kind === 'graph') {
           return h(GraphView, {
             key: nav.id || 'graph',
             t: t,
             meta: meta,
-            entries: navEntries,
+            entries: visibleEntries,
             relations: relations,
+            hiddenNodes: hiddenNodes,
+            showHidden: showHidden,
+            onRestoreHidden: restoreHiddenNodes,
             collections: collections,
             projects: projects,
             stats: stats,
@@ -11153,6 +13741,7 @@ window.__ModuleLoader__.load({
               setNav({ kind: 'area', id: frame.id })
             },
             onDeleteFrame: deleteFrame,
+            onRequestDeleteNode: requestDeleteNode,
             onCreateFrame: (draft) => {
               const frames = data.frames || []
               setModal({
@@ -11192,6 +13781,77 @@ window.__ModuleLoader__.load({
             onSort: setSort,
             onChange: setFilters
           }),
+          (nodeHits.length || collectionHits.length || projectHits.length) && search.trim()
+            ? h(
+                'div',
+                { className: 'zw-hitGroups' },
+                nodeHits.length
+                  ? h(
+                      'div',
+                      { className: 'zw-knHits' },
+                      h('div', { className: 'zw-knHitsHead' }, t('kn.objects') + ' · ' + nodeHits.length),
+                      nodeHits.slice(0, 8).map((node) =>
+                        h(
+                          'button',
+                          {
+                            key: node.id,
+                            type: 'button',
+                            className: 'zw-knHit',
+                            onClick: () => {
+                              setNav({ kind: 'knowledge', id: '' })
+                              openKnowledgeNode(node)
+                            }
+                          },
+                          h(Icon, { name: 'layers', size: 13 }),
+                          h('span', { className: 'zw-knHitTitle' }, node.title),
+                          h('span', { className: 'zw-badge zw-badgeNeutral' }, labelOf(t, meta.nodeTypes, node.nodeType, 'type'))
+                        )
+                      )
+                    )
+                  : null,
+                collectionHits.length
+                  ? h(
+                      'div',
+                      { className: 'zw-knHits' },
+                      h('div', { className: 'zw-knHitsHead' }, t('search.collections') + ' · ' + collectionHits.length),
+                      collectionHits.map((collection) =>
+                        h(
+                          'button',
+                          {
+                            key: collection.id,
+                            type: 'button',
+                            className: 'zw-knHit',
+                            onClick: () => setNav({ kind: 'collection', id: collection.id })
+                          },
+                          h(Icon, { name: 'folder', size: 13 }),
+                          h('span', { className: 'zw-knHitTitle' }, collection.name),
+                          h('span', { className: 'zw-badge zw-badgeNeutral' }, (collection.memberIds || []).length + ' ' + t('collections.members'))
+                        )
+                      )
+                    )
+                  : null,
+                projectHits.length
+                  ? h(
+                      'div',
+                      { className: 'zw-knHits' },
+                      h('div', { className: 'zw-knHitsHead' }, t('search.projects') + ' · ' + projectHits.length),
+                      projectHits.map((project) =>
+                        h(
+                          'button',
+                          {
+                            key: project.id,
+                            type: 'button',
+                            className: 'zw-knHit',
+                            onClick: () => setNav({ kind: 'project', id: project.id })
+                          },
+                          h(Icon, { name: 'home', size: 13 }),
+                          h('span', { className: 'zw-knHitTitle' }, project.name)
+                        )
+                      )
+                    )
+                  : null
+              )
+            : null,
           h(MemoryList, {
             t: t,
             meta: meta,
@@ -11233,6 +13893,7 @@ window.__ModuleLoader__.load({
               writeFlag('railCollapsed', next)
             },
             onOpenView: restoreView,
+            onDeleteView: deleteView,
             onCreateProject: () => setModal({ type: 'project', mode: 'create' }),
             onProjectMenu: openProjectMenu,
             onProjectDragStart: (id) => {
@@ -11283,8 +13944,17 @@ window.__ModuleLoader__.load({
                   h('input', {
                     className: 'zw-searchInput',
                     value: search,
-                    placeholder: t('list.searchPlaceholder'),
-                    onChange: (event) => setSearch(event.target.value)
+                    placeholder: t('list.searchPlaceholder') + ' · ' + t('search.openHint'),
+                    ref: searchRef,
+                    onChange: (event) => setSearch(event.target.value),
+                    onKeyDown: (event) => {
+                      if (event.key !== 'Enter') return
+                      const first = navEntries[0]
+                      if (first) {
+                        event.preventDefault()
+                        openEntry(first.id)
+                      }
+                    }
                   }),
                   search
                     ? h(
@@ -11307,11 +13977,6 @@ window.__ModuleLoader__.load({
                     onClick: () => setModal({ type: 'observe', result: null })
                   },
                   h(Icon, { name: 'sparkle', size: 14 })
-                ),
-                h(
-                  'button',
-                  { type: 'button', className: 'zw-iconBtn', title: t('settings.title'), onClick: openSettings },
-                  h(Icon, { name: 'settings', size: 14 })
                 ),
                 h(
                   'button',
@@ -11380,6 +14045,42 @@ window.__ModuleLoader__.load({
                       'button',
                       {
                         type: 'button',
+                        className: 'zw-btn zw-btnSm',
+                        onClick: async () => {
+                          await mutate(
+                            { action: 'entry-bulk', ids: batchIds.slice(), op: 'status', status: 'archived' },
+                            t('toast.archived')
+                          )
+                          clearBatch()
+                        }
+                      },
+                      h(Icon, { name: 'bookmark', size: 12 }),
+                      t('batch.archive')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm',
+                        onClick: () => setModal({ type: 'batchTags', ids: batchIds.slice() })
+                      },
+                      h(Icon, { name: 'tag', size: 12 }),
+                      t('batch.tag')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm zw-btnGhost',
+                        onClick: () => setModal({ type: 'batchDelete', ids: batchIds.slice() })
+                      },
+                      h(Icon, { name: 'trash', size: 12 }),
+                      t('batch.delete')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
                         className: 'zw-btn zw-btnSm zw-btnGhost',
                         onClick: clearBatch
                       },
@@ -11392,9 +14093,38 @@ window.__ModuleLoader__.load({
               ? h('div', { className: 'zw-loadingBar' }, h('div', { className: 'zw-loadingFill' }))
               : null
           ),
-          selectedEntry
-            ? h(DetailRail, {
-            t: t,
+          selectedNode
+            ? h(
+                'aside',
+                { className: 'zw-detail', 'data-collapsed': 'false' },
+                h(NodeDetail, { onRestoreVersion: restoreNodeVersion,
+                  t: t,
+                  meta: meta,
+                  node: selectedNode,
+                  nodes: nodes,
+                  entries: entries,
+                  projects: projects,
+                  relations: relations
+                    .filter((relation) => relation.sourceId === selectedNode.id || relation.targetId === selectedNode.id)
+                    .filter((relation) => relation.sourceType === 'node' && relation.targetType === 'node'),
+                  onOpenNode: openKnowledgeNode,
+                  onOpenEntry: openEntry,
+                  onEdit: (node) => setModal({ type: 'node', node: node }),
+                  onArchive: archiveNode,
+                  onMerge: (node) => setModal({ type: 'nodeMerge', node: node }),
+            onCorrect: (node) => setModal({ type: 'preferenceFix', node: node }),
+                  onLinkMemory: (node) => setModal({ type: 'nodeMemory', nodeId: node.id }),
+                  onUnlinkMemory: unlinkMemoryFromNode,
+                  onCreateRelation: (node) => setModal({ type: 'nodeRelation', sourceId: node.id }),
+                  onDecideRelation: decideRelation,
+                  onDeleteRelation: (relation) => deleteRelation(relation.id),
+                  hiddenIds: hiddenNodes,
+                  onToggleHidden: toggleHiddenNode,
+                  onClose: () => setSelectedNodeId('')
+                })
+              )
+            : selectedEntry
+            ? h(DetailRail, {            t: t,
             meta: meta,
             entry: selectedEntry,
             collections: selectedEntry ? collectionsOf(selectedEntry.id) : [],
@@ -11412,6 +14142,8 @@ window.__ModuleLoader__.load({
             onDeleteRelation: deleteRelation,
             onOpen: openNode,
             onOpenCollection: (id) => setNav({ kind: 'collection', id: id }),
+            nodesOf: (entry) => nodes.filter((node) => (node.relatedMemoryIds || []).indexOf(entry.id) >= 0),
+            onOpenNode: openKnowledgeNode,
             onDelete: deleteEntry,
             assist: {
               busy: assist.busy && assist.entryId === selectedId,
@@ -11445,20 +14177,6 @@ window.__ModuleLoader__.load({
               y: menu.y,
               items: menu.items,
               onClose: () => setMenu(null)
-            })
-          : null,
-        modal && modal.type === 'settings'
-          ? h(SettingsDialog, {
-              t: t,
-              settings: settings,
-              modelChoices: modelChoices,
-              model: (settings && settings.model) || null,
-              busy: busy === 'storage',
-              onSwitchStorage: switchStorage,
-              onExport: exportData,
-              onImport: importData,
-              onPickModel: pickModel,
-              onClose: () => setModal(null)
             })
           : null,
         modal && modal.type === 'project'
@@ -11563,8 +14281,11 @@ window.__ModuleLoader__.load({
               t: t,
               projects: projects,
               defaultProjectId: defaultProjectId,
+              collection: modal.collection || null,
               saving: busy === 'collection-save',
               onCreate: saveCollection,
+              onSave: (patch) =>
+                updateCollection(Object.assign({ id: modal.collection.id }, patch)),
               onClose: () => setModal(null)
             })
           : null,
@@ -11577,9 +14298,53 @@ window.__ModuleLoader__.load({
                 ? collectionById.get(modal.collectionId).memberIds
                 : [],
               saving: busy === 'collection-members',
-              onApply: (ids) => addMembers(modal.collectionId, ids),
+              onApply: (ids) =>
+                modal.sync ? syncMembers(modal.collectionId, ids) : addMembers(modal.collectionId, ids),
               onClose: () => setModal(null)
             })
+          : null,
+        modal && modal.type === 'batchTags'
+          ? h(BatchTagDialog, {
+              t: t,
+              saving: busy === 'entry-bulk',
+              onClose: () => setModal(null),
+              onApply: async (tag) => {
+                await mutate(
+                  { action: 'entry-bulk', ids: modal.ids, op: 'addTag', value: tag },
+                  t('toast.tagged')
+                )
+                setModal(null)
+                clearBatch()
+              }
+            })
+          : null,
+        modal && modal.type === 'batchDelete'
+          ? h(
+              Modal,
+              {
+                title: t('batch.deleteTitle'),
+                icon: 'trash',
+                onClose: () => setModal(null),
+                footer: [
+                  h('button', { key: 'cancel', type: 'button', className: 'zw-btn zw-btnGhost', onClick: () => setModal(null) }, t('action.cancel')),
+                  h(
+                    ConfirmButton,
+                    {
+                      key: 'ok',
+                      label: t('action.delete'),
+                      confirmLabel: t('action.deleteConfirm'),
+                      disabled: busy === 'entry-bulk',
+                      onConfirm: async () => {
+                        await mutate({ action: 'entry-bulk', ids: modal.ids, op: 'delete' }, t('toast.deleted'))
+                        setModal(null)
+                        clearBatch()
+                      }
+                    }
+                  )
+                ]
+              },
+              h('p', { className: 'zw-proseP' }, t('batch.deleteText'))
+            )
           : null,
         modal && modal.type === 'batchCollection'
           ? h(CollectionPicker, {
@@ -11625,7 +14390,47 @@ window.__ModuleLoader__.load({
               onClose: () => setModal(null)
             })
           : null,
-        modal && modal.type === 'saveView'
+        modal && modal.type === 'node'
+          ? h(NodeDialog, {
+              t: t,
+              meta: meta,
+              projects: projects,
+              nodes: nodes,
+              node: modal.node || null,
+              defaultParentId: modal.defaultParentId || '',
+              defaultType: modal.defaultType || 'concept',
+              defaultProjectId: defaultProjectId,
+              saving: busy === 'node',
+              onSave: saveNode,
+              onOpenNode: (node) => {
+                setModal({ type: 'node', node: node })
+              },
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'nodeRelation'
+          ? h(NodeRelationDialog, {
+              t: t,
+              meta: meta,
+              source: nodeById.get(modal.sourceId) || { id: modal.sourceId, title: '' },
+              nodes: nodes,
+              entries: entries,
+              saving: busy === 'relation',
+              onSave: createNodeRelation,
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'nodeMemory'
+          ? h(NodeMemoryPicker, {
+              t: t,
+              meta: meta,
+              node: nodeById.get(modal.nodeId) || null,
+              entries: entries,
+              saving: busy === 'node-link',
+              onPick: (entry) => linkMemoryToNode(nodeById.get(modal.nodeId), entry.id),
+              onClose: () => setModal(null)
+            })
+          : null,        modal && modal.type === 'saveView'
           ? h(NameDialog, {
               t: t,
               title: t('graph.saveView'),
@@ -11672,7 +14477,105 @@ window.__ModuleLoader__.load({
               },
               onClose: () => setModal(null)
             })
-          : null
+          : null,
+        modal && modal.type === 'nodeDelete'
+          ? h(
+              Modal,
+              {
+                title: t('kn.deleteTitle'),
+                icon: 'trash',
+                onClose: () => setModal(null),
+                footer: h(
+                  'div',
+                  { className: 'zw-modalFoot' },
+                  h(
+                    'button',
+                    { className: 'zw-btn zw-btnGhost', type: 'button', onClick: () => setModal(null) },
+                    t('action.cancel')
+                  ),
+                  h(
+                    'button',
+                    { className: 'zw-btn', type: 'button', disabled: busy === 'node', onClick: () => archiveNode(modal.node) },
+                    t('kn.archiveAction')
+                  ),
+                  h(ConfirmButton, {
+                    className: 'zw-btn zw-btnDanger',
+                    label: t('kn.deleteHard'),
+                    confirmLabel: t('action.deleteConfirm'),
+                    onConfirm: () => hardDeleteNode(modal.node)
+                  })
+                )
+              },
+              h(
+                'div',
+                { className: 'zw-form' },
+                h('div', { className: 'zw-hint' }, t('kn.deleteText')),
+                h('div', { className: 'zw-nodeMeta' }, modal.node.title + ' · ' + labelOf(t, meta.nodeTypes, modal.node.nodeType, 'type')),
+                h('div', { className: 'zw-hint' }, t('kn.deleteArchiveHint'))
+              )
+            )
+          : null,
+        modal && modal.type === 'nodeTypeConfirm'
+          ? h(
+              Modal,
+              {
+                title: t('kn.typeChangeTitle'),
+                icon: 'warning',
+                onClose: () => setModal(null),
+                footer: h(
+                  'div',
+                  { className: 'zw-modalFoot' },
+                  h('button', { className: 'zw-btn zw-btnGhost', type: 'button', onClick: () => setModal(null) }, t('action.cancel')),
+                  h(
+                    'button',
+                    {
+                      className: 'zw-btn zw-btnPrimary',
+                      type: 'button',
+                      onClick: () => saveNode(Object.assign({}, modal.payload, { forceTypeChange: true }))
+                    },
+                    t('kn.typeChangeConfirm')
+                  )
+                )
+              },
+              h(
+                'div',
+                { className: 'zw-form' },
+                h('div', { className: 'zw-hint' }, t('kn.typeChangeText')),
+                h(
+                  'div',
+                  { className: 'zw-assistList' },
+                  (modal.affected || []).map((relation) =>
+                    h(
+                      'div',
+                      { className: 'zw-assistItem', key: relation.id },
+                      h('div', { className: 'zw-assistItemTop' }, labelOf(t, meta.relationTypes, relation.relationType, 'relation')),
+                      relation.description ? h('div', { className: 'zw-assistReason' }, relation.description) : null
+                    )
+                  )
+                )
+              )
+            )
+          : null,
+        modal && modal.type === 'preferenceFix'
+          ? h(PreferenceFixDialog, {
+              t: t,
+              node: modal.node,
+              onSave: (fix) => correctPreference(modal.node, fix),
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'nodeMerge'
+          ? h(NodeMergeDialog, {
+              t: t,
+              meta: meta,
+              node: modal.node,
+              nodes: nodes,
+              entries: entries,
+              saving: busy === 'node',
+              onSave: (targetId, sourceId) => mergeKnowledgeNodes(targetId, sourceId),
+              onClose: () => setModal(null)
+            })
+          : null,
       )
     }
 
@@ -11701,6 +14604,22 @@ window.__ModuleLoader__.load({
             locale: NS
           },
           DesignMemoryPanel
+        )
+      )
+      // 设置进 DSH 自己的设置页（储物位置 / 整理用的模型 / 导入导出）。
+      ctx.slots.inject('settings.section', () =>
+        ctx.slots.register(
+          {
+            name: 'settings.section',
+            id: PANEL_ID,
+            order: 120,
+            label: () => t('settings.sectionLabel')
+          },
+          (props) =>
+            h(SettingsSection, {
+              t: t,
+              close: props && typeof props.close === 'function' ? props.close : () => {}
+            })
         )
       )
     }

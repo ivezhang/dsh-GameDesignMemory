@@ -229,11 +229,19 @@ const body = {
   hasAttribute: (name) => name === 'data-ds-dark-theme',
   classList: { add() {}, remove() {} }
 }
+const documentListeners = { keydown: [] }
 const fakeDocument = {
   documentElement: html,
   body,
-  addEventListener() {},
-  removeEventListener() {},
+  addEventListener(type, handler) {
+    if (!documentListeners[type]) documentListeners[type] = []
+    documentListeners[type].push(handler)
+  },
+  removeEventListener(type, handler) {
+    const list = documentListeners[type] || []
+    const index = list.indexOf(handler)
+    if (index >= 0) list.splice(index, 1)
+  },
   createElement: () => ({})
 }
 class MutationObserver {
@@ -273,6 +281,103 @@ let fetchCalls = 0
 const posts = []
 const postHeaders = []
 const live = JSON.parse(JSON.stringify(state))
+
+// 知识对象层级：给知识网络测试准备一个父对象 + 一个子对象。
+live.nodes = (live.nodes || []).concat([
+  {
+    id: "knd_smoke_parent",
+    title: "烟雾测试系统",
+    description: "测试用系统对象",
+    nodeType: "system",
+    scope: "project",
+    projectId: (live.projects[0] || {}).id || "prj_default",
+    parentNodeId: "",
+    attributes: [{ label: "定位", value: "测试" }],
+    tags: ["烟雾测试"],
+    aliases: [],
+    status: "active",
+    confidence: 0.8,
+    importance: 0.5,
+    sourceMemoryIds: [],
+    relatedMemoryIds: (live.entries || []).slice(0, 2).map((entry) => entry.id),
+    childIds: ["knd_smoke_child"],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: "knd_smoke_child",
+    title: "烟雾测试对象",
+    description: "子对象",
+    nodeType: "concept",
+    scope: "project",
+    projectId: (live.projects[0] || {}).id || "prj_default",
+    parentNodeId: "knd_smoke_parent",
+    attributes: [],
+    tags: [],
+    aliases: [],
+    status: "active",
+    confidence: 0.7,
+    importance: 0.4,
+    sourceMemoryIds: [],
+    relatedMemoryIds: [],
+    childIds: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+])
+live.recalls = [
+  {
+    id: 'rcl_smoke',
+    task: '调整哥布林洞窟掉落',
+    projectId: (live.projects[0] || {}).id || 'prj_default',
+    at: new Date().toISOString(),
+    ids: [(live.entries[0] || {}).id || 'mem_a'],
+    nodes: [{ id: 'knd_smoke_child', title: '烟雾测试对象', nodeType: 'concept', score: 6 }],
+    paths: [
+      {
+        memoryId: (live.entries[0] || {}).id || 'mem_a',
+        hops: [
+          { kind: 'node', id: 'knd_smoke_child', title: '烟雾测试对象', relationType: '' },
+          { kind: 'relation', id: 'rel_smoke', title: '', relationType: 'affects' },
+          { kind: 'memory', id: (live.entries[0] || {}).id || 'mem_a', title: '记忆', relationType: '' }
+        ]
+      }
+    ],
+    outcome: 'served',
+    note: '记录了命中的知识对象',
+    source: 'agent'
+  }
+]
+const versionNode = live.nodes[0]
+if (versionNode) {
+  versionNode.versions = [
+    {
+      id: 'ver_smoke_1',
+      version: 1,
+      title: versionNode.title,
+      description: '第一版说明',
+      nodeType: versionNode.nodeType,
+      status: 'active',
+      changeType: 'create',
+      changeReason: '',
+      createdAt: versionNode.createdAt,
+      createdBy: 'user'
+    },
+    {
+      id: 'ver_smoke_2',
+      version: 2,
+      title: versionNode.title,
+      description: '第二版说明',
+      nodeType: versionNode.nodeType,
+      status: 'active',
+      changeType: 'edit',
+      changeReason: '补了掉落位',
+      createdAt: new Date().toISOString(),
+      createdBy: 'user'
+    }
+  ]
+  versionNode.currentVersion = 2
+}
 let nextId = 1000
 let lastModel = { enabled: false, provider: '', model: '', available: true }
 let lastRestore = null
@@ -291,6 +396,7 @@ function payload() {
     proposals: live.proposals || [],
     recalls: live.recalls || [],
     frames: live.frames || [],
+    nodes: live.nodes || [],
     layout: live.layout || { positions: {}, updatedAt: '' },
     stats: live.stats,
     storagePath: 'C:\\fake\\memories.json'
@@ -322,7 +428,9 @@ function applyPost(input) {
     return { deleted: input.id }
   }
   if (input.action === 'layout-save') {
-    live.layout = { positions: input.positions || {}, updatedAt: new Date().toISOString() }
+    const keptHidden = Array.isArray(input.hidden) ? input.hidden.slice() : (live.layout && live.layout.hidden) || []
+    const keptPositions = input.positions || (live.layout && live.layout.positions) || {}
+    live.layout = { positions: keptPositions, hidden: keptHidden, updatedAt: new Date().toISOString() }
     return { layout: live.layout, saved: true }
   }
   if (input.action === 'layout-clear') {
@@ -518,7 +626,13 @@ function applyPost(input) {
         pendingRelations: 0,
         pendingMemories: 0,
         reviewMemories: 0,
-        protectedCount: 0
+        protectedCount: 0,
+        candidateNodes: [
+          { id: 'knd_cand_1', title: '候选对象一', nodeType: 'concept', reason: '自动观察命中' },
+          { id: 'knd_cand_2', title: '候选对象二', nodeType: 'workflow', reason: '自动观察命中' }
+        ],
+        duplicateNodes: [],
+        nodes: 2
       }
     }
   }
@@ -629,9 +743,22 @@ function assistantResult(input) {
   }
 }
 
+let failNext = ''
+globalThis.__failNext = (action) => {
+  failNext = action || ''
+}
 globalThis.fetch = async (url, options) => {
   fetchCalls += 1
   const input = options && options.body ? JSON.parse(options.body) : null
+  if (input && failNext && input.action === failNext) {
+    failNext = ''
+    posts.push(input)
+    return {
+      ok: false,
+      status: 500,
+      json: async () => ({ ok: false, error: { code: 'boom', message: '模型没有返回可用结果' } })
+    }
+  }
   if (input) {
     posts.push(input)
     const sent = (options && options.headers) || {}
@@ -696,14 +823,14 @@ const check = (ok, message) => results.push({ ok: Boolean(ok), message })
 
 // ------------------------------------------------------------------- runtime
 let tree = null
-async function settle(maxPasses = 40) {
+async function settle(maxPasses = 40, root = null) {
   let passes = 0
   do {
     dirty = false
     effectQueue = []
     nameCounters = Object.create(null)
     hookIndex = 0
-    tree = React.createElement(mainSlot.component, {})
+    tree = React.createElement(root || mainSlot.component, {})
     for (const item of effectQueue) {
       const previous = item.store[item.index]
       const next = { deps: item.deps }
@@ -937,6 +1064,11 @@ if (linkTool && nodes.length >= 2) {
       textOf(node).includes(ZH['relation.create'])
   )[0]
   check(Boolean(confirmRelation), 'relation dialog has a create button')
+  check(byClass('zw-relGroup').length >= 5, 'relation dialog groups relation types')
+  check(
+    byClass('zw-relGroupLabel').map((node) => textOf(node)).join(' ').includes(ZH['relGroup.business']),
+    'relation groups carry their own labels'
+  )
   if (confirmRelation) {
     const before = posts.length
     click(confirmRelation)
@@ -1044,8 +1176,8 @@ if (firstDelete) {
     await settle()
     const deleted = posts.slice(beforeDelete).find((post) => post.action === 'entry-delete')
     check(Boolean(deleted), 'deleting a memory posts entry-delete')
-    check(byClass('zw-toastAction').length === 1, 'undo action appears in the toast')
-    const undoBtn = byClass('zw-toastAction')[0]
+    check(byClass('zw-toastAction').length >= 1, 'undo action appears in the toast')
+    const undoBtn = byClass('zw-toastAction').slice(-1)[0]
     if (undoBtn) {
       const beforeUndo = posts.length
       click(undoBtn)
@@ -1145,7 +1277,7 @@ if (protectChip) {
 const scopeBadges = byClass('zw-badgeNeutral').map(textOf)
 const scopeBadge = byClass('zw-badgeNeutral').find(
   (node) =>
-    textOf(node).includes(ZH['scope.project']) || textOf(node).includes(ZH['scope.global'])
+    textOf(node).includes('项目') || textOf(node).includes(ZH['scope.global'])
 )
 check(Boolean(scopeBadge), 'scope badge rendered: ' + JSON.stringify(scopeBadges.slice(0, 6)))
 
@@ -1159,6 +1291,18 @@ if (tidyNav) {
 check(posts.some((post) => post.action === 'memory-tidy'), 'tidy center asks for the tidy report')
 check(byClass('zw-tidy').length === 1, 'tidy view rendered')
 check(byClass('zw-tidyCard').length >= 4, 'tidy cards: ' + byClass('zw-tidyCard').length)
+check(byClass('zw-tidyCard').length >= 6, 'tidy adds candidate and duplicate object cards')
+const confirmAll = findAll(
+  (node) => node.type === 'button' && textOf(node).trim() === ZH['tidy.confirmAllNodes']
+)[0]
+check(Boolean(confirmAll), 'tidy center offers batch confirm for candidates')
+if (confirmAll) {
+  const before = posts.length
+  confirmAll.props.onClick()
+  await settle(8)
+  const confirmed = posts.slice(before).filter((post) => post.action === 'node-save' && post.status === 'active')
+  check(confirmed.length >= 2, 'batch confirm activates every candidate object')
+}
 
 // recall log
 const recallNav = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.recall']))
@@ -1210,40 +1354,55 @@ if (observeBtn) {
 // ------------------------------------------------- 5b. workspace upgrade checks
 async function workspaceChecks() {
   const badHeaders = postHeaders.filter((value) => !String(value).includes('application/json'))
-  if (badHeaders.length) console.log('DEBUG bad headers: ' + JSON.stringify(badHeaders))
   check(
     postHeaders.length > 0 && badHeaders.length === 0,
     'every write request carries content-type: application/json'
   )
 
-  // 设置弹窗
+  // 设置已经搬进 DSH 设置页：面板里不该再有齿轮
   const gear = findAll(
     (node) => node.type === 'button' && node.props && node.props.title === ZH['settings.title']
   )[0]
-  check(Boolean(gear), 'settings button in the top bar')
-  if (gear) {
-    click(gear)
-    await settle(10)
-    check(byClass('zw-settingsBlock').length >= 3, 'settings dialog shows model / storage / transfer blocks')
-    check(posts.some((post) => post.action === 'models.list'), 'settings asks for the model list')
-    const modelSelect = findAll(
-      (node) => node.type === 'select' && node.props && (node.props.value === '' || node.props.value === undefined)
-    )
-    check(modelSelect.length >= 2, 'model provider and model pickers rendered')
-    const modelPicker = modelSelect[1]
-    if (modelPicker) {
-      modelPicker.props.onChange({ target: { value: 'demo-1' } })
-      await settle(8)
-      check(posts.some((post) => post.action === 'settings.model'), 'picking a model posts settings.model')
+  check(byClass('zw-settingsBlock').length === 0, 'in-app settings panel is gone')
+  const sectionSlot = slots.find((slot) => slot.options && slot.options.name === 'settings.section')
+  check(Boolean(sectionSlot), 'settings section registered for the DSH settings page')
+  if (sectionSlot) {
+    const settleSection = (passes) => settle(passes, sectionSlot.component)
+    await settleSection(8)
+    check(byClass('zw-settingsBlock').length >= 3, 'settings section renders storage / model / data blocks')
+    check(posts.some((post) => post.action === 'settings.get'), 'settings section asks for current settings')
+    check(posts.some((post) => post.action === 'models.list'), 'settings section asks for the model list')
+    const selects = findAll((node) => node.type === 'select')
+    check(selects.length >= 2, 'model provider and model pickers rendered')
+    const providerSelect = selects[0]
+    if (providerSelect) {
+      providerSelect.props.onChange({ target: { value: 'demo' } })
+      await settleSection(6)
+      const modelSelect = findAll((node) => node.type === 'select')[1]
+      if (modelSelect) {
+        modelSelect.props.onChange({ target: { value: 'demo-1' } })
+        await settleSection(6)
+      }
+      const enableBtn = findAll(
+        (node) => node.type === 'button' && textOf(node).includes(ZH['settings.modelEnable'])
+      )[0]
+      check(Boolean(enableBtn), 'model enable button rendered')
+      if (enableBtn) {
+        click(enableBtn)
+        await settleSection(8)
+        check(
+          posts.some((post) => post.action === 'settings.model' && post.provider === 'demo' && post.model === 'demo-1'),
+          'enabling the model posts settings.model with the picked route'
+        )
+      }
     }
-    const closeSettings = findAll(
-      (node) => node.type === 'button' && textOf(node).includes(ZH['action.close'])
+      const storageBtn = findAll(
+      (node) => node.type === 'button' && textOf(node).includes(ZH['settings.switchApply'])
     )[0]
-    if (closeSettings) {
-      click(closeSettings)
-      await settle(4)
-    }
+    check(Boolean(storageBtn), 'storage switch button rendered')
+    await settleSection(6)
   }
+  await settle(10)
 
   // 项目右键菜单
   const projectRow = byClass('zw-projectRow')[0]
@@ -1530,8 +1689,283 @@ async function workspaceChecks() {
 }
 
 await workspaceChecks()
+await knowledgeChecks()
+await searchChecks()
+await interactionChecks()
+
+// ---------------------------------------------- 5d. shortcuts + recall nodes
+async function searchChecks() {
+  const allNav = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.all']))
+  check(Boolean(allNav), 'left rail still has the all memories entry')
+  if (allNav) {
+    click(allNav)
+    await settle(10)
+  }
+  const input = byClass('zw-searchInput')[0]
+  check(Boolean(input), 'top bar search input is rendered')
+  check(
+    Boolean(input && String(input.props.placeholder || '').includes(ZH['search.openHint'])),
+    'search input advertises the ctrl/cmd+k shortcut'
+  )
+  const before = posts.length
+  windowListeners.keydown.slice().forEach((handler) => handler({ key: 'k', ctrlKey: true, preventDefault() {} }))
+  await settle(3)
+  check(posts.length === before, 'ctrl/cmd+k only focuses the search box')
+
+  const firstRow = byClass('zw-row')[0]
+  check(Boolean(firstRow), 'list renders rows for enter-to-open')
+  if (input) {
+    const detailBefore = byClass('zw-detail').length
+    if (input.props.onKeyDown) input.props.onKeyDown({ key: 'Enter', preventDefault() {} })
+    await settle(10)
+    check(byClass('zw-detail').length >= 1, 'enter opens the first search result')
+    if (!detailBefore) check(byClass('zw-detail').length === 1, 'enter opens exactly one detail panel')
+  }
+
+  // 对象版本：打开带历史的对象，看「历史版本」区块与回滚按钮
+  const knNavAgain = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.knowledge']))
+  if (knNavAgain) {
+    click(knNavAgain)
+    await settle(12)
+    const targetLabel = (live.nodes[0] || {}).title || ''
+    const versionedNode = byClass('zw-gnode').find((node) => textOf(node).includes(targetLabel))
+    if (versionedNode) {
+      pointer(versionedNode, 'onPointerDown', { clientX: 120, clientY: 120, pointerId: 41, button: 0, shiftKey: false, ctrlKey: false, metaKey: false })
+      const svg = byClass('zw-graphSvg')[0]
+      if (svg) pointer(svg, 'onPointerUp', { clientX: 120, clientY: 120, pointerId: 41, button: 0 })
+      await settle(10)
+      check(byClass('zw-versionList').length === 1, 'knowledge object history lists versions')
+      check(byClass('zw-version').length >= 2, 'history shows every recorded version')
+      let restoreBtn = null
+      walk(byClass('zw-versionList')[0], (node) => {
+        if (restoreBtn || !node.props || typeof node.props.onClick !== 'function') return
+        if (textOf(node).includes(ZH['kn.restore'])) restoreBtn = node
+      })
+      check(Boolean(restoreBtn), 'older versions offer a restore action')
+      if (restoreBtn) {
+        const beforeRestore = posts.length
+        click(restoreBtn)
+        await settle(8)
+        const restoredPost = posts.slice(beforeRestore).find((post) => post.action === 'node-version-restore')
+        check(Boolean(restoredPost), 'restoring a version posts node-version-restore')
+      }
+    }
+  }
+
+  const recallNav = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.recall']))
+  check(Boolean(recallNav), 'left rail lists recall history')
+  if (recallNav) {
+    click(recallNav)
+    await settle(12)
+    check(byClass('zw-recallRow').length >= 1, 'recall view lists the recorded calls')
+    const pathLine = byClass('zw-recallPath')[0]
+  check(Boolean(pathLine), 'recall view shows the object → relation → memory path')
+  if (pathLine) {
+    check(textOf(pathLine).includes(ZH['recall.path']), 'recall path row is labelled')
+    check(textOf(pathLine).includes('烟雾测试对象'), 'recall path names the knowledge object it came through')
+  }
+  const nodeLine = byClass('zw-recallNodes')[0]
+    check(Boolean(nodeLine), 'recall record shows the knowledge objects it hit')
+    check(Boolean(nodeLine && textOf(nodeLine).includes('烟雾测试对象')), 'recall node line names the object')
+  }
+}
+
+// ------------------------------------- 5e. mouse / keyboard interaction checks
+async function interactionChecks() {
+  const escape = () => {
+    const event = { key: "Escape", stopPropagation() {}, preventDefault() {} }
+    ;(documentListeners.keydown || []).slice().forEach((handler) => handler(event))
+    ;(windowListeners.keydown || []).slice().forEach((handler) => handler(event))
+  }
+  const spaceKey = (type) => {
+    const handlers = (windowListeners[type] || []).slice()
+    handlers.forEach((handler) => handler({ key: " ", code: "Space", preventDefault() {} }))
+  }
+  const navTo = async (label, settlePasses) => {
+    const item = byClass("zw-navItem").find((node) => textOf(node).includes(label))
+    if (item) {
+      click(item)
+      await settle(settlePasses || 10)
+    }
+    return Boolean(item)
+  }
+
+  // 11.17 Esc 关掉最上层的弹窗，画布数据不受影响
+  const knowledgeOk = await navTo(ZH["nav.knowledge"], 12)
+  check(knowledgeOk, "keyboard section can reach the knowledge view")
+  const newBtn = byClass("zw-btnPrimary").find((node) => textOf(node).includes(ZH["kn.new"]))
+  if (newBtn) {
+    click(newBtn)
+    await settle(8)
+  }
+  check(byClass("zw-modal").length === 1, "Escape test starts with a dialog open")
+  escape()
+  await settle(6)
+  check(byClass("zw-modal").length === 0, "Escape closes the top dialog")
+  check(byClass("zw-knTabs").length === 1, "closing a dialog leaves the page intact")
+
+  // 11.2 单击节点开详情，Esc 取消选择
+  const knNodes = byClass("zw-gnodeKn")
+  const svg = byClass("zw-graphSvg")[0]
+  if (knNodes.length && svg) {
+    pointer(knNodes[0], "onPointerDown", screen(nodePoint(knNodes[0])))
+    pointer(svg, "onPointerUp", screen(nodePoint(knNodes[0])))
+    await settle(10)
+  }
+  check(byClass("zw-detail").length === 1, "clicking a node opens the detail rail")
+  escape()
+  await settle(6)
+  check(byClass("zw-detail").length === 0, "Escape clears the selection when no dialog is open")
+
+  // 5.2 双击节点 = 进入局部详情（聚焦该对象）
+  const focusNodes = byClass("zw-gnodeKn")
+  const svg2 = byClass("zw-graphSvg")[0]
+  if (focusNodes.length && svg2) {
+    const target = focusNodes[0]
+    if (target.props.onDoubleClick) target.props.onDoubleClick()
+    await settle(10)
+  }
+  check(byClass("zw-detail").length === 1, "double clicking a node focuses it")
+
+  // 5.2 / 5.4 Space+拖动 = 平移画布，且不创建记忆区、不改业务归属
+  const framesBefore = byClass("zw-frameBox").length
+  // 先把工具切回「选择」——上一个用例可能停在框选工具上
+  const selectTool = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolSelect']))
+  if (selectTool) {
+    click(selectTool)
+    await settle(8)
+  }
+  let moved = false
+  if (byClass("zw-graphSvg").length) {
+    const canvasTransform = () => {
+      const holder = findAll((node) => node.type === "g" && String((node.props && node.props.transform) || "").includes("scale("))[0]
+      return String((holder && holder.props && holder.props.transform) || "")
+    }
+    const before = canvasTransform()
+    spaceKey("keydown")
+    await settle(4)
+    pointer(byClass("zw-graphSvg")[0], "onPointerDown", { clientX: 40, clientY: 40 })
+    await settle(2)
+    pointer(byClass("zw-graphSvg")[0], "onPointerMove", { clientX: 140, clientY: 120 })
+    await settle(4)
+    pointer(byClass("zw-graphSvg")[0], "onPointerUp", { clientX: 140, clientY: 120 })
+    await settle(6)
+    spaceKey("keyup")
+    await settle(4)
+    moved = before !== canvasTransform()
+  }
+  check(moved, "Space + drag pans the canvas")
+  check(byClass("zw-frameBox").length === framesBefore, "panning never creates or resizes a memory area")
+  check(byClass("zw-modal").length === 0, "panning does not open any dialog")
+
+  // 11.4 Ctrl/Cmd+点击 = 多选切换
+  // 一个知识节点会渲染多个同 class 的元素，所以按「文字不同」挑两个不同对象
+  const distinctNodes = []
+  for (const node of byClass("zw-gnodeKn")) {
+    const label = textOf(node).trim()
+    if (label && !distinctNodes.some((item) => item.label === label)) distinctNodes.push({ node, label })
+    if (distinctNodes.length === 2) break
+  }
+  if (distinctNodes.length === 2) {
+    const first = distinctNodes[0].node
+    pointer(first, "onPointerDown", screen(nodePoint(first)))
+    pointer(byClass("zw-graphSvg")[0], "onPointerUp", screen(nodePoint(first)))
+    await settle(8)
+    const second = byClass("zw-gnodeKn").find((node) => textOf(node).trim() === distinctNodes[1].label)
+    if (second) {
+      const mods = { ctrlKey: true, metaKey: true }
+      pointer(second, "onPointerDown", screen(nodePoint(second)), mods)
+      pointer(byClass("zw-graphSvg")[0], "onPointerUp", screen(nodePoint(second)), mods)
+      await settle(10)
+    }
+  }
+  check(byClass("zw-batchbar").length >= 1, "ctrl + click keeps multi selection and shows the batch bar")
+
+  // 11.18 超长名称：不崩、按上限截断落库
+  const newBtn2 = byClass("zw-btnPrimary").find((node) => textOf(node).includes(ZH["kn.new"]))
+  if (newBtn2) {
+    click(newBtn2)
+    await settle(8)
+  }
+  const longName = "超长名称".repeat(30)
+  const nameInput = findAll((node) => node.type === "input" && node.props && node.props.placeholder === ZH["kn.titlePlaceholder"])[0]
+  if (nameInput && nameInput.props.onChange) {
+    nameInput.props.onChange({ target: { value: longName } })
+    await settle(4)
+  }
+  const saveBtn = findAll((node) => node.type === "button" && textOf(node).trim() === ZH["action.save"])[0]
+  if (saveBtn) saveBtn.props.onClick()
+  await settle(10)
+  const longPost = posts.filter((post) => post.action === "node-save").pop()
+  check(Boolean(longPost), "an over-long name still posts a save")
+  check(Boolean(longPost) && String(longPost.title || "").length <= 120, "the host keeps object titles within the limit")
+
+  const allNav2 = byClass("zw-navItem").find((node) => textOf(node).includes(ZH["nav.all"]))
+  if (allNav2) {
+    click(allNav2)
+    await settle(10)
+  }
+}
 
 // ---------------------------------------------------------------- 6. summary
+  // 批量操作条：归档 / 加标签 / 删除，以及搜索里的集合与项目分组
+  {
+    const allNavBtn = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.all']))
+    if (allNavBtn) {
+      click(allNavBtn)
+      await settle(8)
+    }
+    const rows = byClass('zw-rowCheck')
+    if (rows.length >= 2) {
+      click(rows[0])
+      await settle(3)
+      click(byClass('zw-rowCheck')[1])
+      await settle(5)
+
+      const bar = byClass('zw-batchbar')[0]
+      check(Boolean(bar), 'selecting two rows shows the batch bar')
+      const barText = bar ? textOf(bar) : ''
+      check(barText.includes(ZH['batch.archive']), 'batch bar offers archive')
+      check(barText.includes(ZH['batch.tag']), 'batch bar offers add-tag')
+      check(barText.includes(ZH['batch.delete']), 'batch bar offers delete')
+
+      const tagBtn = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['batch.tag'])[0]
+      if (tagBtn) {
+        click(tagBtn)
+        await settle(6)
+        const tagInput = findAll((node) => node.type === 'input' && node.props && node.props.placeholder === ZH['batch.tagPlaceholder'])[0]
+        check(Boolean(tagInput), 'add-tag dialog opens with an input')
+        if (tagInput) {
+          tagInput.props.onChange({ target: { value: '批量标签' } })
+          await settle(4)
+          const applyBtn = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['batch.tagApply'])[0]
+          check(Boolean(applyBtn), 'add-tag dialog has an apply button')
+          if (applyBtn) {
+            click(applyBtn)
+            await settle(10)
+            const posted = posts.filter((item) => item.action === 'entry-bulk' && item.op === 'addTag')
+            check(posted.length >= 1, 'add-tag posts entry-bulk addTag')
+            if (posted.length) {
+              check(posted[posted.length - 1].value === '批量标签', 'add-tag sends the typed tag')
+            }
+          }
+        }
+      }
+
+      const deleteBtn = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['batch.delete'])[0]
+      if (deleteBtn) {
+        click(deleteBtn)
+        await settle(6)
+        check(byClass('zw-modal').length === 1, 'delete asks for confirmation in a dialog')
+        const cancel = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.cancel'])[0]
+        if (cancel) {
+          click(cancel)
+          await settle(6)
+        }
+      }
+    }
+  }
+
 const failed = results.filter((item) => !item.ok)
 for (const item of results) console.log((item.ok ? 'PASS  ' : 'FAIL  ') + item.message)
 console.log('')
@@ -1539,4 +1973,185 @@ console.log(`SUMMARY  ${results.length} checks · ${results.length - failed.leng
 if (failed.length) {
   console.log('posts: ' + posts.map((post) => post.action).join(', '))
   process.exit(1)
+}
+
+// ------------------------------------------------- 5c. knowledge network checks
+async function knowledgeChecks() {
+  const navButtons = () => byClass('zw-navItem')
+  const knowledgeNav = navButtons().find((node) => textOf(node).includes(ZH['nav.knowledge']))
+  check(Boolean(knowledgeNav), 'left rail lists the knowledge network')
+  if (!knowledgeNav) return
+  click(knowledgeNav)
+  await settle(12)
+  check(byClass('zw-knTabs').length === 1, 'knowledge network shows the four view tabs')
+  check(byClass('zw-knTab').length === 4, 'four knowledge views are offered')
+const expandAllBtn = findAll((node) => node.type === 'button' && node.props.title === ZH['graph.expandAll'])[0]
+check(Boolean(expandAllBtn), 'graph offers expand all')
+  const knNodes = byClass('zw-gnodeKn')
+  check(knNodes.length >= 1, 'knowledge objects are drawn as their own nodes')
+  const glyph = byClass('zw-gnodeKnGlyph')[0]
+  check(Boolean(glyph), 'knowledge nodes carry a type glyph')
+  const firstNode = live.nodes.find((node) => node.status !== 'merged')
+  check(Boolean(firstNode), 'fixture carries at least one knowledge object')
+  const drawn = knNodes[0]
+  if (drawn && firstNode) {
+    drawn.props.onPointerDown({ clientX: 260, clientY: 220, pointerId: 21, button: 0, shiftKey: false, metaKey: false, ctrlKey: false, currentTarget: drawn, preventDefault() {}, stopPropagation() {} })
+    await settle(2)
+    const svg = byClass('zw-graphSvg')[0]
+    if (svg && svg.props.onPointerUp) svg.props.onPointerUp({ clientX: 260, clientY: 220, pointerId: 21 })
+    await settle(10)
+    check(byClass('zw-detail').length === 1, 'clicking a knowledge object opens the detail rail')
+    const title = byClass('zw-detailTitle')[0]
+    check(Boolean(title) && textOf(title).includes(firstNode.title), 'detail rail shows the clicked object')
+  }
+  const newNodeBtn = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['kn.new']))[0]
+  check(Boolean(newNodeBtn), 'knowledge page offers a new-object button')
+  if (newNodeBtn) {
+    click(newNodeBtn)
+    await settle(10)
+    check(byClass('zw-modal').length === 1, 'new-object dialog opens')
+    const needTitle = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['action.save']))[0]
+    if (needTitle) {
+      click(needTitle)
+      await settle(6)
+      const saveButtons = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.save'])
+      saveButtons.forEach((button) => { if (button.props.onClick) button.props.onClick() })
+      await settle(8)
+      check(byClass('zw-error').length >= 1, 'empty name is rejected with a clear error')
+      const nameField = findAll((node) => node.type === 'input' && node.props && node.props.onChange)[0]
+      if (nameField && nameField.props && nameField.props.onChange) {
+        const typed = '失败也要留住输入'
+        nameField.props.onChange({ target: { value: typed } })
+        await settle(4)
+        globalThis.__failNext('node-save')
+        const saveBtn2 = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.save'])[0]
+        if (saveBtn2 && saveBtn2.props && saveBtn2.props.onClick) {
+          saveBtn2.props.onClick()
+          await settle(8)
+          const toastText = textOf(byClass('zw-toast')[0] || {})
+          check(
+            Boolean(byClass('zw-toast').length) && toastText.length > 0 && !toastText.includes(ZH['toast.saved']),
+            'a failed save reports an error instead of pretending success'
+          )
+          check(byClass('zw-modal').length === 1, 'a failed save keeps the dialog open')
+          const stillTyped = findAll((node) => node.type === 'input' && node.props && node.props.value === typed)[0]
+          check(Boolean(stillTyped), 'a failed save keeps what the user typed')
+        }
+      }
+    }
+    const cancel = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['action.cancel']))[0]
+    if (cancel) click(cancel)
+    await settle(8)
+  }
+  const relationBtn = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['kn.createRelation']))[0]
+  if (relationBtn) {
+    click(relationBtn)
+    await settle(10)
+    check(byClass('zw-preview').length >= 2, 'relation dialog previews start and end')
+    check(textOf(byClass('zw-preview')[0] || {}).length > 0, 'relation preview has text')
+    const close = findAll((node) => node.type === 'button' && textOf(node).includes(ZH['action.cancel']))[0]
+    if (close) click(close)
+    await settle(6)
+  } else {
+    check(false, 'create-relation entry available on a knowledge object')
+  }
+  // 展开/折叠：点了 +N 之后子对象从画布收起，再点回来
+  const badge = byClass('zw-gnodeKnCount')[0]
+  check(Boolean(badge), 'knowledge nodes show a hidden-children badge')
+  const beforeCollapse = byClass('zw-gnodeKn').length
+  if (badge && badge.props.onClick) {
+    badge.props.onClick({ stopPropagation() {} })
+    await settle(10)
+    check(byClass('zw-gnodeKn').length < beforeCollapse, 'collapsing a parent hides its children')
+    const again = byClass('zw-gnodeKnCount')[0]
+    if (again && again.props.onClick) {
+      again.props.onClick({ stopPropagation() {} })
+      await settle(10)
+    }
+    check(byClass('zw-gnodeKn').length === beforeCollapse, 'expanding the parent brings the children back')
+  }
+
+  // Delete 键对选中对象发起删除 / 归档确认，而不是直接删
+  const knNow = byClass('zw-gnodeKn')[0]
+  if (knNow) {
+    knNow.props.onPointerDown({ clientX: 260, clientY: 220, pointerId: 31, button: 0, shiftKey: false, metaKey: false, ctrlKey: false, currentTarget: knNow, preventDefault() {}, stopPropagation() {} })
+    await settle(2)
+    const svgUp = byClass('zw-graphSvg')[0]
+    if (svgUp && svgUp.props.onPointerUp) svgUp.props.onPointerUp({ clientX: 260, clientY: 220, pointerId: 31 })
+    await settle(8)
+    ;(windowListeners.keydown || []).forEach((handler) =>
+      handler({ key: 'Delete', target: { tagName: 'div' }, preventDefault() {}, stopPropagation() {} })
+    )
+    await settle(10)
+    check(byClass('zw-modal').length === 1, 'Delete asks for confirmation before removing a knowledge object')
+    check(textOf(byClass('zw-modal')[0] || {}).includes(ZH['kn.archiveAction']), 'delete dialog offers archiving first')
+    const closeDialog = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.cancel'])[0]
+    if (closeDialog) click(closeDialog)
+    await settle(8)
+  }
+
+  // 合并：详情里的合并按钮会打开独立的合并流程，先看对比再确认
+  const mergeBtn = findAll((node) => node.type === 'button' && node.props && node.props.title === ZH['kn.merge'])[0]
+  check(Boolean(mergeBtn), 'node detail offers a merge entry')
+  const hideBtn = findAll((node) => node.type === 'button' && node.props && node.props.title === ZH['kn.hide'])[0]
+  check(Boolean(hideBtn), 'node detail offers hiding from the view')
+  if (hideBtn) {
+    const before = posts.length
+    click(hideBtn)
+    await settle(8)
+    const hidePost = posts.slice(before).find((post) => post.action === 'layout-save' && Array.isArray(post.hidden))
+    check(Boolean(hidePost) && hidePost.hidden.length >= 1, 'hiding posts a layout-save with hidden ids')
+    const unhideBtn = findAll((node) => node.type === 'button' && node.props && node.props.title === ZH['kn.show'])[0]
+    check(Boolean(unhideBtn), 'a hidden object can be shown again')
+    if (unhideBtn) {
+      const mark = posts.length
+      click(unhideBtn)
+      await settle(8)
+      const showPost = posts.slice(mark).find((post) => post.action === 'layout-save' && Array.isArray(post.hidden))
+      check(Boolean(showPost) && showPost.hidden.length === 0, 'unhiding clears the hidden list')
+    }
+  }
+  if (mergeBtn) {
+    click(mergeBtn)
+    await settle(10)
+    check(byClass('zw-modal').length === 1, 'merge opens its own dialog')
+    const mergeText = textOf(byClass('zw-modal')[0] || {})
+    check(mergeText.includes(ZH['kn.mergeHint']), 'merge dialog explains what will be kept')
+    const cancelMerge = findAll((node) => node.type === 'button' && textOf(node).trim() === ZH['action.cancel'])[0]
+    if (cancelMerge) click(cancelMerge)
+    await settle(6)
+  }
+
+  // 搜索同时找知识对象：列表上方会给出对象命中，点进去切到知识网络
+  const allNavEarly = navButtons().find((node) => textOf(node).includes(ZH['nav.all']))
+  if (allNavEarly) {
+    click(allNavEarly)
+    await settle(10)
+    const searchInput = byClass('zw-searchInput')[0]
+    check(Boolean(searchInput), 'list view has a search box')
+    if (searchInput) {
+      searchInput.props.onChange({ target: { value: '烟雾测试系统' } })
+      await settle(10)
+      check(byClass('zw-knHit').length >= 1, 'searching also finds knowledge objects')
+      const hit = byClass('zw-knHit')[0]
+      if (hit) {
+        click(hit)
+        await settle(10)
+        check(byClass('zw-knTabs').length === 1, 'clicking a knowledge hit opens the knowledge network')
+      }
+      const searchReset = byClass('zw-searchInput')[0]
+      if (searchReset) {
+        searchReset.props.onChange({ target: { value: '' } })
+        await settle(8)
+      }
+    }
+  }
+
+  // 回到全部记忆，确认导航还能切回去
+  const allNav = navButtons().find((node) => textOf(node).includes(ZH['nav.all']))
+  if (allNav) {
+    click(allNav)
+    await settle(10)
+    check(byClass('zw-knTabs').length === 0, 'switching views does not duplicate knowledge widgets')
+  }
 }

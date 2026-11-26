@@ -169,6 +169,60 @@ if (searchTool) {
   })
 }
 
+// 上次「fiber failed → 面板 404」的教训：宿主契约一变，插件不该整体崩。
+// 这里换一个 systemPrompt.section 直接抛错的宿主，验证工具与路由照样注册成立。
+{
+  const home2 = fs.mkdtempSync(path.join(os.tmpdir(), 'zw-contract-bad-'))
+  const previous = process.env.DSH_HOME
+  process.env.DSH_HOME = home2
+  const mod2 = await import(pathToFileURL('D:/Agent工作台/99_临时/zhiwei-v2/index.js').href + '?broken-prompt=1')
+  const tools2 = new Map()
+  const routes2 = new Map()
+  const ctx2 = {
+    tools: {
+      register(definition) {
+        tools2.set(definition.name, definition)
+      }
+    },
+    effect(fn) {
+      fn()
+      return {}
+    },
+    inject(_deps, callback) {
+      callback({
+        effect(fn) {
+          fn()
+          return {}
+        },
+        systemPrompt: {
+          section() {
+            throw new Error('section signature changed')
+          }
+        },
+        webServer: {
+          register(route) {
+            routes2.set(route.kind + ' ' + route.path, route)
+            return () => routes2.delete(route.kind + ' ' + route.path)
+          }
+        }
+      })
+    }
+  }
+  let error2 = null
+  try {
+    await mod2.apply(ctx2)
+  } catch (error) {
+    error2 = error
+  }
+  check('survives a broken systemPrompt service', () => {
+    if (error2) throw error2
+    if (tools2.size !== 6) throw new Error('expected 6 tools after prompt failure, got ' + tools2.size)
+    if (!routes2.has('prefix /design-memory')) throw new Error('routes missing after prompt failure')
+    return 'tools + route registered anyway'
+  })
+  process.env.DSH_HOME = previous
+}
+
 const failed = results.filter((item) => !item.ok)
 for (const item of results) {
   console.log((item.ok ? 'PASS  ' : 'FAIL  ') + item.name + (item.ok ? '' : ' :: ' + item.detail))

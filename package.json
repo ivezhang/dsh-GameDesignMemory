@@ -1,8 +1,8 @@
 {
   "name": "@local/design-memory",
-  "version": "2.3.2",
+  "version": "2.5.9",
   "private": true,
-  "description": "知微 — an AI-assisted knowledge workbench for game designers: typed memories, semantic relations, topic collections, a three-pane workspace, and an explorable knowledge graph, with agent tools for search, write, suggest and analyze.",
+  "description": "知微：面向游戏策划的 AI 知识工作台 —— 记忆与知识对象双层网络、棘轮式演进、固有约定保护、自动关系与召回记录",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -20,7 +20,9 @@
     "icon.svg"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true,

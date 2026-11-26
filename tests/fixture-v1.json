@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "mem_demo_combat_001",
+      "category": "system",
+      "title": "技能释放与冷却",
+      "summary": "主动技能统一走冷却，普攻不占冷却位",
+      "body": "所有主动技能共用一个冷却队列，按技能顺序排队释放；普攻不受冷却限制。\n冷却时间可被「急速」属性按 0.4 系数缩短，下限 0.4 秒。",
+      "tags": ["技能", "冷却", "战斗"],
+      "facts": [
+        { "label": "急速系数", "value": "0.4" },
+        { "label": "冷却下限", "value": "0.4s" }
+      ],
+      "links": [{ "to": "mem_demo_combat_002", "label": "依赖能量回复" }],
+      "status": "confirmed",
+      "pinned": true,
+      "source": "manual",
+      "createdAt": "2026-06-01T08:00:00.000Z",
+      "updatedAt": "2026-06-10T08:00:00.000Z",
+      "history": []
+    },
+    {
+      "id": "mem_demo_combat_002",
+      "category": "numbers",
+      "title": "能量回复速度",
+      "summary": "每秒回复 2 点，上限 100 点",
+      "body": "能量每秒自然回复 2 点，上限 100 点；击杀精英怪额外回复 15 点。",
+      "tags": ["能量", "战斗", "数值"],
+      "facts": [
+        { "label": "自然回复", "value": "2/s" },
+        { "label": "上限", "value": "100" }
+      ],
+      "links": [],
+      "status": "confirmed",
+      "pinned": false,
+      "source": "manual",
+      "createdAt": "2026-06-02T08:00:00.000Z",
+      "updatedAt": "2026-06-11T08:00:00.000Z",
+      "history": []
+    },
+    {
+      "id": "mem_demo_combat_003",
+      "category": "other",
+      "title": "敌人行为节奏",
+      "summary": "远程怪先手，近战怪后撤再突进",
+      "body": "远程敌人在进入视野后 1.2 秒开火；近战敌人先后撤 0.8 秒再突进，避免瞬间贴脸。",
+      "tags": ["敌人", "战斗", "节奏"],
+      "facts": [],
+      "links": [{ "to": "mem_demo_combat_001", "label": "影响技能节奏" }],
+      "status": "confirmed",
+      "pinned": false,
+      "source": "manual",
+      "createdAt": "2026-06-03T08:00:00.000Z",
+      "updatedAt": "2026-06-12T08:00:00.000Z",
+      "history": []
+    },
+    {
+      "id": "mem_demo_combat_004",
+      "category": "system",
+      "title": "战斗数值平衡基线",
+      "summary": "1 级角色 10 秒击杀普通怪",
+      "body": "1 级角色对同级普通怪的击杀时间目标为 10 秒，精英怪 35 秒，Boss 90 秒。",
+      "tags": ["平衡", "战斗", "数值"],
+      "facts": [{ "label": "普通怪 TTK", "value": "10s" }],
+      "links": [],
+      "status": "confirmed",
+      "pinned": false,
+      "source": "manual",
+      "createdAt": "2026-06-04T08:00:00.000Z",
+      "updatedAt": "2026-06-13T08:00:00.000Z",
+      "history": []
+    },
+    {
+      "id": "mem_demo_growth_001",
+      "category": "workflow",
+      "title": "数值验收流程",
+      "summary": "先自测再评审，通过后进正式表",
+      "body": "1. 策划自测 \n2. 主策评审 \n3. 进正式配置表并锁版本。",
+      "tags": ["流程", "成长"],
+      "facts": [],
+      "links": [],
+      "status": "confirmed",
+      "pinned": false,
+      "source": "manual",
+      "createdAt": "2026-06-05T08:00:00.000Z",
+      "updatedAt": "2026-06-14T08:00:00.000Z",
+      "history": []
+    },
+    {
+      "id": "mem_demo_economy_001",
+      "category": "numbers",
+      "title": "金币产出与消耗",
+      "summary": "日常产出 1200，单日消耗 900",
+      "body": "日常任务金币产出 1200/天，主线消耗约 900/天，预留 300 作为活动缓冲。",
+      "tags": ["金币", "经济"],
+      "facts": [
+        { "label": "日产出", "value": "1200" },
+        { "label": "日消耗", "value": "900" }
+      ],
+      "links": [],
+      "status": "draft",
+      "pinned": false,
+      "source": "manual",
+      "createdAt": "2026-06-06T08:00:00.000Z",
+      "updatedAt": "2026-06-15T08:00:00.000Z",
+      "history": []
+    },
+    {
+      "id": "mem_demo_question_001",
+      "category": "other",
+      "title": "新手引导是否跳过战斗",
+      "summary": "待定：新手首战是否直接给胜利",
+      "body": "新手第一场战斗直接给胜利能降低挫败，但会削弱对战斗循环的理解。待验证。",
+      "tags": ["新手引导", "体验"],
+      "facts": [],
+      "links": [],
+      "status": "draft",
+      "pinned": false,
+      "source": "conversation",
+      "createdAt": "2026-06-07T08:00:00.000Z",
+      "updatedAt": "2026-06-16T08:00:00.000Z",
+      "history": []
+    },
+    {
+      "id": "mem_demo_deprecated_001",
+      "category": "system",
+      "title": "旧版能量机制",
+      "summary": "能量按攻击段数累积（已废弃）",
+      "body": "旧方案：每次命中累积 5 点能量，无自然回复。已由每秒回复方案替代。",
+      "tags": ["能量", "历史方案"],
+      "facts": [],
+      "links": [{ "to": "mem_demo_combat_002", "label": "被替代" }],
+      "status": "deprecated",
+      "pinned": false,
+      "source": "manual",
+      "createdAt": "2026-05-20T08:00:00.000Z",
+      "updatedAt": "2026-06-09T08:00:00.000Z",
+      "history": []
+    }
+  ],
+  "regions": [
+    {
+      "id": "reg_demo_combat",
+      "name": "战斗核心",
+      "note": "技能、能量、敌人节奏与平衡基线",
+      "color": "violet",
+      "memberIds": [
+        "mem_demo_combat_001",
+        "mem_demo_combat_002",
+        "mem_demo_combat_003",
+        "mem_demo_combat_004"
+      ],
+      "createdAt": "2026-06-10T08:00:00.000Z"
+    },
+    {
+      "id": "reg_demo_economy",
+      "name": "经济与成长",
+      "note": "",
+      "color": "amber",
+      "memberIds": ["mem_demo_growth_001", "mem_demo_economy_001"],
+      "createdAt": "2026-06-11T08:00:00.000Z"
+    }
+  ]
+}

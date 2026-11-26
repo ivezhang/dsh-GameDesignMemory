@@ -5,788 +5,2264 @@ window.__ModuleLoader__.load({
     const h = React.createElement
     const { useState, useEffect, useMemo, useCallback, useRef } = React
 
-    const NS = 'designMemory'
+    /* ------------------------------------------------------------------ *
+     * 知微 · 策划知识工作台
+     * 一个面向游戏策划的 AI 知识管理与记忆探索系统：
+     *   AI 负责理解 / 提取 / 分类 / 推荐关系 / 归纳主题，
+     *   人负责确认 / 修正 / 决策。
+     * ------------------------------------------------------------------ */
+
+    const NS = 'zhiwei'
     const PANEL_ID = 'design-memory'
     const API = 'design-memory/api'
 
-    const CATEGORIES = [
-      { id: 'system', labelKey: 'rail.system', hintKey: 'empty.system.hint' },
-      { id: 'numbers', labelKey: 'rail.numbers', hintKey: 'empty.numbers.hint' },
-      { id: 'workflow', labelKey: 'rail.workflow', hintKey: 'empty.workflow.hint' },
-      { id: 'other', labelKey: 'rail.other', hintKey: 'empty.other.hint' }
-    ]
-    const STATUSES = [
-      { id: 'draft', labelKey: 'status.draft' },
-      { id: 'confirmed', labelKey: 'status.confirmed' },
-      { id: 'deprecated', labelKey: 'status.deprecated' }
-    ]
+    const TYPE_COLOR = {
+      decision: '#6366f1',
+      rule: '#3b82f6',
+      assumption: '#f59e0b',
+      question: '#ec4899',
+      proposal: '#8b5cf6',
+      reference: '#14b8a6',
+      metric: '#22c55e',
+      retro: '#64748b',
+      process: '#06b6d4'
+    }
+
+    const RELATION_COLOR = {
+      belongs_to: '#94a3b8',
+      depends_on: '#f97316',
+      affects: '#ef4444',
+      derived_from: '#a855f7',
+      references: '#0ea5e9',
+      conflicts_with: '#e11d48',
+      supersedes: '#64748b',
+      refines: '#22c55e'
+    }
+
+    const RELATION_DASH = {
+      belongs_to: '1 5',
+      depends_on: '7 4',
+      affects: '',
+      derived_from: '2 4',
+      references: '9 5',
+      conflicts_with: '3 3',
+      supersedes: '10 3 2 3',
+      refines: '6 4'
+    }
+
+    const COLLECTION_COLORS = ['violet', 'blue', 'teal', 'amber', 'rose', 'lime']
+
+    const DEFAULT_META = {
+      entryTypes: [
+        { id: 'decision', label: '设计决策', hint: '已经拍板的选择与理由' },
+        { id: 'rule', label: '设计规则', hint: '系统规则、数值口径、计算公式' },
+        { id: 'assumption', label: '设计假设', hint: '还没验证的判断与前提' },
+        { id: 'question', label: '设计问题', hint: '待解决的疑问与风险点' },
+        { id: 'proposal', label: '设计方案', hint: '可执行的方案与备选' },
+        { id: 'reference', label: '参考案例', hint: '竞品拆解、外部资料' },
+        { id: 'metric', label: '数值数据', hint: '产出、消耗、概率、留存' },
+        { id: 'retro', label: '复盘结论', hint: '上线结果与经验总结' },
+        { id: 'process', label: '流程约定', hint: '工作方式、协作约定、目录规范' }
+      ],
+      domains: [
+        { id: 'combat', label: '战斗' },
+        { id: 'growth', label: '成长' },
+        { id: 'economy', label: '经济' },
+        { id: 'level', label: '关卡' },
+        { id: 'event', label: '活动' },
+        { id: 'uiux', label: '界面交互' },
+        { id: 'monetization', label: '商业化' },
+        { id: 'social', label: '社交' },
+        { id: 'operation', label: '运营' },
+        { id: 'tech', label: '技术' }
+      ],
+      statuses: [
+        { id: 'draft', label: '草稿', hint: '刚记下来，还没整理' },
+        { id: 'pending', label: '待确认', hint: 'AI 整理过，等人拍板' },
+        { id: 'active', label: '已生效', hint: '已确认，可作为依据' },
+        { id: 'deprecated', label: '已废弃', hint: '被推翻，保留追溯' },
+        { id: 'archived', label: '已归档', hint: '不再活跃，留档' }
+      ],
+      relationTypes: [
+        { id: 'belongs_to', label: '归属于', hint: '是某个系统/模块的一部分' },
+        { id: 'depends_on', label: '依赖于', hint: '前置条件或上游依赖' },
+        { id: 'affects', label: '影响', hint: '改动会波及对方' },
+        { id: 'derived_from', label: '来源于', hint: '由对方推导而来' },
+        { id: 'references', label: '参考', hint: '作为依据或对照' },
+        { id: 'conflicts_with', label: '冲突', hint: '两者互斥或互相矛盾' },
+        { id: 'supersedes', label: '替代', hint: '取代了对方的旧结论' },
+        { id: 'refines', label: '细化', hint: '是对方更具体的延伸' }
+      ],
+      relationStatuses: [
+        { id: 'suggested', label: '待确认' },
+        { id: 'confirmed', label: '已确认' },
+        { id: 'rejected', label: '已拒绝' }
+      ],
+      sourceKinds: [
+        { id: 'manual', label: '手动' },
+        { id: 'conversation', label: '对话' },
+        { id: 'import', label: '导入' },
+        { id: 'ai', label: 'AI 整理' }
+      ]
+    }
 
     const ZH = {
-      'panel.label': '策划记忆',
-      'head.title': '策划记忆',
-      'head.subtitle': '系统规则、数值口径、工作流与设计约定的长期记忆库',
-      'view.list': '列表',
-      'view.graph': '关系网',
-      'search.placeholder': '搜索标题、要点或正文',
-      'search.clear': '清除搜索',
+      'panel.label': '知微',
+      'app.name': '知微',
+      'app.badge': 'AI 知识工作台',
+
+      'nav.overview': '工作台',
+      'nav.all': '全部记忆',
+      'nav.inbox': '待整理',
+      'nav.collections': '主题集合',
+      'nav.favorites': '收藏',
+      'nav.recent': '最近访问',
+      'nav.graph': '关系图',
+      'nav.projects': '项目空间',
+      'nav.savedViews': '保存的视图',
+      'nav.savedViewsEmpty': '在关系图里可以保存当前视角',
+      'nav.collapse': '收起导航',
+      'nav.expand': '展开导航',
+
       'action.new': '新建记忆',
-      'action.refresh': '刷新',
       'action.save': '保存',
-      'action.saving': '保存中…',
       'action.cancel': '取消',
-      'action.edit': '编辑',
       'action.delete': '删除',
-      'action.retry': '重试',
+      'action.edit': '编辑',
       'action.close': '关闭',
-      'rail.label': '记忆分类',
-      'rail.all': '全部',
-      'rail.system': '系统',
-      'rail.numbers': '数值',
-      'rail.workflow': '工作流',
-      'rail.other': '其他',
-      'rail.status': '状态',
-      'status.all': '全部',
-      'status.draft': '待确认',
-      'status.confirmed': '已确认',
+      'action.confirm': '确认',
+      'action.reset': '重置',
+      'action.retry': '重试',
+      'action.accept': '采纳',
+      'action.ignore': '忽略',
+      'action.open': '打开',
+      'action.selectAll': '全选',
+
+      'common.all': '全部',
+      'common.empty': '这里还没有内容',
+      'common.items': '条',
+
+      'type.decision': '设计决策',
+      'type.rule': '设计规则',
+      'type.assumption': '设计假设',
+      'type.question': '设计问题',
+      'type.proposal': '设计方案',
+      'type.reference': '参考案例',
+      'type.metric': '数值数据',
+      'type.retro': '复盘结论',
+      'type.process': '流程约定',
+
+      'domain.combat': '战斗',
+      'domain.growth': '成长',
+      'domain.economy': '经济',
+      'domain.level': '关卡',
+      'domain.event': '活动',
+      'domain.uiux': '界面交互',
+      'domain.monetization': '商业化',
+      'domain.social': '社交',
+      'domain.operation': '运营',
+      'domain.tech': '技术',
+
+      'status.draft': '草稿',
+      'status.pending': '待确认',
+      'status.active': '已生效',
       'status.deprecated': '已废弃',
-      'status.confirm': '确认',
-      'status.deprecate': '废弃',
-      'status.reopen': '恢复为已确认',
-      'status.draftExplain':
-        '待确认 = 从对话或文档里先记下、还没经你确认的结论。确认后 AI 才会把它当既定口径使用；废弃表示这条结论已作废。',
-      'status.deprecatedExplain': '这条已废弃：AI 不会再把它的内容当成当前口径。若结论重新有效，可以恢复为已确认。',
-      'list.label': '记忆列表',
-      'list.count': '条',
-      'list.links': '关联',
-      'list.loading': '正在读取记忆库…',
-      'list.noMatch': '没有匹配的记忆',
-      'list.noMatchHint': '换个关键词，或切换分类 / 状态。',
-      'detail.updated': '更新于',
-      'detail.source': '来源',
-      'detail.id': '编号',
-      'detail.facts': '关键要点',
-      'detail.pin': '置顶',
-      'detail.unpin': '取消置顶',
+      'status.archived': '已归档',
+
+      'relation.belongs_to': '归属于',
+      'relation.depends_on': '依赖于',
+      'relation.affects': '影响',
+      'relation.derived_from': '来源于',
+      'relation.references': '参考',
+      'relation.conflicts_with': '冲突',
+      'relation.supersedes': '替代',
+      'relation.refines': '细化',
+
+      'relStatus.suggested': '待确认',
+      'relStatus.confirmed': '已确认',
+      'relStatus.rejected': '已拒绝',
+
+      'source.manual': '手动',
+      'source.conversation': '对话',
+      'source.import': '导入',
+      'source.ai': 'AI 整理',
+
+      'sort.updated': '最近更新',
+      'layout.list': '列表',
+      'layout.cards': '卡片',
+
+      'overview.stat.total': '全部记忆',
+      'overview.stat.inbox': '待整理',
+      'overview.stat.collections': '主题集合',
+      'overview.stat.relations': '关联',
+      'overview.recent': '最近更新',
+      'overview.inbox': '待整理',
+      'overview.decisions': '最近确认的设计决策',
+      'overview.favorites': '收藏',
+      'overview.suggestedRelations': 'AI 建议的关系',
+      'overview.empty': '还没有记忆，从右上角「新建记忆」开始',
+
+      'list.empty': '没有符合条件的记忆',
+      'list.emptyHint': '放宽筛选，或者新建一条',
+      'list.filters': '筛选',
+      'list.searchPlaceholder': '搜索标题、正文、标签（按 / 聚焦）',
+
+      'filter.type': '类型',
+      'filter.domain': '领域',
+      'filter.status': '状态',
+      'filter.tag': '标签',
+      'filter.clearAll': '清除筛选',
+
+      'detail.created': '创建于',
+      'detail.content': '正文',
+      'detail.tags': '标签',
+      'detail.facts': '关键数值',
+      'detail.collections': '所属集合',
+      'detail.relations': '关联记忆',
+      'detail.noRelations': '还没有关联。可以手动建立，也可以等 AI 建议。',
       'detail.history': '改动记录',
-      'detail.historyNoNote': '（未填写说明）',
-      'detail.deleteConfirm': '删除后不可恢复，确认？',
-      'detail.selectTitle': '选择一条记忆',
-      'detail.selectHint': '从列表里点开一条，或新建一条。这里会显示规则、数值、工作流和改动记录。',
-      'detail.links': '关联记忆',
-      'detail.backlinks': '被关联',
-      'detail.noLinks': '还没有关联。把相关的记忆串起来，关系网里就能看到它们。',
-      'detail.linkPick': '选择要关联的记忆',
-      'detail.linkLabel': '关系说明（可选）',
-      'detail.linkAdd': '添加关联',
-      'detail.linkRemove': '移除关联',
-      'detail.linkNothing': '没有可关联的记忆了',
-      'empty.title': '还没有策划记忆',
-      'empty.hint': '把已经确认的规则、数值和约定记在这里，开新会话时 AI 也能查到。',
-      'empty.cta': '新建第一条',
-      'empty.system.hint': '玩法规则、模块边界、异常口径',
-      'empty.numbers.hint': '产出消耗、概率阈值、平衡结论',
-      'empty.workflow.hint': '翻译、找竞品、目录与交付约定',
-      'empty.other.hint': '其他设计约定',
-      'editor.mode.create': '新建记忆',
-      'editor.mode.edit': '编辑记忆',
-      'editor.hint': 'Esc 取消 · Ctrl/⌘ + Enter 保存',
-      'editor.fields.title': '标题',
-      'editor.fields.category': '分类',
-      'editor.fields.status': '状态',
-      'editor.fields.summary': '摘要',
-      'editor.fields.tags': '标签',
-      'editor.fields.note': '改动说明',
-      'editor.title.placeholder': '标题，例如「周末活动场地效果入口」',
-      'editor.summary.placeholder': '一句话说明这条记忆解决什么问题',
-      'editor.facts.title': '关键要点',
-      'editor.facts.hint': '名称 = 值，例如「随机皮肤放大器 = 20」',
-      'editor.facts.add': '添加一项',
-      'editor.facts.remove': '删除这一项',
-      'editor.facts.label': '名称',
-      'editor.facts.value': '值',
-      'editor.body.title': '详细说明',
-      'editor.body.hint': '支持 - 列表与 ### 小标题',
-      'editor.body.placeholder': '规则、口径、数值、代码位置、结论…',
-      'editor.tags.placeholder': '标签，用逗号分隔',
-      'editor.source.placeholder': '来源：会话、文档或配置表（可选）',
-      'editor.note.placeholder': '本次改动说明（可选，写入改动记录）',
-      'editor.saveHint': '保存后会记录更新时间与改动说明',
-      'notice.created': '已新建记忆',
-      'notice.saved': '已保存修改',
-      'notice.deleted': '已删除记忆',
-      'notice.confirmed': '已确认为既定口径',
-      'notice.reopened': '已恢复为已确认',
-      'notice.deprecated': '已标记为废弃',
-      'notice.linked': '已添加关联',
-      'notice.unlinked': '已移除关联',
-      'ai.hint': 'AI 可读写：design_memory_search / design_memory_write',
-      'storage.label': '存储位置',
-      'error.load': '读取记忆库失败',
-      'error.offline': '无法连接插件后台',
-      'graph.nodes': '个节点',
-      'graph.links': '条关联',
-      'graph.empty': '关系网里还没有节点',
-      'graph.emptyHint': '先新建几条记忆，或在详情里用「关联记忆」把它们串起来。',
-      'graph.hint': '拖动节点 · 滚轮缩放 · 拖空白平移 · 单击查看',
+      'detail.favorite': '收藏',
+      'detail.unfavorite': '取消收藏',
+      'detail.expand': '展开',
+      'detail.collapse': '收起',
+
+      'editor.title': '标题',
+      'editor.titlePlaceholder': '一句话说清这条记忆',
+      'editor.content': '正文',
+      'editor.contentPlaceholder': '细节、依据、边界条件…支持 - 列表和 ### 小标题',
+      'editor.type': '类型',
+      'editor.status': '状态',
+      'editor.domains': '业务领域',
+      'editor.tags': '标签',
+      'editor.tagsPlaceholder': '回车或逗号分隔',
+      'editor.project': '项目',
+      'editor.source': '来源',
+      'editor.facts': '关键数值',
+      'editor.factLabel': '名称',
+      'editor.factValue': '数值',
+      'editor.addFact': '加一条',
+
+      'quick.title': '记一条',
+      'quick.subtitle': '先丢下原始想法，知微替你整理成记忆',
+      'quick.placeholder': '例如：战令经验曲线改为前 30 级线性、后 20 级指数，30 级前日均可升 1.2 级…',
+      'quick.analyze': 'AI 整理并保存',
+      'quick.proposal': 'AI 的整理结果',
+      'quick.related': '可能相关',
+      'quick.collections': '可能属于',
+
+      'relation.title': '建立关联',
+      'relation.editTitle': '编辑关联',
+      'relation.from': '起点',
+      'relation.to': '终点',
+      'relation.type': '关系类型',
+      'relation.desc': '说明',
+      'relation.descPlaceholder': '为什么建立这条关系？',
+      'relation.status': '状态',
+      'relation.swap': '交换方向',
+      'relation.save': '保存关联',
+      'relation.created': '已建立关联',
+      'relation.confirm': '确认',
+      'relation.reject': '拒绝',
+      'relation.delete': '删除关联',
+      'relation.self': '不能和自己建立关联',
+      'relation.duplicate': '这条关联已经存在',
+      'relation.pick': '选择一条记忆',
+      'relation.pickSearch': '搜索目标记忆',
+      'relation.noTarget': '还没有其他记忆可以关联',
+      'relation.suggestedHint': 'AI 建议的关联，确认后才会成为正式关系',
+      'relation.confirmedHint': '已确认的关系',
+      'relation.more': '展开全部',
+      'relation.less': '收起',
+
+      'collections.subtitle': '把讲同一件事的记忆放在一起，一条记忆可以属于多个集合',
+      'collections.new': '新建集合',
+      'collections.name': '集合名称',
+      'collections.descPlaceholder': '这个集合收的是什么？',
+      'collections.color': '颜色',
+      'collections.members': '成员',
+      'collections.memberCount': '条记忆',
+      'collections.empty': '还没有集合',
+      'collections.emptyHint': '可以手动新建，也可以让 AI 从现有记忆里聚类',
+      'collections.suggestAi': '让 AI 找主题',
+      'collections.aiFound': '找到的主题',
+      'collections.aiSource': 'AI 建议',
+      'collections.accept': '采纳为集合',
+      'collections.addMembers': '添加记忆',
+      'collections.removeMember': '移出集合',
+      'collections.noMembers': '集合里还没有记忆',
+      'collections.mergeInto': '合并到…',
+      'collections.reasons': '为什么这样归类',
+
+      'graph.subtitle': '拖动探索，点击查看，Shift 拖拽建关系，Alt 拖拽框选',
       'graph.zoomIn': '放大',
       'graph.zoomOut': '缩小',
       'graph.fit': '适应窗口',
-      'graph.relayout': '重新排版',
-      'graph.auto': '自动关联',
-      'graph.autoHint': '按共同标签自动补虚线，仅显示用，不写入数据',
-      'graph.isolate': '只看这一条',
-      'graph.isolateOn': '显示全部',
-      'graph.title': '关系网',
-      'graph.sharedTags': '共同标签',
-      'graph.hintLink': '从一个记忆拖到另一个记忆，松手就建立关联',
-      'graph.hintRegion': '拖出一个框，把有关系的记忆圈成一个记忆区',
+      'graph.relayout': '重新布局',
+      'graph.collapse': '折叠集合',
+      'graph.searchPlaceholder': '在图中定位记忆…',
+      'graph.saveView': '保存当前视图',
+      'graph.viewName': '视图名称',
+      'graph.clusterHint': '同一集合的节点会被气泡包住',
+
+      'batch.clear': '取消选择',
+
+      'toast.saved': '已保存',
+      'toast.deleted': '已删除',
+      'toast.collectionSaved': '已保存到集合',
+      'toast.relationCreated': '已建立关联',
+      'toast.relationDeleted': '关联已删除',
+      'toast.viewSaved': '视图已保存',
+
+      'error.load': '加载失败',
+      'error.offline': '连不上知微的后端服务，试试重启 DSH',
+      'error.write': '保存失败',
+
+      'view.overview': '工作台',
+      'view.all': '全部记忆',
+      'view.inbox': '待整理',
+      'view.collections': '主题集合',
+      'view.favorites': '收藏',
+      'view.recent': '最近访问',
+      'view.graph': '关系图',
+      'app.title': '知微 · AI 知识工作台',
+      'app.loading': '加载中…',
+      'common.name': '名称',
+
+      'action.star': '收藏',
+      'action.unstar': '取消收藏',
+      'action.deleteConfirm': '确认删除',
+
+      'detail.status': '状态',
+      'detail.meta': '元信息',
+      'detail.legacy': '这条记忆来自旧版分类，内容已按新类型保留。',
+      'detail.noCollections': '还没有归入任何集合',
+      'detail.emptyTitle': '还没有选中记忆',
+      'detail.emptyText': '从中间列表点一条记忆，或者按「新建记忆」记下第一条设计结论。',
+
+      'editor.newTitle': '新建记忆',
+      'editor.editTitle': '编辑记忆',
+      'editor.needContent': '正文不能为空',
+      'editor.contentHint': '写清背景、结论和具体数字，Markdown 可用。',
+      'editor.factsHint': '每行一条「名称=值」，例如 随机皮肤放大器=20',
+      'editor.collections': '所属集合',
+      'editor.collectionsHint': '一条记忆可以同时属于多个集合。',
+      'editor.noCollections': '还没有集合',
+      'editor.sourceLabel': '来源说明',
+      'editor.sourceLabelPlaceholder': '例：N2 周会 / 竞品拆解 / 数值表',
+      'editor.favorite': '收藏这条记忆',
+      'editor.pin': '置顶显示',
+
+      'quick.needText': '先写下这条记忆的内容',
+      'quick.sourceLabel': '来源说明',
+      'quick.saveRaw': '直接保存',
+      'quick.confirm': '保存并整理',
+      'quick.subtitleHint': '随便写，AI 会自动整理成标题、类型、领域和关联。',
+
+      'relation.create': '建立关联',
+      'relation.suggested': '建议中',
+      'relation.needTarget': '先选一条要关联的记忆',
+      'relation.searchPlaceholder': '搜索记忆标题或正文',
+      'relation.description': '说明',
+      'relation.descriptionPlaceholder': '为什么相关？例：同属战斗数值，被这条规则约束',
+      'relation.preview': '关联方向',
+      'relation.previewSelf': '起点和终点不能是同一条记忆',
+
+      'collections.needName': '先给集合起个名字',
+      'collections.description': '简介',
+      'collections.project': '所属项目',
+      'collections.selected': '已选择',
+      'collections.deleted': '集合已删除',
+
       'graph.toolSelect': '选择',
       'graph.toolLink': '划线',
-      'graph.toolRegion': '圈区',
-      'graph.regionName': '记忆区',
-      'graph.regions': '记忆区',
-      'graph.regionsUnit': '个区',
-      'graph.regionUnit': '条',
-      'graph.regionColor': '换颜色',
-      'graph.regionRename': '改名',
-      'graph.regionDelete': '删除记忆区',
-      'graph.regionDeleteConfirm': '再点一次删除',
+      'graph.toolBox': '圈选',
+      'graph.linkNeedTarget': '把线拖到另一条记忆上才能建立关联',
       'graph.linkSelf': '不能连到自己',
-      'graph.linkNeedTarget': '要拖到另一个记忆上',
       'graph.linkDone': '已建立关联',
       'graph.boxEmpty': '框里没有记忆',
-      'graph.boxDone': '已圈成新的记忆区',
-      'graph.regionSaved': '已保存记忆区',
-      'graph.regionRemoved': '已删除记忆区',
-      'detail.region': '记忆区'
+      'graph.filters': '筛选',
+      'graph.byType': '按类型',
+      'graph.byRelation': '按关系类型',
+      'graph.byDomain': '按领域',
+      'graph.byCollection': '按集合',
+      'graph.suggestedOnly': '只看 AI 建议',
+      'graph.collapsed': '已折叠',
+      'graph.noCollections': '还没有集合',
+      'graph.viewNamePlaceholder': '例：战斗数值全景',
+
+      'batch.selected': '已选中',
+      'batch.addToCollection': '加入集合',
+      'batch.setStatus': '设为已生效',
+      'batch.pickCollection': '选择要加入的集合',
+      'nav.newProject': '新建项目空间',
+      'toast.created': '已创建',
+      'toast.status': '已更新状态',
+      'toast.membersAdded': '已加入集合',
+      'toast.merged': '已合并',
+      'toast.suggested': '已生成建议',
+      'toast.restored': '已恢复',
+      'toast.segmentAdded': '已拆成新记忆',
+
+      'assist.title': 'AI 辅助',
+      'assist.organize': '整理这条',
+      'assist.similar': '找相似',
+      'assist.relations': '推荐关联',
+      'assist.summary': '生成总结',
+      'assist.conflicts': '查冲突',
+      'assist.impact': '上下游',
+      'assist.running': '正在分析…',
+      'assist.done': '分析完成',
+      'assist.empty': '没有发现需要处理的内容',
+      'assist.apply': '应用建议',
+      'assist.applied': '已应用建议',
+      'assist.reason': '理由',
+      'assist.titleSug': '建议标题',
+      'assist.typeSug': '建议类型',
+      'assist.domainSug': '建议领域',
+      'assist.tagSug': '关键词',
+      'assist.summarySug': '建议摘要',
+      'assist.segments': '可拆分出的原子记忆',
+      'assist.splitOne': '拆出这条',
+      'assist.segmentCount': '条',
+      'assist.similarCount': '条相似',
+      'assist.keepBoth': '都保留，稍后再定',
+      'assist.supersede': '新内容替代旧的',
+      'assist.bothApply': '两条分别适用不同场景',
+      'assist.noConflict': '确认不冲突',
+      'assist.confirmed': '已记录你的判断',
+      'assist.themes': '主题',
+      'assist.members': '涉及记忆',
+      'assist.needSelection': '先选中一条记忆或一个集合',
+      'assist.upstream': '上游（影响它的）',
+      'assist.downstream': '下游（受它影响的）',
+      'assist.notApplied': '仅供参考，不会自动写入',
+      'action.undo': '撤销',
+      'common.none': '无'
     }
 
     const EN = {
-      'panel.label': 'Design memory',
-      'head.title': 'Design memory',
-      'head.subtitle': 'System rules, numeric decisions, workflows, and project conventions',
-      'view.list': 'List',
-      'view.graph': 'Network',
-      'search.placeholder': 'Search title, facts, or body',
-      'search.clear': 'Clear search',
-      'action.new': 'New entry',
-      'action.refresh': 'Refresh',
+      'panel.label': 'Zhiwei',
+      'app.name': 'Zhiwei',
+      'app.badge': 'AI knowledge workbench',
+
+      'nav.overview': 'Workbench',
+      'nav.all': 'All memories',
+      'nav.inbox': 'Inbox',
+      'nav.collections': 'Collections',
+      'nav.favorites': 'Favorites',
+      'nav.recent': 'Recent',
+      'nav.graph': 'Graph',
+      'nav.projects': 'Projects',
+      'nav.savedViews': 'Saved views',
+      'nav.savedViewsEmpty': 'Save a view from the graph',
+      'nav.collapse': 'Collapse navigation',
+      'nav.expand': 'Expand navigation',
+
+      'action.new': 'New memory',
       'action.save': 'Save',
-      'action.saving': 'Saving…',
       'action.cancel': 'Cancel',
-      'action.edit': 'Edit',
       'action.delete': 'Delete',
-      'action.retry': 'Retry',
+      'action.edit': 'Edit',
       'action.close': 'Close',
-      'rail.label': 'Categories',
-      'rail.all': 'All',
-      'rail.system': 'Systems',
-      'rail.numbers': 'Numbers',
-      'rail.workflow': 'Workflows',
-      'rail.other': 'Other',
-      'rail.status': 'Status',
-      'status.all': 'All',
+      'action.confirm': 'Confirm',
+      'action.reset': 'Reset',
+      'action.retry': 'Retry',
+      'action.accept': 'Accept',
+      'action.ignore': 'Ignore',
+      'action.open': 'Open',
+      'action.selectAll': 'Select all',
+
+      'common.all': 'All',
+      'common.empty': 'Nothing here yet',
+      'common.items': 'items',
+
+      'type.decision': 'Decision',
+      'type.rule': 'Rule',
+      'type.assumption': 'Assumption',
+      'type.question': 'Question',
+      'type.proposal': 'Proposal',
+      'type.reference': 'Reference',
+      'type.metric': 'Metric',
+      'type.retro': 'Retro',
+      'type.process': 'Process',
+
+      'domain.combat': 'Combat',
+      'domain.growth': 'Growth',
+      'domain.economy': 'Economy',
+      'domain.level': 'Level',
+      'domain.event': 'Event',
+      'domain.uiux': 'UI/UX',
+      'domain.monetization': 'Monetization',
+      'domain.social': 'Social',
+      'domain.operation': 'Operations',
+      'domain.tech': 'Tech',
+
       'status.draft': 'Draft',
-      'status.confirmed': 'Confirmed',
+      'status.pending': 'Pending',
+      'status.active': 'Active',
       'status.deprecated': 'Deprecated',
-      'status.confirm': 'Confirm',
-      'status.deprecate': 'Deprecate',
-      'status.reopen': 'Restore as confirmed',
-      'status.draftExplain':
-        'Draft = noted from a session or document but not confirmed by you yet. Only confirmed entries are treated as settled rules; deprecated means the conclusion no longer applies.',
-      'status.deprecatedExplain':
-        'This entry is deprecated: the agent no longer treats it as a current rule. Restore it as confirmed if the conclusion applies again.',
-      'list.label': 'Entries',
-      'list.count': 'entries',
-      'list.links': 'links',
-      'list.loading': 'Loading memories…',
-      'list.noMatch': 'No matching entries',
-      'list.noMatchHint': 'Try another keyword, or switch category / status.',
-      'detail.updated': 'Updated',
-      'detail.source': 'Source',
-      'detail.id': 'ID',
-      'detail.facts': 'Key facts',
-      'detail.pin': 'Pin',
-      'detail.unpin': 'Unpin',
-      'detail.history': 'Change log',
-      'detail.historyNoNote': '(no note)',
-      'detail.deleteConfirm': 'This cannot be undone. Delete?',
-      'detail.selectTitle': 'Select an entry',
-      'detail.selectHint': 'Open an entry from the list, or create one. Rules, numbers, workflows, and change notes appear here.',
-      'detail.links': 'Linked entries',
-      'detail.backlinks': 'Linked from',
-      'detail.noLinks': 'No links yet. Connect related entries and they show up in the network view.',
-      'detail.linkPick': 'Pick an entry to link',
-      'detail.linkLabel': 'Relation note (optional)',
-      'detail.linkAdd': 'Add link',
-      'detail.linkRemove': 'Remove link',
-      'detail.linkNothing': 'Nothing left to link',
-      'empty.title': 'No design memories yet',
-      'empty.hint': 'Record confirmed rules, numbers, and conventions here so the agent can find them in later sessions.',
-      'empty.cta': 'Create the first entry',
-      'empty.system.hint': 'Rules, module boundaries, edge cases',
-      'empty.numbers.hint': 'Outputs, costs, chances, thresholds',
-      'empty.workflow.hint': 'Translation, competitor lookup, folders, delivery',
-      'empty.other.hint': 'Other design conventions',
-      'editor.mode.create': 'New entry',
-      'editor.mode.edit': 'Edit entry',
-      'editor.hint': 'Esc cancels · Ctrl/⌘ + Enter saves',
-      'editor.fields.title': 'Title',
-      'editor.fields.category': 'Category',
-      'editor.fields.status': 'Status',
-      'editor.fields.summary': 'Summary',
-      'editor.fields.tags': 'Tags',
-      'editor.fields.note': 'Change note',
-      'editor.title.placeholder': 'Title, e.g. “Weekend event field effects”',
-      'editor.summary.placeholder': 'One line: what problem does this entry answer?',
-      'editor.facts.title': 'Key facts',
-      'editor.facts.hint': 'Name = value, e.g. “Random skin amplifier = 20”',
-      'editor.facts.add': 'Add a fact',
-      'editor.facts.remove': 'Remove this fact',
-      'editor.facts.label': 'Name',
-      'editor.facts.value': 'Value',
-      'editor.body.title': 'Details',
-      'editor.body.hint': 'Supports - lists and ### headings',
-      'editor.body.placeholder': 'Rules, numbers, file locations, conclusions…',
-      'editor.tags.placeholder': 'Tags, comma separated',
-      'editor.source.placeholder': 'Source: session, document, or table (optional)',
-      'editor.note.placeholder': 'What changed (optional, saved to the change log)',
-      'editor.saveHint': 'Saving records the time and your change note',
-      'notice.created': 'Entry created',
-      'notice.saved': 'Changes saved',
-      'notice.deleted': 'Entry deleted',
-      'notice.confirmed': 'Marked as confirmed',
-      'notice.reopened': 'Restored as confirmed',
-      'notice.deprecated': 'Marked as deprecated',
-      'notice.linked': 'Link added',
-      'notice.unlinked': 'Link removed',
-      'ai.hint': 'Agent tools: design_memory_search / design_memory_write',
-      'storage.label': 'Storage',
-      'error.load': 'Could not load memories',
-      'error.offline': 'Cannot reach the plugin host',
-      'graph.nodes': 'nodes',
-      'graph.links': 'links',
-      'graph.empty': 'The network has no nodes yet',
-      'graph.emptyHint': 'Create a few entries first, or connect them from an entry detail.',
-      'graph.hint': 'Drag nodes · wheel to zoom · drag the canvas to pan · click to inspect',
+      'status.archived': 'Archived',
+
+      'relation.belongs_to': 'Belongs to',
+      'relation.depends_on': 'Depends on',
+      'relation.affects': 'Affects',
+      'relation.derived_from': 'Derived from',
+      'relation.references': 'References',
+      'relation.conflicts_with': 'Conflicts with',
+      'relation.supersedes': 'Supersedes',
+      'relation.refines': 'Refines',
+
+      'relStatus.suggested': 'Suggested',
+      'relStatus.confirmed': 'Confirmed',
+      'relStatus.rejected': 'Rejected',
+
+      'source.manual': 'Manual',
+      'source.conversation': 'Conversation',
+      'source.import': 'Import',
+      'source.ai': 'AI',
+
+      'sort.updated': 'Recently updated',
+      'layout.list': 'List',
+      'layout.cards': 'Cards',
+
+      'overview.stat.total': 'Memories',
+      'overview.stat.inbox': 'Inbox',
+      'overview.stat.collections': 'Collections',
+      'overview.stat.relations': 'Relations',
+      'overview.recent': 'Recently updated',
+      'overview.inbox': 'Inbox',
+      'overview.decisions': 'Confirmed decisions',
+      'overview.favorites': 'Favorites',
+      'overview.suggestedRelations': 'AI suggested relations',
+      'overview.empty': 'No memories yet — start from “New memory”',
+
+      'list.empty': 'No memories match',
+      'list.emptyHint': 'Loosen the filters or create one',
+      'list.filters': 'Filters',
+      'list.searchPlaceholder': 'Search title, content, tags (press /)',
+
+      'filter.type': 'Type',
+      'filter.domain': 'Domain',
+      'filter.status': 'Status',
+      'filter.tag': 'Tag',
+      'filter.clearAll': 'Clear filters',
+
+      'detail.created': 'Created',
+      'detail.content': 'Content',
+      'detail.tags': 'Tags',
+      'detail.facts': 'Key numbers',
+      'detail.collections': 'Collections',
+      'detail.relations': 'Relations',
+      'detail.noRelations': 'No relations yet. Link one or wait for AI suggestions.',
+      'detail.history': 'History',
+      'detail.favorite': 'Favorite',
+      'detail.unfavorite': 'Unfavorite',
+      'detail.expand': 'Expand',
+      'detail.collapse': 'Collapse',
+
+      'editor.title': 'Title',
+      'editor.titlePlaceholder': 'One line that captures it',
+      'editor.content': 'Content',
+      'editor.contentPlaceholder': 'Details, evidence, boundaries… supports - lists and ### headings',
+      'editor.type': 'Type',
+      'editor.status': 'Status',
+      'editor.domains': 'Domains',
+      'editor.tags': 'Tags',
+      'editor.tagsPlaceholder': 'Enter or comma separated',
+      'editor.project': 'Project',
+      'editor.source': 'Source',
+      'editor.facts': 'Key numbers',
+      'editor.factLabel': 'Name',
+      'editor.factValue': 'Value',
+      'editor.addFact': 'Add row',
+
+      'quick.title': 'Capture',
+      'quick.subtitle': 'Drop the raw thought, Zhiwei shapes it into a memory',
+      'quick.placeholder': 'e.g. Battle pass XP curve becomes linear for the first 30 levels, exponential after…',
+      'quick.analyze': 'Shape with AI',
+      'quick.proposal': 'What the AI understood',
+      'quick.related': 'Maybe related',
+      'quick.collections': 'Maybe belongs to',
+
+      'relation.title': 'Create relation',
+      'relation.editTitle': 'Edit relation',
+      'relation.from': 'From',
+      'relation.to': 'To',
+      'relation.type': 'Type',
+      'relation.desc': 'Note',
+      'relation.descPlaceholder': 'Why does this relation exist?',
+      'relation.status': 'Status',
+      'relation.swap': 'Swap direction',
+      'relation.save': 'Save relation',
+      'relation.created': 'Relation created',
+      'relation.confirm': 'Confirm',
+      'relation.reject': 'Reject',
+      'relation.delete': 'Delete relation',
+      'relation.self': 'Cannot link a memory to itself',
+      'relation.duplicate': 'This relation already exists',
+      'relation.pick': 'Pick a memory',
+      'relation.pickSearch': 'Search memories',
+      'relation.noTarget': 'No other memories to link',
+      'relation.suggestedHint': 'AI suggestions become relations only after you confirm',
+      'relation.confirmedHint': 'Confirmed relations',
+      'relation.more': 'Show all',
+      'relation.less': 'Show less',
+
+      'collections.subtitle': 'Group memories about the same thing — a memory can live in many collections',
+      'collections.new': 'New collection',
+      'collections.name': 'Name',
+      'collections.descPlaceholder': 'What belongs here?',
+      'collections.color': 'Color',
+      'collections.members': 'Members',
+      'collections.memberCount': 'memories',
+      'collections.empty': 'No collections yet',
+      'collections.emptyHint': 'Create one, or let the AI cluster your memories',
+      'collections.suggestAi': 'Find themes with AI',
+      'collections.aiFound': 'Themes found',
+      'collections.aiSource': 'AI suggested',
+      'collections.accept': 'Accept as collection',
+      'collections.addMembers': 'Add memories',
+      'collections.removeMember': 'Remove from collection',
+      'collections.noMembers': 'No memories in this collection',
+      'collections.mergeInto': 'Merge into…',
+      'collections.reasons': 'Why grouped',
+
+      'graph.subtitle': 'Drag to explore, click to open, Shift-drag to link, Alt-drag to box select',
       'graph.zoomIn': 'Zoom in',
       'graph.zoomOut': 'Zoom out',
-      'graph.fit': 'Fit to window',
-      'graph.relayout': 'Relayout',
-      'graph.auto': 'Auto links',
-      'graph.autoHint': 'Dashed edges derived from shared tags (display only)',
-      'graph.isolate': 'Isolate',
-      'graph.isolateOn': 'Show all',
-      'graph.title': 'Network',
-      'graph.sharedTags': 'shared tags',
-      'graph.hintLink': 'Drag from one memory onto another to link them',
-      'graph.hintRegion': 'Drag a box around related memories to group them into a region',
+      'graph.fit': 'Fit',
+      'graph.relayout': 'Re-layout',
+      'graph.collapse': 'Collapse collection',
+      'graph.searchPlaceholder': 'Locate a memory in the graph…',
+      'graph.saveView': 'Save current view',
+      'graph.viewName': 'View name',
+      'graph.clusterHint': 'Nodes in the same collection are wrapped in a hull',
+
+      'batch.clear': 'Clear selection',
+
+      'toast.saved': 'Saved',
+      'toast.deleted': 'Deleted',
+      'toast.collectionSaved': 'Saved to collection',
+      'toast.relationCreated': 'Relation created',
+      'toast.relationDeleted': 'Relation deleted',
+      'toast.viewSaved': 'View saved',
+
+      'error.load': 'Failed to load',
+      'error.offline': 'Cannot reach the Zhiwei backend — try restarting DSH',
+      'error.write': 'Could not save',
+
+      'view.overview': 'Workbench',
+      'view.all': 'All memories',
+      'view.inbox': 'Inbox',
+      'view.collections': 'Collections',
+      'view.favorites': 'Favorites',
+      'view.recent': 'Recent',
+      'view.graph': 'Relation graph',
+      'app.title': 'Zhiwei · AI knowledge workbench',
+      'app.loading': 'Loading…',
+      'common.name': 'Name',
+
+      'action.star': 'Star',
+      'action.unstar': 'Unstar',
+      'action.deleteConfirm': 'Delete?',
+
+      'detail.status': 'Status',
+      'detail.meta': 'Details',
+      'detail.legacy': 'Imported from the old category system; content kept as is.',
+      'detail.noCollections': 'Not in any collection yet',
+      'detail.emptyTitle': 'Nothing selected',
+      'detail.emptyText': 'Pick a memory from the list, or press “New memory” to capture your first design note.',
+
+      'editor.newTitle': 'New memory',
+      'editor.editTitle': 'Edit memory',
+      'editor.needContent': 'Content cannot be empty',
+      'editor.contentHint': 'Context, decision and the actual numbers — Markdown works.',
+      'editor.factsHint': 'One “name=value” per line, e.g. Random skin amplifier=20',
+      'editor.collections': 'Collections',
+      'editor.collectionsHint': 'A memory can belong to several collections.',
+      'editor.noCollections': 'No collections yet',
+      'editor.sourceLabel': 'Source note',
+      'editor.sourceLabelPlaceholder': 'e.g. N2 weekly sync / competitor teardown / numbers sheet',
+      'editor.favorite': 'Star this memory',
+      'editor.pin': 'Pin to top',
+
+      'quick.needText': 'Write something first',
+      'quick.sourceLabel': 'Source note',
+      'quick.saveRaw': 'Save as is',
+      'quick.confirm': 'Save & organize',
+      'quick.subtitleHint': 'Dump it in — AI will title it, type it, tag domains and suggest relations.',
+
+      'relation.create': 'Create relation',
+      'relation.suggested': 'Suggested',
+      'relation.needTarget': 'Pick a memory to relate to',
+      'relation.searchPlaceholder': 'Search title or content',
+      'relation.description': 'Note',
+      'relation.descriptionPlaceholder': 'Why do they relate? e.g. same combat economy, constrained by this rule',
+      'relation.preview': 'Direction',
+      'relation.previewSelf': 'Source and target cannot be the same memory',
+
+      'collections.needName': 'Name the collection first',
+      'collections.description': 'Description',
+      'collections.project': 'Project',
+      'collections.selected': 'selected',
+      'collections.deleted': 'Collection deleted',
+
       'graph.toolSelect': 'Select',
-      'graph.toolLink': 'Draw link',
-      'graph.toolRegion': 'Draw region',
-      'graph.regionName': 'Region',
-      'graph.regions': 'Regions',
-      'graph.regionsUnit': 'regions',
-      'graph.regionUnit': 'entries',
-      'graph.regionColor': 'Change color',
-      'graph.regionRename': 'Rename',
-      'graph.regionDelete': 'Delete region',
-      'graph.regionDeleteConfirm': 'Click again to delete',
-      'graph.linkSelf': "A memory can't link to itself",
-      'graph.linkNeedTarget': 'Drop it on another memory',
-      'graph.linkDone': 'Link created',
-      'graph.boxEmpty': 'No memory inside the box',
-      'graph.boxDone': 'Created a new region',
-      'graph.regionSaved': 'Region saved',
-      'graph.regionRemoved': 'Region deleted',
-      'detail.region': 'Region'
+      'graph.toolLink': 'Link',
+      'graph.toolBox': 'Box select',
+      'graph.linkNeedTarget': 'Drop the line on another memory to link it',
+      'graph.linkSelf': 'Cannot link to itself',
+      'graph.linkDone': 'Relation created',
+      'graph.boxEmpty': 'Nothing inside the box',
+      'graph.filters': 'Filters',
+      'graph.byType': 'By type',
+      'graph.byRelation': 'By relation',
+      'graph.byDomain': 'By domain',
+      'graph.byCollection': 'By collection',
+      'graph.suggestedOnly': 'AI suggestions only',
+      'graph.collapsed': 'collapsed',
+      'graph.noCollections': 'No collections yet',
+      'graph.viewNamePlaceholder': 'e.g. Combat economy map',
+
+      'batch.selected': 'selected',
+      'batch.addToCollection': 'Add to collection',
+      'batch.setStatus': 'Set active',
+      'batch.pickCollection': 'Pick a collection',
+      'nav.newProject': 'New project space',
+      'toast.created': 'Created',
+      'toast.status': 'Status updated',
+      'toast.membersAdded': 'Added to collection',
+      'toast.merged': 'Collections merged',
+      'toast.suggested': 'Suggestions ready',
+      'toast.restored': 'Restored',
+      'toast.segmentAdded': 'Split into a new memory',
+
+      'assist.title': 'AI assist',
+      'assist.organize': 'Organize',
+      'assist.similar': 'Find similar',
+      'assist.relations': 'Suggest relations',
+      'assist.summary': 'Summarize',
+      'assist.conflicts': 'Check conflicts',
+      'assist.impact': 'Impact',
+      'assist.running': 'Analyzing…',
+      'assist.done': 'Analysis complete',
+      'assist.empty': 'Nothing needs attention',
+      'assist.apply': 'Apply suggestion',
+      'assist.applied': 'Suggestion applied',
+      'assist.reason': 'Why',
+      'assist.titleSug': 'Suggested title',
+      'assist.typeSug': 'Suggested type',
+      'assist.domainSug': 'Suggested domains',
+      'assist.tagSug': 'Keywords',
+      'assist.summarySug': 'Suggested summary',
+      'assist.segments': 'Atomic memories found',
+      'assist.splitOne': 'Split this out',
+      'assist.segmentCount': 'items',
+      'assist.similarCount': 'similar',
+      'assist.keepBoth': 'Keep both for now',
+      'assist.supersede': 'New one replaces the old',
+      'assist.bothApply': 'They cover different cases',
+      'assist.noConflict': 'No conflict',
+      'assist.confirmed': 'Decision recorded',
+      'assist.themes': 'Themes',
+      'assist.members': 'Memories involved',
+      'assist.needSelection': 'Select a memory or a collection first',
+      'assist.upstream': 'Upstream (affects this)',
+      'assist.downstream': 'Downstream (affected by this)',
+      'assist.notApplied': 'For reference only, nothing is written',
+      'action.undo': 'Undo',
+      'common.none': 'none'
     }
 
     const CSS = `
-.dm-root {
-  --dm-surface: var(--dsw-alias-bg-base, #ffffff);
-  --dm-surface-1: var(--dsw-alias-bg-layer-1, #f7f8fa);
-  --dm-surface-2: var(--dsw-alias-bg-layer-2, #f1f2f5);
-  --dm-card: var(--dsw-alias-card-fill, var(--dsw-alias-bg-layer-1, #f7f8fa));
-  --dm-skeleton: var(--dsw-alias-bg-skeleton, rgba(0, 0, 0, 0.05));
-  --dm-border: var(--dsw-alias-border-l1, rgba(0, 0, 0, 0.06));
-  --dm-border-strong: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12));
-  --dm-text: var(--dsw-alias-label-primary, #1b1b1c);
-  --dm-text-2: var(--dsw-alias-label-secondary, #6b7280);
-  --dm-hover: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.04));
-  --dm-active: var(--dsw-alias-interactive-bg-active, rgba(0, 0, 0, 0.06));
-  --dm-accent: var(--dsw-alias-brand-primary, #4176e6);
-  --dm-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
-  --dm-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
-  --dm-toolbar-fill: color-mix(in srgb, var(--dm-surface) 88%, transparent);
-  --dm-graph-bg: var(--dsw-alias-bg-base, #ffffff);
-  --dm-grid: rgba(15, 23, 42, 0.05);
-  --dm-edge: rgba(15, 23, 42, 0.3);
-  --dm-edge-auto: rgba(15, 23, 42, 0.16);
-  --dm-node-ring: var(--dsw-alias-bg-base, #ffffff);
-  --dm-graph-glow: rgba(65, 118, 230, 0.10);
-  --dm-signal: rgba(65, 118, 230, 0.72);
-  --dm-signal-soft: rgba(65, 118, 230, 0.26);
-  --dm-region-violet: #8b5cf6;
-  --dm-region-blue: #3b82f6;
-  --dm-region-teal: #14b8a6;
-  --dm-region-amber: #f59e0b;
-  --dm-region-rose: #f43f5e;
-  --dm-region-lime: #84cc16;
-  --dm-cat-system: var(--dsw-alias-link, #3b82f6);
-  --dm-cat-numbers: var(--dsw-alias-state-success-primary, #22c55e);
-  --dm-cat-workflow: var(--dsw-alias-state-info-primary, #7c6cd6);
-  --dm-cat-other: var(--dsw-alias-state-warn-primary, #f59e0b);
-  display:flex; flex-direction:column; height:100%; min-height:0; background:var(--dm-surface); color:var(--dm-text); font-size:13px; line-height:1.5;
-}
-.dm-root[data-dm-theme='dark'] {
-  --dm-surface-1: var(--dsw-alias-bg-layer-1, #232324);
-  --dm-surface-2: var(--dsw-alias-bg-layer-2, #2c2c2e);
-  --dm-card: var(--dsw-alias-card-fill, rgba(255, 255, 255, 0.05));
-  --dm-skeleton: var(--dsw-alias-bg-skeleton, rgba(255, 255, 255, 0.08));
-  --dm-text: var(--dsw-alias-label-primary, #f3f4f6);
-  --dm-text-2: var(--dsw-alias-label-secondary, #a1a1aa);
-  --dm-hover: var(--dsw-alias-interactive-bg-hover, rgba(255, 255, 255, 0.06));
-  --dm-active: var(--dsw-alias-interactive-bg-active, rgba(255, 255, 255, 0.1));
-  --dm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --dm-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
-  --dm-grid: rgba(255, 255, 255, 0.055);
-  --dm-edge: rgba(228, 232, 240, 0.36);
-  --dm-edge-auto: rgba(228, 232, 240, 0.18);
-  --dm-node-ring: var(--dsw-alias-bg-base, #151517);
-  --dm-graph-glow: rgba(96, 145, 255, 0.20);
-  --dm-signal: rgba(138, 180, 255, 0.86);
-  --dm-signal-soft: rgba(138, 180, 255, 0.32);
-  --dm-region-violet: #a78bfa;
-  --dm-region-blue: #60a5fa;
-  --dm-region-teal: #2dd4bf;
-  --dm-region-amber: #fbbf24;
-  --dm-region-rose: #fb7185;
-  --dm-region-lime: #a3e635;
-}
-.dm-root[data-dm-theme='light'] { color-scheme: light; }
-.dm-root[data-dm-theme='dark'] { color-scheme: dark; }
-.dm-root *, .dm-root *::before, .dm-root *::after { box-sizing:border-box; }
-.dm-root button { font:inherit; color:inherit; }
-.dm-head { flex:none; display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding:22px 28px 16px; border-bottom:.5px solid var(--dm-border); }
-html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-top-clearance, 0px)); }
-.dm-title { margin:0; font-size:20px; line-height:28px; font-weight:500; letter-spacing:.2px; }
-.dm-sub { margin:4px 0 0; font-size:12px; color:var(--dm-text-2); }
-.dm-headActions { flex:none; display:flex; align-items:center; gap:8px; }
-.dm-segment { display:inline-flex; gap:2px; padding:2px; border:1px solid var(--dm-border); border-radius:9px; background:var(--dm-surface-1); }
-.dm-segmentBtn { display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 10px; border:0; border-radius:7px; background:transparent; color:var(--dm-text-2); font-size:12px; cursor:pointer; }
-.dm-segmentBtn:hover { color:var(--dm-text); }
-.dm-segmentBtnOn { background:var(--dm-surface); color:var(--dm-text); box-shadow:var(--dm-shadow-sm); }
-.dm-search { position:relative; display:flex; align-items:center; }
-.dm-search > svg { position:absolute; left:9px; color:var(--dm-text-2); pointer-events:none; }
-.dm-search input { width:220px; height:32px; padding:0 30px; border:1px solid var(--dm-border); border-radius:8px; background:var(--dm-surface-1); color:var(--dm-text); font:inherit; outline:none; }
-.dm-search input:focus-visible { border-color:var(--dm-accent); }
-.dm-search input::placeholder { color:var(--dm-text-2); opacity:.8; }
-.dm-searchClear { position:absolute; right:4px; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--dm-text-2); cursor:pointer; }
-.dm-searchClear:hover { background:var(--dm-active); color:var(--dm-text); }
-.dm-notice { flex:none; display:flex; align-items:center; gap:8px; margin:10px 28px 0; padding:8px 12px; border-radius:8px; font-size:12px; background:var(--dm-hover); color:var(--dm-text-2); }
-.dm-notice-success { color:var(--dsw-alias-state-success-primary, #16a34a); }
-.dm-notice-error { color:var(--dsw-alias-state-error-primary, #ef4444); }
-.dm-body { display:grid; grid-template-columns:196px minmax(260px, 320px) minmax(0, 1fr); flex:1; min-height:0; }
-.dm-body-graph { grid-template-columns:196px minmax(0, 1fr); }
-.dm-rail { display:flex; flex-direction:column; gap:2px; min-height:0; padding:12px 10px; overflow-y:auto; border-right:.5px solid var(--dm-border); }
-.dm-railRow { display:flex; align-items:center; gap:8px; height:32px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:var(--dm-text-2); cursor:pointer; text-align:left; }
-.dm-railRow:hover { background:var(--dm-hover); color:var(--dm-text); }
-.dm-railRowActive { background:var(--dm-active); color:var(--dm-text); font-weight:500; }
-.dm-railLabel { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dm-railCount { flex:none; font-size:11px; color:var(--dm-text-2); font-variant-numeric:tabular-nums; }
-.dm-dot { flex:none; width:7px; height:7px; border-radius:50%; background:var(--dm-text-2); opacity:.65; }
-.dm-dot-system { background:var(--dm-cat-system); }
-.dm-dot-numbers { background:var(--dm-cat-numbers); }
-.dm-dot-workflow { background:var(--dm-cat-workflow); }
-.dm-dot-other { background:var(--dm-cat-other); }
-.dm-dot-system, .dm-dot-numbers, .dm-dot-workflow, .dm-dot-other { opacity:1; }
-.dm-railDivider { height:1px; margin:10px 6px; background:var(--dm-border); }
-.dm-railSection { padding:0 10px 6px; font-size:11px; letter-spacing:.04em; color:var(--dm-text-2); }
-.dm-statusFilter { display:flex; flex-wrap:wrap; gap:6px; padding:0 8px; }
-.dm-chip { height:24px; padding:0 9px; border:1px solid var(--dm-border); border-radius:999px; background:transparent; color:var(--dm-text-2); font-size:11px; cursor:pointer; }
-.dm-chip:hover { background:var(--dm-hover); }
-.dm-chipOn { border-color:var(--dm-accent); color:var(--dm-accent); }
-.dm-railFoot { display:flex; flex-direction:column; gap:4px; margin-top:auto; padding:12px 10px 4px; font-size:11px; color:var(--dm-text-2); }
-.dm-storage { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; opacity:.8; }
-.dm-list { display:flex; flex-direction:column; min-height:0; border-right:.5px solid var(--dm-border); }
-.dm-listHead { flex:none; display:flex; align-items:center; gap:8px; padding:14px 14px 10px; }
-.dm-listTitle { font-weight:500; }
-.dm-listCount { font-size:12px; color:var(--dm-text-2); }
-.dm-listHead .dm-iconBtn { margin-left:auto; }
-.dm-rows { flex:1; min-height:0; display:flex; flex-direction:column; gap:2px; padding:0 8px 12px; overflow-y:auto; }
-.dm-row { display:flex; flex-direction:column; gap:5px; width:100%; padding:10px 12px; border:0; border-radius:10px; background:transparent; text-align:left; cursor:pointer; }
-.dm-row:hover:not(:disabled) { background:var(--dm-hover); }
-.dm-rowActive { background:var(--dm-active); box-shadow:inset 2px 0 0 var(--dm-accent); }
-.dm-row:disabled { cursor:default; opacity:.65; }
-.dm-rowTop { display:flex; align-items:center; gap:8px; }
-.dm-rowTitle { flex:1; min-width:0; display:flex; align-items:center; gap:4px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dm-pinMark { display:inline-flex; flex:none; color:var(--dsw-alias-state-warn-primary, #f59e0b); }
-.dm-statusPill { flex:none; padding:0 6px; border-radius:999px; background:var(--dm-hover); color:var(--dm-text-2); font-size:10px; line-height:16px; }
-.dm-status-confirmed { color:var(--dsw-alias-state-success-primary, #16a34a); }
-.dm-status-draft { color:var(--dsw-alias-state-warn-primary, #d97706); }
-.dm-status-deprecated { color:var(--dm-text-2); opacity:.85; }
-.dm-rowSummary { display:-webkit-box; overflow:hidden; color:var(--dm-text-2); font-size:12px; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-.dm-rowMeta { display:flex; align-items:center; gap:6px; color:var(--dm-text-2); font-size:11px; }
-.dm-rowMetaLinks { display:inline-flex; align-items:center; gap:3px; margin-left:auto; }
-.dm-dotSep { opacity:.5; }
-.dm-detail { min-width:0; min-height:0; overflow-y:auto; }
-.dm-detailInner { max-width:720px; padding:26px 32px 48px; }
-.dm-detailMeta { display:flex; align-items:center; gap:8px; color:var(--dm-text-2); font-size:11px; }
-.dm-catChip { display:inline-flex; align-items:center; gap:5px; height:22px; padding:0 8px; border-radius:999px; background:var(--dm-hover); font-size:11px; }
-.dm-catChip::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--dm-text-2); }
-.dm-cat-system::before { background:var(--dm-cat-system); }
-.dm-cat-numbers::before { background:var(--dm-cat-numbers); }
-.dm-cat-workflow::before { background:var(--dm-cat-workflow); }
-.dm-cat-other::before { background:var(--dm-cat-other); }
-.dm-detailDate { margin-left:auto; }
-.dm-detailHead { display:flex; align-items:flex-start; gap:12px; margin:10px 0 6px; }
-.dm-detailTitle { flex:1; min-width:0; margin:0; font-size:19px; line-height:28px; font-weight:600; word-break:break-word; }
-.dm-detailSummary { margin:0 0 18px; color:var(--dm-text-2); font-size:13px; line-height:1.7; }
-.dm-statusNote { display:flex; align-items:flex-start; gap:10px; margin:12px 0 18px; padding:10px 12px; border:1px solid var(--dm-border); border-radius:10px; background:var(--dm-surface-1); color:var(--dm-text-2); font-size:12px; line-height:1.65; }
-.dm-statusNote-warn { border-color:color-mix(in srgb, var(--dsw-alias-state-warn-primary, #d97706) 42%, var(--dm-border)); }
-.dm-statusNote-dim { border-style:dashed; }
-.dm-statusNoteIcon { flex:none; margin-top:1px; color:var(--dsw-alias-state-warn-primary, #d97706); }
-.dm-statusNoteBody { flex:1; min-width:0; }
-.dm-statusNoteActions { display:flex; flex:none; align-items:center; gap:6px; }
-.dm-section { margin:20px 0 0; }
-.dm-sectionTitle { margin:0 0 8px; color:var(--dm-text-2); font-size:11px; font-weight:500; letter-spacing:.06em; text-transform:uppercase; }
-.dm-facts { border-top:.5px solid var(--dm-border); }
-.dm-factRow { display:grid; grid-template-columns:minmax(90px,180px) minmax(0,1fr); gap:12px; padding:8px 2px; border-bottom:.5px solid var(--dm-border); }
-.dm-factLabel { color:var(--dm-text-2); }
-.dm-factValue { font-variant-numeric:tabular-nums; white-space:pre-wrap; word-break:break-word; }
-.dm-bodyText { font-size:13px; line-height:1.85; word-break:break-word; }
-.dm-bodyP { margin:0 0 10px; white-space:pre-wrap; }
-.dm-bodyList { margin:0 0 10px; padding-left:18px; }
-.dm-bodyList li { margin:3px 0; }
-.dm-bodyH { margin:16px 0 8px; font-size:13px; font-weight:600; }
-.dm-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:18px; }
-.dm-tag { padding:2px 7px; border-radius:6px; background:var(--dm-hover); color:var(--dm-text-2); font-size:11px; }
-.dm-links { display:flex; flex-direction:column; gap:6px; }
-.dm-linkRow { display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--dm-border); border-radius:9px; background:transparent; text-align:left; cursor:pointer; }
-.dm-linkRow:hover { border-color:var(--dm-border-strong); background:var(--dm-hover); }
-.dm-linkRowMain { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
-.dm-linkRowTitle { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; }
-.dm-linkRowNote { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dm-text-2); font-size:11px; }
-.dm-linkRowCat { flex:none; }
-.dm-linkAdd { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:8px; }
-.dm-linkAdd select, .dm-linkAdd input { height:30px; padding:0 8px; border:1px solid var(--dm-border); border-radius:8px; background:var(--dm-surface-1); color:var(--dm-text); font:inherit; font-size:12px; outline:none; }
-.dm-linkAdd select { flex:1 1 180px; min-width:140px; }
-.dm-linkAdd input { flex:1 1 140px; min-width:120px; }
-.dm-linkEmpty { color:var(--dm-text-2); font-size:12px; }
-.dm-detailFoot { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-top:28px; padding-top:14px; border-top:.5px solid var(--dm-border); }
-.dm-footMeta { display:flex; flex-direction:column; gap:3px; min-width:0; color:var(--dm-text-2); font-size:11px; }
-.dm-footLine { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dm-footActions { flex:none; display:flex; gap:8px; }
-.dm-footBtns { display:flex; gap:8px; }
-.dm-confirm { display:flex; align-items:center; gap:8px; }
-.dm-confirmText { color:var(--dsw-alias-state-error-primary, #ef4444); font-size:11px; }
-.dm-history { margin-top:18px; padding-top:10px; border-top:.5px solid var(--dm-border); }
-.dm-historySummary { color:var(--dm-text-2); font-size:11px; cursor:pointer; }
-.dm-historyList { display:flex; flex-direction:column; gap:6px; margin:8px 0 0; padding:0; list-style:none; }
-.dm-historyItem { display:flex; gap:10px; color:var(--dm-text-2); font-size:11px; }
-.dm-historyDate { flex:none; font-variant-numeric:tabular-nums; opacity:.85; }
-.dm-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--dm-border-strong); border-radius:8px; background:var(--dm-surface-1); color:var(--dm-text); white-space:nowrap; cursor:pointer; }
-.dm-btn:hover:not(:disabled) { background:var(--dm-hover); }
-.dm-btn:disabled { opacity:.55; cursor:default; }
-.dm-btnPrimary { border-color:var(--dm-accent); background:var(--dm-accent); color:var(--dsw-alias-label-primary-foreground, #ffffff); }
-.dm-btnPrimary:hover:not(:disabled) { border-color:var(--dsw-alias-button-primary-hover, var(--dm-accent)); background:var(--dsw-alias-button-primary-hover, var(--dm-accent)); filter:none; }
-.dm-btnDanger { border-color:var(--dsw-alias-state-error-primary, #ef4444); color:var(--dsw-alias-state-error-primary, #ef4444); }
-.dm-btnGhostDanger { color:var(--dsw-alias-state-error-primary, #ef4444); }
-.dm-btnSmall { height:26px; padding:0 10px; font-size:12px; }
-.dm-iconBtn { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:1px solid transparent; border-radius:8px; background:transparent; color:var(--dm-text-2); cursor:pointer; }
-.dm-iconBtn:hover:not(:disabled) { background:var(--dm-hover); color:var(--dm-text); }
-.dm-iconBtnOn { color:var(--dsw-alias-state-warn-primary, #f59e0b); }
-.dm-btn:focus-visible, .dm-iconBtn:focus-visible, .dm-row:focus-visible, .dm-railRow:focus-visible, .dm-chip:focus-visible, .dm-segmentBtn:focus-visible, .dm-linkRow:focus-visible, .dm-search input:focus-visible, .dm-input:focus-visible { outline:2px solid var(--dm-accent); outline-offset:2px; }
-.dm-editor { display:flex; flex-direction:column; gap:12px; max-width:760px; padding:22px 32px 48px; }
-.dm-editorTop { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.dm-editorMode { color:var(--dm-accent); font-size:11px; font-weight:500; letter-spacing:.08em; }
-.dm-editorHint { color:var(--dm-text-2); font-size:11px; }
-.dm-input { width:100%; height:34px; padding:0 10px; border:1px solid var(--dm-border); border-radius:8px; background:var(--dm-surface-1); color:var(--dm-text); font:inherit; outline:none; }
-.dm-input::placeholder { color:var(--dm-text-2); opacity:.75; }
-.dm-titleInput { height:40px; font-size:16px; font-weight:500; }
-.dm-textarea { height:auto; min-height:170px; padding:10px; line-height:1.7; resize:vertical; }
-.dm-select { padding:0 8px; }
-.dm-editorRow { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; }
-.dm-field { display:flex; flex:1; flex-direction:column; gap:5px; min-width:150px; }
-.dm-fieldLabel { color:var(--dm-text-2); font-size:11px; letter-spacing:.04em; }
-.dm-fieldHint { color:var(--dm-text-2); font-size:11px; opacity:.8; }
-.dm-check { display:inline-flex; align-items:center; gap:6px; height:34px; color:var(--dm-text-2); font-size:12px; }
-.dm-editorSection { display:flex; flex-direction:column; gap:7px; }
-.dm-editorSectionHead { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
-.dm-factsEdit { display:flex; flex-direction:column; gap:6px; }
-.dm-factEditRow { display:grid; grid-template-columns:minmax(110px,220px) minmax(0,1fr) 30px; align-items:center; gap:8px; }
-.dm-textBtn { align-self:flex-start; display:inline-flex; align-items:center; gap:5px; height:26px; padding:0 8px; border:1px dashed var(--dm-border-strong); border-radius:7px; background:transparent; color:var(--dm-text-2); font-size:12px; cursor:pointer; }
-.dm-textBtn:hover { background:var(--dm-hover); color:var(--dm-text); }
-.dm-editorActions { display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:6px; }
-.dm-saveHint { margin-right:auto; color:var(--dm-text-2); font-size:11px; }
-.dm-formError { color:var(--dsw-alias-state-error-primary, #ef4444); font-size:12px; }
-.dm-blank { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; height:100%; padding:32px; color:var(--dm-text-2); text-align:center; }
-.dm-blank > svg { margin-bottom:4px; opacity:.55; }
-.dm-blankTitle { margin:0; color:var(--dm-text); font-size:15px; font-weight:500; }
-.dm-blankHint { max-width:360px; margin:0; font-size:12px; line-height:1.7; }
-.dm-onboard { display:flex; flex-direction:column; gap:20px; max-width:640px; padding:40px 32px 48px; }
-.dm-onboardHead { display:flex; flex-direction:column; gap:6px; }
-.dm-onboardIcon { color:var(--dm-accent); }
-.dm-onboardTitle { margin:0; font-size:18px; font-weight:600; }
-.dm-onboardHint { max-width:480px; margin:0; color:var(--dm-text-2); font-size:12px; line-height:1.7; }
-.dm-onboardCards { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
-.dm-onboardCard { display:flex; flex-direction:column; gap:5px; padding:12px; border:1px solid var(--dm-border); border-radius:10px; background:var(--dm-card); }
-.dm-onboardCardTitle { display:flex; align-items:center; gap:6px; font-weight:500; }
-.dm-onboardCardHint { color:var(--dm-text-2); font-size:11px; line-height:1.6; }
-.dm-skeleton { height:52px; margin:0 8px 6px; border-radius:10px; background:var(--dm-skeleton); }
-.dm-graphArea { position:relative; min-width:0; min-height:0; overflow:hidden; background:var(--dm-graph-bg); }
-.dm-graphWrap { position:absolute; inset:0; }
-.dm-graphSvg { display:block; width:100%; height:100%; touch-action:none; cursor:grab; }
-.dm-graphSvg:active { cursor:grabbing; }
-.dm-graphSvg.dm-toolLink, .dm-graphSvg.dm-toolRegion { cursor:crosshair; }
-.dm-graphDot { fill:var(--dm-grid); }
-.dm-graphGlowStop { stop-color:var(--dm-graph-glow); }
-.dm-regionLayer { pointer-events:none; }
-.dm-regionBlob { fill-opacity:.10; stroke-width:1.3; stroke-dasharray:7 8; animation:dmRegionFlow 22s linear infinite; }
-.dm-regionBlobDim { fill-opacity:.03; stroke-opacity:.22; animation:none; }
-.dm-regionBlobFocus { fill-opacity:.16; stroke-opacity:.9; stroke-width:1.7; }
-.dm-regionLabel { font-size:10.5px; font-weight:600; paint-order:stroke; stroke:var(--dm-graph-bg); stroke-width:3.2px; stroke-linejoin:round; }
-.dm-regionLabelOn { font-size:11.5px; }
-.dm-gedge { fill:none; stroke:var(--dm-edge); stroke-width:1.15; }
-.dm-gedgeAuto { stroke:var(--dm-edge-auto); stroke-dasharray:4 7; stroke-width:1; }
-.dm-gedgeSel { stroke:var(--dm-accent); stroke-width:1.9; }
-.dm-gedgeDim { stroke-opacity:.12; }
-.dm-gedgeSignal { fill:none; stroke:var(--dm-signal); stroke-width:1.8; stroke-linecap:round; stroke-dasharray:1.4 26; animation:dmSignalFlow 5.2s linear infinite; }
-.dm-gedgeSignalAuto { stroke:var(--dm-signal-soft); stroke-dasharray:1.2 34; animation-duration:7.4s; }
-.dm-gedgeDraft { fill:none; stroke:var(--dm-accent); stroke-width:1.7; stroke-dasharray:6 5; opacity:.9; }
-.dm-gedgeArrow { fill:var(--dm-edge); }
-.dm-gedgeArrowSel { fill:var(--dm-accent); }
-.dm-gedgeLabel { font-size:10px; fill:var(--dm-text-2); text-anchor:middle; pointer-events:none; paint-order:stroke; stroke:var(--dm-graph-bg); stroke-width:3px; stroke-linejoin:round; }
-.dm-linkDot { fill:var(--dm-accent); }
-.dm-gnode { cursor:pointer; }
-.dm-gnodeHalo { opacity:.12; transform-box:fill-box; transform-origin:center; animation:dmNodeBreath 6.4s ease-in-out infinite; }
-.dm-gnodeRing { fill:none; stroke-width:1; opacity:.4; }
-.dm-gnodeDot { stroke:var(--dm-node-ring); stroke-width:2.2; }
-.dm-gnodeDotSel { stroke:var(--dm-accent); stroke-width:3; }
-.dm-gnodeSelRing { fill:none; stroke:var(--dm-accent); stroke-width:1.1; stroke-dasharray:3 4; opacity:.65; animation:dmRegionFlow 9s linear infinite; }
-.dm-gnodeLabel { font-size:11px; fill:var(--dm-text-2); text-anchor:middle; pointer-events:none; paint-order:stroke; stroke:var(--dm-graph-bg); stroke-width:3.2px; stroke-linejoin:round; }
-.dm-gnodeLabelSel { fill:var(--dm-text); font-weight:600; }
-.dm-gnodeStar { fill:var(--dm-cat-other); }
-.dm-gnodeDim { opacity:.18; }
-.dm-gnodeTarget { filter:drop-shadow(0 0 6px var(--dm-accent)); }
-.dm-gnodeDraft { stroke-dasharray:4 3; }
-.dm-gnodeDeprecated { opacity:.55; }
-.dm-boxRect { fill:var(--dm-accent); fill-opacity:.07; stroke:var(--dm-accent); stroke-width:1.1; stroke-dasharray:5 4; }
-.dm-graphToolbar { position:absolute; top:12px; left:12px; z-index:2; display:flex; flex-wrap:wrap; align-items:center; gap:4px; max-width:calc(100% - 96px); padding:5px; border:1px solid var(--dm-border); border-radius:10px; background:var(--dm-toolbar-fill); backdrop-filter:blur(10px); }
-.dm-graphCount { padding:0 8px; color:var(--dm-text-2); font-size:11px; font-variant-numeric:tabular-nums; }
-.dm-graphToggle { display:inline-flex; align-items:center; gap:4px; height:26px; padding:0 8px; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--dm-text-2); font-size:11px; cursor:pointer; }
-.dm-graphToggle:hover { background:var(--dm-hover); color:var(--dm-text); }
-.dm-graphToggle:disabled { opacity:.4; cursor:default; }
-.dm-graphToggleOn { border-color:var(--dm-border-strong); background:var(--dm-active); color:var(--dm-text); }
-.dm-graphHint { position:absolute; left:14px; bottom:12px; z-index:2; max-width:calc(100% - 250px); color:var(--dm-text-2); font-size:11px; opacity:.82; pointer-events:none; }
-.dm-graphFlash { position:absolute; left:50%; bottom:44px; z-index:4; transform:translateX(-50%); padding:5px 12px; border:1px solid var(--dm-border-strong); border-radius:999px; background:var(--dm-surface); box-shadow:var(--dm-shadow-sm); color:var(--dm-text); font-size:11.5px; pointer-events:none; }
-.dm-graphLegend { position:absolute; right:14px; bottom:12px; z-index:2; display:flex; gap:12px; align-items:center; color:var(--dm-text-2); font-size:11px; opacity:.85; pointer-events:none; }
-.dm-legendItem { display:inline-flex; gap:5px; align-items:center; }
-.dm-legendSample { display:inline-block; width:16px; height:0; border-top:1px solid var(--dm-edge); }
-.dm-legendDashed { border-top:1px dashed var(--dm-edge-auto); }
-.dm-regionPanel { position:absolute; top:58px; right:12px; z-index:3; display:flex; flex-direction:column; gap:1px; width:min(232px, 54%); max-height:calc(100% - 132px); overflow:auto; padding:7px; border:1px solid var(--dm-border); border-radius:12px; background:var(--dm-surface); box-shadow:var(--dm-shadow-sm); }
-.dm-regionPanelHead { display:flex; align-items:center; gap:5px; padding:2px 4px 5px; color:var(--dm-text-2); font-size:11px; }
-.dm-regionRow { display:flex; align-items:center; gap:6px; width:100%; padding:5px 6px; border:0; border-radius:8px; background:transparent; color:var(--dm-text); font:inherit; font-size:12px; text-align:left; cursor:pointer; }
-.dm-regionRow:hover { background:var(--dm-hover); }
-.dm-regionRowOn { background:var(--dm-active); }
-.dm-regionSwatch { flex:none; width:9px; height:9px; padding:0; border:0; border-radius:50%; cursor:pointer; }
-.dm-regionName { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dm-regionEditInput { flex:1; min-width:0; height:22px; padding:0 6px; border:1px solid var(--dm-accent); border-radius:6px; background:var(--dm-surface); color:var(--dm-text); font:inherit; font-size:12px; }
-.dm-regionCount { flex:none; color:var(--dm-text-2); font-size:11px; font-variant-numeric:tabular-nums; }
-.dm-regionDel { flex:none; display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; padding:0; border:0; border-radius:6px; background:transparent; color:var(--dm-text-2); cursor:pointer; }
-.dm-regionDel:hover { background:var(--dm-hover); color:var(--dm-text); }
-.dm-regionDelArmed { color:var(--dsw-alias-state-error-primary, #dc2626); }
-.dm-regionChip { display:inline-flex; align-items:center; height:20px; padding:0 8px; border:1px solid var(--dm-border-strong); border-radius:999px; color:var(--dm-text-2); font-size:11px; }
-.dm-graphSvg.dm-toolRegion .dm-gnode { cursor:cell; }
-@keyframes dmNodeBreath { 0%, 100% { opacity:.09; transform:scale(.94); } 50% { opacity:.24; transform:scale(1.10); } }
-@keyframes dmSignalFlow { from { stroke-dashoffset:0; } to { stroke-dashoffset:-54; } }
-@keyframes dmRegionFlow { from { stroke-dashoffset:0; } to { stroke-dashoffset:-120; } }
-.dm-drawer { position:absolute; top:12px; right:12px; bottom:12px; z-index:3; display:flex; flex-direction:column; width:min(372px, 46%); border:1px solid var(--dm-border); border-radius:12px; background:var(--dm-surface); box-shadow:var(--dm-shadow); overflow:hidden; }
-.dm-drawerHead { flex:none; display:flex; align-items:center; gap:6px; padding:10px 12px; border-bottom:.5px solid var(--dm-border); color:var(--dm-text); font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.dm-drawerHead .dm-iconBtn { margin-left:auto; }
-.dm-drawerScroll { flex:1; min-height:0; overflow:auto; padding:14px 16px 20px; }
-.dm-drawerScroll .dm-detailInner { max-width:none; }
+    /* ================= 知微 · 设计令牌 ================= */
+    .zw-root {
+      --zw-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      --zw-mono: 'SF Mono', ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace;
+      --zw-bg: var(--dsw-alias-bg-base, #ffffff);
+      --zw-bg-soft: color-mix(in srgb, var(--dsw-alias-bg-base, #ffffff) 94%, #000 6%);
+      --zw-bg-sunken: color-mix(in srgb, var(--dsw-alias-bg-base, #ffffff) 90%, #000 10%);
+      --zw-surface: var(--dsw-alias-bg-base, #ffffff);
+      --zw-surface-raised: var(--dsw-alias-bg-base, #ffffff);
+      --zw-border: rgba(15, 23, 42, 0.09);
+      --zw-border-strong: rgba(15, 23, 42, 0.16);
+      --zw-text: var(--dsw-alias-text, #0f172a);
+      --zw-text-2: rgba(15, 23, 42, 0.62);
+      --zw-text-3: rgba(15, 23, 42, 0.42);
+      --zw-accent: #5b5bd6;
+      --zw-accent-2: #7c6cf0;
+      --zw-accent-soft: rgba(91, 91, 214, 0.1);
+      --zw-accent-text: #4a45c9;
+      --zw-danger: #dc2626;
+      --zw-danger-soft: rgba(220, 38, 38, 0.1);
+      --zw-warn: #b45309;
+      --zw-ok: #0f766e;
+      --zw-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+      --zw-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.1), 0 1px 3px rgba(15, 23, 42, 0.06);
+      --zw-shadow-lg: 0 24px 64px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+      --zw-graph-bg: color-mix(in srgb, var(--dsw-alias-bg-base, #ffffff) 96%, #0f172a 4%);
+      --zw-graph-dot: rgba(15, 23, 42, 0.1);
+      --zw-graph-edge: rgba(15, 23, 42, 0.32);
+      --zw-graph-node-ring: var(--dsw-alias-bg-base, #ffffff);
+      --zw-region-violet: #8b5cf6;
+      --zw-region-blue: #3b82f6;
+      --zw-region-teal: #14b8a6;
+      --zw-region-amber: #f59e0b;
+      --zw-region-rose: #f43f5e;
+      --zw-region-lime: #84cc16;
+      --zw-type-decision: #6366f1;
+      --zw-type-rule: #3b82f6;
+      --zw-type-assumption: #f59e0b;
+      --zw-type-question: #ec4899;
+      --zw-type-proposal: #8b5cf6;
+      --zw-type-reference: #14b8a6;
+      --zw-type-metric: #22c55e;
+      --zw-type-retro: #64748b;
+      --zw-type-process: #06b6d4;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
+      color: var(--zw-text);
+      font-family: var(--zw-font);
+      font-size: 13px;
+      line-height: 1.55;
+      background: var(--zw-bg);
+      -webkit-font-smoothing: antialiased;
+    }
 
-@media (max-width:1080px) {
-  .dm-body { grid-template-columns:168px minmax(240px, 300px) minmax(0, 1fr); }
-  .dm-body-graph { grid-template-columns:168px minmax(0, 1fr); }
-  .dm-search input { width:170px; }
-  .dm-onboardCards { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-}
-`
+    .zw-root[data-zw-theme='dark'] {
+      --zw-bg: var(--dsw-alias-bg-base, #101014);
+      --zw-bg-soft: color-mix(in srgb, var(--dsw-alias-bg-base, #101014) 90%, #ffffff 10%);
+      --zw-bg-sunken: color-mix(in srgb, var(--dsw-alias-bg-base, #101014) 82%, #ffffff 18%);
+      --zw-surface: var(--dsw-alias-bg-base, #101014);
+      --zw-surface-raised: color-mix(in srgb, var(--dsw-alias-bg-base, #101014) 88%, #ffffff 12%);
+      --zw-border: rgba(226, 232, 240, 0.1);
+      --zw-border-strong: rgba(226, 232, 240, 0.2);
+      --zw-text: var(--dsw-alias-text, #e8ecf4);
+      --zw-text-2: rgba(226, 232, 240, 0.66);
+      --zw-text-3: rgba(226, 232, 240, 0.4);
+      --zw-accent: #8b8bf0;
+      --zw-accent-2: #a78bfa;
+      --zw-accent-soft: rgba(139, 139, 240, 0.16);
+      --zw-accent-text: #b6b6ff;
+      --zw-danger: #f87171;
+      --zw-danger-soft: rgba(248, 113, 113, 0.14);
+      --zw-warn: #fbbf24;
+      --zw-ok: #2dd4bf;
+      --zw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --zw-shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5);
+      --zw-shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.6);
+      --zw-graph-bg: color-mix(in srgb, var(--dsw-alias-bg-base, #101014) 92%, #ffffff 8%);
+      --zw-graph-dot: rgba(226, 232, 240, 0.12);
+      --zw-graph-edge: rgba(226, 232, 240, 0.28);
+      --zw-graph-node-ring: var(--dsw-alias-bg-base, #101014);
+      --zw-region-violet: #a78bfa;
+      --zw-region-blue: #60a5fa;
+      --zw-region-teal: #2dd4bf;
+      --zw-region-amber: #fbbf24;
+      --zw-region-rose: #fb7185;
+      --zw-region-lime: #a3e635;
+      --zw-type-decision: #818cf8;
+      --zw-type-rule: #60a5fa;
+      --zw-type-assumption: #fbbf24;
+      --zw-type-question: #f472b6;
+      --zw-type-proposal: #a78bfa;
+      --zw-type-reference: #2dd4bf;
+      --zw-type-metric: #4ade80;
+      --zw-type-retro: #94a3b8;
+      --zw-type-process: #22d3ee;
+      color-scheme: dark;
+    }
+
+    .zw-root * { box-sizing: border-box; }
+    .zw-root button { font-family: inherit; font-size: inherit; color: inherit; }
+    .zw-root ::selection { background: var(--zw-accent-soft); }
+
+    .zw-scroll { scrollbar-width: thin; scrollbar-color: var(--zw-border-strong) transparent; }
+    .zw-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+    .zw-scroll::-webkit-scrollbar-thumb {
+      background: var(--zw-border-strong);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    .zw-scroll::-webkit-scrollbar-track { background: transparent; }
+
+    /* ================= 三栏骨架 ================= */
+    .zw-app { display: flex; flex: 1; min-height: 0; position: relative; }
+
+    .zw-rail {
+      width: 232px;
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 14px 10px 10px;
+      gap: 4px;
+      border-right: 1px solid var(--zw-border);
+      background: var(--zw-bg-soft);
+      transition: width 160ms ease;
+    }
+    .zw-rail[data-collapsed='true'] { width: 60px; padding-left: 6px; padding-right: 6px; }
+
+    .zw-brand { display: flex; align-items: center; gap: 9px; padding: 2px 6px 12px; }
+    .zw-brandMark {
+      width: 30px; height: 30px; border-radius: 10px; flex: 0 0 auto;
+      display: grid; place-items: center;
+      background: linear-gradient(140deg, var(--zw-accent), var(--zw-accent-2));
+      color: #fff;
+      box-shadow: 0 6px 16px color-mix(in srgb, var(--zw-accent) 40%, transparent);
+    }
+    .zw-brandText { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .zw-brandName { font-size: 15px; font-weight: 650; letter-spacing: 0.02em; }
+    .zw-brandBadge { font-size: 10px; color: var(--zw-text-3); letter-spacing: 0.08em; text-transform: uppercase; }
+    .zw-rail[data-collapsed='true'] .zw-brandText,
+    .zw-rail[data-collapsed='true'] .zw-navLabel,
+    .zw-rail[data-collapsed='true'] .zw-navCount,
+    .zw-rail[data-collapsed='true'] .zw-navGroupLabel,
+    .zw-rail[data-collapsed='true'] .zw-projectName,
+    .zw-rail[data-collapsed='true'] .zw-projectCount,
+    .zw-rail[data-collapsed='true'] .zw-brandBadge { display: none; }
+    .zw-rail[data-collapsed='true'] .zw-brand { justify-content: center; padding-left: 0; padding-right: 0; }
+
+    .zw-newBtn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      width: 100%; height: 34px; margin-bottom: 8px;
+      border: 0; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg, var(--zw-accent), var(--zw-accent-2));
+      color: #fff; font-weight: 600; font-size: 13px;
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--zw-accent) 34%, transparent);
+      transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms;
+    }
+    .zw-newBtn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px color-mix(in srgb, var(--zw-accent) 40%, transparent); }
+    .zw-newBtn:active { transform: translateY(0); }
+    .zw-rail[data-collapsed='true'] .zw-newBtn { padding: 0; }
+    .zw-rail[data-collapsed='true'] .zw-newBtn span { display: none; }
+
+    .zw-navGroup { display: flex; flex-direction: column; gap: 1px; margin-top: 6px; }
+    .zw-navGroupLabel {
+      padding: 8px 8px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--zw-text-3);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .zw-navItem {
+      display: flex; align-items: center; gap: 9px; width: 100%;
+      height: 31px; padding: 0 8px; border: 0; border-radius: 8px;
+      background: transparent; cursor: pointer; color: var(--zw-text-2);
+      font-size: 12.5px; text-align: left; transition: background 120ms, color 120ms;
+    }
+    .zw-navItem:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-navItemOn { background: var(--zw-accent-soft); color: var(--zw-accent-text); font-weight: 600; }
+    .zw-navItemOn:hover { background: var(--zw-accent-soft); }
+    .zw-navItem svg { flex: 0 0 auto; opacity: 0.85; }
+    .zw-navLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-navCount {
+      flex: 0 0 auto; min-width: 20px; padding: 0 6px; height: 17px; border-radius: 9px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10.5px; font-weight: 600; color: var(--zw-text-3);
+      background: var(--zw-bg-sunken); font-variant-numeric: tabular-nums;
+    }
+    .zw-navItemOn .zw-navCount { background: color-mix(in srgb, var(--zw-accent) 16%, transparent); color: var(--zw-accent-text); }
+    .zw-navDot { width: 6px; height: 6px; border-radius: 999px; flex: 0 0 auto; }
+    .zw-rail[data-collapsed='true'] .zw-navItem { justify-content: center; padding: 0; }
+    .zw-rail[data-collapsed='true'] .zw-navCount { display: none; }
+
+    .zw-projects { display: flex; flex-direction: column; gap: 1px; max-height: 168px; overflow-y: auto; }
+    .zw-projectRow {
+      display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px;
+      border: 0; border-radius: 7px; background: transparent; cursor: pointer;
+      color: var(--zw-text-2); font-size: 12px; text-align: left;
+    }
+    .zw-projectRow:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-projectRowOn { color: var(--zw-text); font-weight: 600; background: var(--zw-bg-sunken); }
+    .zw-projectDot { width: 7px; height: 7px; border-radius: 2px; flex: 0 0 auto; }
+    .zw-projectName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-projectCount { font-size: 10.5px; color: var(--zw-text-3); font-variant-numeric: tabular-nums; }
+
+    .zw-railSpacer { flex: 1; min-height: 8px; }
+    .zw-railFoot {
+      border-top: 1px solid var(--zw-border); padding-top: 8px; margin-top: 4px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .zw-savedView {
+      display: flex; align-items: center; gap: 7px; width: 100%; height: 26px; padding: 0 8px;
+      border: 0; border-radius: 7px; background: transparent; cursor: pointer;
+      color: var(--zw-text-2); font-size: 12px; text-align: left;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .zw-savedView:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-savedEmpty { padding: 4px 8px 6px; font-size: 11px; color: var(--zw-text-3); line-height: 1.45; }
+    .zw-railToggle {
+      display: flex; align-items: center; gap: 7px; height: 26px; padding: 0 8px;
+      border: 0; border-radius: 7px; background: transparent; cursor: pointer;
+      color: var(--zw-text-3); font-size: 11.5px; text-align: left;
+    }
+    .zw-railToggle:hover { background: var(--zw-bg-sunken); color: var(--zw-text-2); }
+    .zw-rail[data-collapsed='true'] .zw-railToggle { justify-content: center; padding: 0; }
+    .zw-rail[data-collapsed='true'] .zw-savedEmpty { display: none; }
+
+    /* ================= 中栏 ================= */
+    .zw-center { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+    .zw-topbar {
+      flex: 0 0 auto; padding: 14px 18px 0;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .zw-titleRow { display: flex; align-items: center; gap: 12px; }
+    .zw-viewTitle { font-size: 17px; font-weight: 650; letter-spacing: -0.01em; margin: 0; }
+    .zw-viewSub { font-size: 11.5px; color: var(--zw-text-3); margin: 1px 0 0; }
+    .zw-titleMain { min-width: 0; flex: 1; }
+    .zw-count { font-size: 11.5px; color: var(--zw-text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .zw-search {
+      flex: 1; max-width: 460px; min-width: 140px;
+      display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px;
+      border: 1px solid var(--zw-border); border-radius: 9px;
+      background: var(--zw-bg); color: var(--zw-text-3);
+      transition: border-color 140ms, box-shadow 140ms;
+    }
+    .zw-search:focus-within {
+      border-color: color-mix(in srgb, var(--zw-accent) 60%, transparent);
+      box-shadow: 0 0 0 3px var(--zw-accent-soft);
+      color: var(--zw-text-2);
+    }
+    .zw-searchInput {
+      flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+      font-size: 12.5px; color: var(--zw-text);
+    }
+    .zw-searchInput::placeholder { color: var(--zw-text-3); }
+    .zw-searchX {
+      display: grid; place-items: center; width: 18px; height: 18px; border: 0; border-radius: 5px;
+      background: transparent; cursor: pointer; color: var(--zw-text-3);
+    }
+    .zw-searchX:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+
+    .zw-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      height: 32px; padding: 0 12px; border: 1px solid var(--zw-border); border-radius: 9px;
+      background: var(--zw-bg); color: var(--zw-text); font-size: 12.5px; font-weight: 500;
+      cursor: pointer; white-space: nowrap; transition: background 120ms, border-color 120ms, color 120ms;
+    }
+    .zw-btn:hover { background: var(--zw-bg-soft); border-color: var(--zw-border-strong); }
+    .zw-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .zw-btnPrimary {
+      border-color: transparent; color: #fff;
+      background: linear-gradient(135deg, var(--zw-accent), var(--zw-accent-2));
+      box-shadow: 0 3px 10px color-mix(in srgb, var(--zw-accent) 30%, transparent);
+    }
+    .zw-btnPrimary:hover { filter: brightness(1.05); background: linear-gradient(135deg, var(--zw-accent), var(--zw-accent-2)); }
+    .zw-btnGhost { border-color: transparent; background: transparent; color: var(--zw-text-2); }
+    .zw-btnGhost:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-btnDanger { color: var(--zw-danger); border-color: color-mix(in srgb, var(--zw-danger) 30%, transparent); }
+    .zw-btnDanger:hover { background: var(--zw-danger-soft); border-color: var(--zw-danger); }
+    .zw-btnSm { height: 27px; padding: 0 9px; font-size: 11.5px; border-radius: 7px; }
+    .zw-iconBtn {
+      display: inline-grid; place-items: center; width: 30px; height: 30px;
+      border: 1px solid transparent; border-radius: 8px; background: transparent;
+      color: var(--zw-text-2); cursor: pointer; transition: background 120ms, color 120ms;
+    }
+    .zw-iconBtn:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-iconBtn:disabled { opacity: 0.4; cursor: default; }
+    .zw-iconBtnOn { background: var(--zw-accent-soft); color: var(--zw-accent-text); }
+
+    .zw-seg { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--zw-border); border-radius: 9px; background: var(--zw-bg-soft); }
+    .zw-segBtn {
+      display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px;
+      border: 0; border-radius: 7px; background: transparent; color: var(--zw-text-3);
+      font-size: 11.5px; font-weight: 500; cursor: pointer;
+    }
+    .zw-segBtn:hover { color: var(--zw-text); }
+    .zw-segBtnOn { background: var(--zw-bg); color: var(--zw-text); box-shadow: var(--zw-shadow-sm); }
+
+    .zw-filterbar {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding-bottom: 10px; border-bottom: 1px solid var(--zw-border);
+    }
+    .zw-filterLabel { font-size: 11px; color: var(--zw-text-3); margin-right: 2px; }
+    .zw-chip {
+      display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px;
+      border: 1px solid var(--zw-border); border-radius: 999px; background: var(--zw-bg);
+      color: var(--zw-text-2); font-size: 11.5px; cursor: pointer; white-space: nowrap;
+      transition: background 120ms, border-color 120ms, color 120ms;
+    }
+    .zw-chip:hover { border-color: var(--zw-border-strong); color: var(--zw-text); }
+    .zw-chipOn { background: var(--zw-accent-soft); border-color: color-mix(in srgb, var(--zw-accent) 40%, transparent); color: var(--zw-accent-text); font-weight: 600; }
+    .zw-chipDot { width: 6px; height: 6px; border-radius: 999px; flex: 0 0 auto; }
+    .zw-chipX { display: grid; place-items: center; width: 13px; height: 13px; border-radius: 999px; margin-right: -2px; }
+    .zw-chipX:hover { background: rgba(0, 0, 0, 0.08); }
+
+    .zw-popoverHost { position: relative; }
+    .zw-popover {
+      position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 210px; max-height: 340px;
+      overflow-y: auto; padding: 5px; border-radius: 11px;
+      border: 1px solid var(--zw-border); background: var(--zw-surface-raised);
+      box-shadow: var(--zw-shadow-lg);
+    }
+    .zw-popItem {
+      display: flex; align-items: center; gap: 8px; width: 100%; height: 29px; padding: 0 8px;
+      border: 0; border-radius: 7px; background: transparent; color: var(--zw-text-2);
+      font-size: 12.5px; cursor: pointer; text-align: left;
+    }
+    .zw-popItem:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-popItemOn { color: var(--zw-accent-text); font-weight: 600; }
+    .zw-popLabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-popCheck { width: 14px; display: grid; place-items: center; color: var(--zw-accent); }
+    .zw-popSep { height: 1px; margin: 4px 6px; background: var(--zw-border); }
+
+    .zw-bodyArea { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* 列表 */
+    .zw-listWrap { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px 40px; }
+    .zw-list { display: flex; flex-direction: column; gap: 6px; }
+    .zw-row {
+      position: relative; display: flex; gap: 10px; padding: 11px 12px 11px 10px;
+      border: 1px solid var(--zw-border); border-radius: 12px; background: var(--zw-surface);
+      cursor: pointer; transition: border-color 130ms, box-shadow 130ms, transform 130ms, background 130ms;
+    }
+    .zw-row:hover { border-color: var(--zw-border-strong); box-shadow: var(--zw-shadow-sm); }
+    .zw-rowOn {
+      border-color: color-mix(in srgb, var(--zw-accent) 55%, transparent);
+      background: color-mix(in srgb, var(--zw-accent) 5%, var(--zw-surface));
+      box-shadow: 0 0 0 2px var(--zw-accent-soft);
+    }
+    .zw-rowCheck {
+      flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; display: grid; place-items: center;
+      border: 1px solid var(--zw-border-strong); border-radius: 6px; background: var(--zw-bg);
+      color: transparent; cursor: pointer; transition: all 120ms;
+    }
+    .zw-rowCheck:hover { border-color: var(--zw-accent); }
+    .zw-rowCheckOn { background: var(--zw-accent); border-color: var(--zw-accent); color: #fff; }
+    .zw-rowBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .zw-rowTop { display: flex; align-items: center; gap: 7px; min-width: 0; }
+    .zw-rowDot { width: 6px; height: 6px; border-radius: 999px; flex: 0 0 auto; }
+    .zw-rowTitle {
+      font-size: 13.5px; font-weight: 600; min-width: 0; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.005em;
+    }
+    .zw-rowSummary {
+      font-size: 12px; color: var(--zw-text-2); display: -webkit-box;
+      -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .zw-rowMeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+    .zw-rowSide { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 6px; }
+    .zw-rowDate { font-size: 10.5px; color: var(--zw-text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .zw-badge {
+      display: inline-flex; align-items: center; gap: 4px; height: 19px; padding: 0 7px;
+      border-radius: 999px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap;
+    }
+    .zw-badgeType { background: var(--zw-bg-sunken); color: var(--zw-text-2); }
+    .zw-badgeNeutral { background: var(--zw-bg-sunken); color: var(--zw-text-2); }
+    .zw-badgeActive { background: color-mix(in srgb, #10b981 14%, transparent); color: #047857; }
+    .zw-badgeDraft { background: var(--zw-bg-sunken); color: var(--zw-text-3); }
+    .zw-badgePending { background: color-mix(in srgb, #f59e0b 16%, transparent); color: #b45309; }
+    .zw-badgeDeprecated { background: color-mix(in srgb, #ef4444 12%, transparent); color: #b91c1c; }
+    .zw-badgeArchived { background: var(--zw-bg-sunken); color: var(--zw-text-3); }
+    .zw-root[data-zw-theme='dark'] .zw-badgeActive { color: #34d399; }
+    .zw-root[data-zw-theme='dark'] .zw-badgePending { color: #fbbf24; }
+    .zw-root[data-zw-theme='dark'] .zw-badgeDeprecated { color: #f87171; }
+
+    .zw-tag {
+      display: inline-flex; align-items: center; height: 19px; padding: 0 7px; border-radius: 6px;
+      background: var(--zw-bg-sunken); color: var(--zw-text-2); font-size: 10.5px; white-space: nowrap;
+    }
+    .zw-tagOn { background: var(--zw-accent-soft); color: var(--zw-accent-text); }
+    .zw-tagBtn { border: 0; cursor: pointer; }
+    .zw-tagBtn:hover { background: var(--zw-accent-soft); color: var(--zw-accent-text); }
+
+    .zw-star { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--zw-text-3); cursor: pointer; }
+    .zw-star:hover { background: var(--zw-bg-sunken); color: #d97706; }
+    .zw-starOn { color: #d97706; }
+
+    /* 概要视图 */
+    .zw-overview { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px 40px; display: flex; flex-direction: column; gap: 18px; }
+    .zw-statGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .zw-stat {
+      display: flex; flex-direction: column; gap: 3px; padding: 12px 14px;
+      border: 1px solid var(--zw-border); border-radius: 12px; background: var(--zw-surface);
+      cursor: pointer; transition: border-color 130ms, box-shadow 130ms, transform 130ms;
+    }
+    .zw-stat:hover { border-color: var(--zw-border-strong); box-shadow: var(--zw-shadow-sm); transform: translateY(-1px); }
+    .zw-statValue { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .zw-statLabel { font-size: 11.5px; color: var(--zw-text-3); display: flex; align-items: center; gap: 5px; }
+
+    .zw-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .zw-panelCard { border: 1px solid var(--zw-border); border-radius: 12px; background: var(--zw-surface); overflow: hidden; }
+    .zw-panelHead {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      border-bottom: 1px solid var(--zw-border); background: var(--zw-bg-soft);
+    }
+    .zw-panelTitle { font-size: 12px; font-weight: 650; flex: 1; display: flex; align-items: center; gap: 6px; }
+    .zw-panelLink { border: 0; background: transparent; color: var(--zw-text-3); font-size: 11px; cursor: pointer; }
+    .zw-panelLink:hover { color: var(--zw-accent-text); }
+    .zw-miniList { display: flex; flex-direction: column; padding: 4px; }
+    .zw-mini {
+      display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 8px;
+      border: 0; border-radius: 8px; background: transparent; cursor: pointer; text-align: left;
+    }
+    .zw-mini:hover { background: var(--zw-bg-sunken); }
+    .zw-miniBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .zw-miniTitle { font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-miniMeta { font-size: 10.5px; color: var(--zw-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .zw-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 46px 20px; color: var(--zw-text-3); text-align: center; }
+    .zw-emptyIcon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--zw-bg-sunken); color: var(--zw-text-3); }
+    .zw-emptyTitle { font-size: 13px; font-weight: 600; color: var(--zw-text-2); }
+    .zw-emptyText { font-size: 11.5px; max-width: 320px; line-height: 1.6; }
+
+    /* 集合 */
+    .zw-collectionGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    .zw-collectionCard {
+      display: flex; flex-direction: column; gap: 7px; padding: 13px 14px;
+      border: 1px solid var(--zw-border); border-radius: 12px; background: var(--zw-surface);
+      cursor: pointer; transition: border-color 130ms, box-shadow 130ms, transform 130ms;
+      position: relative; overflow: hidden;
+    }
+    .zw-collectionCard:hover { border-color: var(--zw-border-strong); box-shadow: var(--zw-shadow-sm); transform: translateY(-1px); }
+    .zw-collectionCard::before {
+      content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--zw-hullColor, var(--zw-accent));
+    }
+    .zw-collectionTop { display: flex; align-items: center; gap: 8px; }
+    .zw-collectionName { font-size: 13px; font-weight: 650; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-collectionDesc { font-size: 11.5px; color: var(--zw-text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 32px; }
+    .zw-collectionMeta { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--zw-text-3); }
+    .zw-collectionAi { color: var(--zw-accent-text); display: inline-flex; align-items: center; gap: 3px; }
+
+    /* ================= 右详情栏 ================= */
+    .zw-detail {
+      width: 372px; flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column;
+      border-left: 1px solid var(--zw-border); background: var(--zw-bg-soft);
+      transition: width 160ms ease;
+    }
+    .zw-detail[data-collapsed='true'] { width: 48px; }
+    .zw-detailHead {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+      padding: 11px 12px; border-bottom: 1px solid var(--zw-border);
+    }
+    .zw-detailTitleWrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .zw-detailTitle { font-size: 14px; font-weight: 650; line-height: 1.35; margin: 0; letter-spacing: -0.01em; }
+    .zw-detailMeta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 10.5px; color: var(--zw-text-3); }
+    .zw-detailActions { display: flex; align-items: center; gap: 2px; }
+    .zw-detailScroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px 48px; display: flex; flex-direction: column; gap: 15px; }
+
+    .zw-block { display: flex; flex-direction: column; gap: 6px; }
+    .zw-blockHead { display: flex; align-items: center; gap: 6px; }
+    .zw-blockTitle { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zw-text-3); flex: 1; }
+    .zw-blockHint { font-size: 10.5px; color: var(--zw-text-3); }
+
+    .zw-prose { font-size: 12.5px; line-height: 1.7; color: var(--zw-text); display: flex; flex-direction: column; gap: 7px; }
+    .zw-proseH { font-size: 12.5px; font-weight: 650; margin: 4px 0 0; }
+    .zw-proseP { margin: 0; white-space: pre-wrap; word-break: break-word; }
+    .zw-proseUl { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 3px; }
+    .zw-proseLi { list-style: disc; }
+    .zw-proseCode { font-family: var(--zw-mono); font-size: 11.5px; background: var(--zw-bg-sunken); padding: 1px 4px; border-radius: 4px; }
+
+    .zw-factGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+    .zw-fact { padding: 7px 9px; border-radius: 9px; background: var(--zw-bg-sunken); display: flex; flex-direction: column; gap: 1px; }
+    .zw-factLabel { font-size: 10px; color: var(--zw-text-3); }
+    .zw-factValue { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; word-break: break-word; }
+
+    .zw-tagRow { display: flex; flex-wrap: wrap; gap: 4px; }
+    .zw-regionChip {
+      display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px 0 6px;
+      border-radius: 999px; font-size: 10.5px; font-weight: 600;
+      background: var(--zw-bg-sunken); color: var(--zw-text-2); border: 0; cursor: pointer;
+    }
+    .zw-regionChip:hover { background: var(--zw-accent-soft); color: var(--zw-accent-text); }
+
+    .zw-relGroup { display: flex; flex-direction: column; gap: 2px; }
+    .zw-relGroupTitle {
+      display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--zw-text-3);
+      font-weight: 600; padding: 2px 0;
+    }
+    .zw-relLine { width: 14px; height: 0; border-top: 2px solid var(--zw-relColor, var(--zw-border-strong)); border-radius: 2px; }
+    .zw-relRow {
+      display: flex; align-items: flex-start; gap: 7px; padding: 7px 8px;
+      border: 1px solid transparent; border-radius: 9px; background: transparent; cursor: pointer; text-align: left;
+    }
+    .zw-relRow:hover { background: var(--zw-bg); border-color: var(--zw-border); }
+    .zw-relGlyph { flex: 0 0 auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--zw-bg-sunken); color: var(--zw-text-2); }
+    .zw-relBody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .zw-relName { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-relNote { font-size: 10.5px; color: var(--zw-text-3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .zw-relActions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+    .zw-relSuggested { border-color: color-mix(in srgb, var(--zw-accent) 26%, transparent); background: color-mix(in srgb, var(--zw-accent) 4%, transparent); }
+    .zw-suggestRow {
+      display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 9px;
+      border: 1px dashed color-mix(in srgb, var(--zw-accent) 34%, transparent);
+      background: color-mix(in srgb, var(--zw-accent) 4%, transparent);
+    }
+    .zw-confBar { overflow: hidden; height: 3px; border-radius: 999px; background: var(--zw-border); }
+    .zw-confFill { height: 100%; background: linear-gradient(90deg, var(--zw-accent), var(--zw-accent-2)); border-radius: 999px; }
+
+    .zw-historyRow { display: flex; gap: 8px; font-size: 11px; color: var(--zw-text-3); }
+    .zw-historyDot { width: 5px; height: 5px; margin-top: 6px; border-radius: 999px; background: var(--zw-border-strong); flex: 0 0 auto; }
+
+    /* ================= 编辑 / 弹窗 ================= */
+    .zw-modalMask {
+      position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-start; justify-content: center;
+      padding: 6vh 18px 18px; background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(3px); animation: zwFade 140ms ease;
+    }
+    .zw-modal {
+      width: 100%; max-width: 620px; max-height: 84vh; display: flex; flex-direction: column;
+      border-radius: 16px; border: 1px solid var(--zw-border); background: var(--zw-surface);
+      box-shadow: var(--zw-shadow-lg); overflow: hidden; animation: zwRise 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .zw-modalWide { max-width: 760px; }
+    .zw-modalHead {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+      padding: 13px 16px; border-bottom: 1px solid var(--zw-border);
+    }
+    .zw-modalTitle { flex: 1; font-size: 14px; font-weight: 650; }
+    .zw-modalBody { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .zw-modalFoot {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 11px 16px;
+      border-top: 1px solid var(--zw-border); background: var(--zw-bg-soft);
+    }
+    .zw-modalFootSpacer { flex: 1; }
+
+    .zw-form { display: flex; flex-direction: column; gap: 12px; }
+    .zw-formRow { display: flex; gap: 10px; }
+    .zw-formRow > * { flex: 1; min-width: 0; }
+    .zw-field { display: flex; flex-direction: column; gap: 4px; }
+    .zw-fieldLabel { font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--zw-text-3); }
+    .zw-input, .zw-textarea, .zw-select {
+      width: 100%; border: 1px solid var(--zw-border); border-radius: 9px; background: var(--zw-bg);
+      padding: 7px 10px; font-family: inherit; font-size: 12.5px; color: var(--zw-text);
+      outline: 0; transition: border-color 130ms, box-shadow 130ms;
+    }
+    .zw-input:focus, .zw-textarea:focus, .zw-select:focus {
+      border-color: color-mix(in srgb, var(--zw-accent) 60%, transparent);
+      box-shadow: 0 0 0 3px var(--zw-accent-soft);
+    }
+    .zw-textarea { resize: vertical; min-height: 88px; line-height: 1.65; }
+    .zw-textareaBig { min-height: 148px; font-size: 13.5px; }
+    .zw-select { appearance: none; cursor: pointer; height: 33px; padding-right: 26px; background-image: none; }
+    .zw-hint { font-size: 10.5px; color: var(--zw-text-3); }
+    .zw-error { font-size: 11.5px; color: var(--zw-danger); }
+
+    .zw-chipPicker { display: flex; flex-wrap: wrap; gap: 5px; }
+    .zw-chipOpt {
+      display: inline-flex; align-items: center; gap: 5px; height: 25px; padding: 0 9px;
+      border: 1px solid var(--zw-border); border-radius: 999px; background: var(--zw-bg);
+      font-size: 11.5px; color: var(--zw-text-2); cursor: pointer; transition: all 120ms;
+    }
+    .zw-chipOpt:hover { border-color: var(--zw-border-strong); }
+    .zw-chipOptOn { background: var(--zw-accent-soft); border-color: color-mix(in srgb, var(--zw-accent) 42%, transparent); color: var(--zw-accent-text); font-weight: 600; }
+
+    .zw-facts { display: flex; flex-direction: column; gap: 6px; }
+    .zw-factRow { display: flex; gap: 6px; align-items: center; }
+    .zw-factRow > .zw-input:first-child { flex: 0 0 38%; }
+    .zw-factRow > .zw-input:nth-child(2) { flex: 1; }
+
+    .zw-pickList { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+    .zw-pickRow {
+      display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid transparent;
+      border-radius: 8px; background: transparent; cursor: pointer; text-align: left;
+    }
+    .zw-pickRow:hover { background: var(--zw-bg-soft); border-color: var(--zw-border); }
+    .zw-pickRowOn { background: var(--zw-accent-soft); border-color: color-mix(in srgb, var(--zw-accent) 40%, transparent); }
+
+    /* ================= 关系图 ================= */
+    .zw-graphWrap { flex: 1; min-height: 0; display: flex; }
+    .zw-graphStage {
+      flex: 1; min-width: 0; position: relative; overflow: hidden;
+      background:
+        radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--zw-accent) 8%, transparent), transparent 60%),
+        radial-gradient(circle at 75% 80%, color-mix(in srgb, var(--zw-accent-2) 7%, transparent), transparent 62%),
+        var(--zw-graph-bg);
+      background-size: 100% 100%;
+      touch-action: none;
+    }
+    .zw-graphSvg { display: block; width: 100%; height: 100%; cursor: grab; }
+    .zw-graphSvg:active { cursor: grabbing; }
+    .zw-graphSvg[data-tool='link'] { cursor: crosshair; }
+    .zw-graphSvg[data-tool='region'] { cursor: cell; }
+
+    .zw-gedge { fill: none; stroke-width: 1.4; opacity: 0.62; }
+    .zw-gedgeOn { opacity: 1; stroke-width: 2.4; }
+    .zw-gedgeDim { opacity: 0.12; }
+    .zw-gedgeSuggested { opacity: 0.5; }
+    .zw-gedgeFlow { fill: none; stroke-width: 2.6; opacity: 0.34; stroke-dasharray: 3 9; animation: zwFlow 1.6s linear infinite; }
+    .zw-gedgeLabel {
+      font-size: 9.5px; fill: var(--zw-text-3); font-family: var(--zw-font);
+      pointer-events: none; user-select: none;
+    }
+    .zw-gedgeLabelOn { fill: var(--zw-text); font-weight: 600; }
+    .zw-gedgeDraft { stroke: var(--zw-accent); stroke-width: 1.8; stroke-dasharray: 5 5; fill: none; opacity: 0.9; }
+    .zw-garrow { fill: var(--zw-graph-edge); opacity: 0.66; }
+
+    .zw-gnode { cursor: pointer; }
+    .zw-gnodeHalo { opacity: 0; transition: opacity 160ms; }
+    .zw-gnode:hover .zw-gnodeHalo { opacity: 0.16; }
+    .zw-gnodeHaloOn { opacity: 0.2; }
+    .zw-gnodeRing { fill: none; stroke-width: 1.6; }
+    .zw-gnodeCore { transition: r 140ms, filter 140ms; }
+    .zw-gnodeOn .zw-gnodeCore { filter: drop-shadow(0 0 8px var(--zw-accent)); }
+    .zw-gnodeLabel {
+      font-size: 10.5px; fill: var(--zw-text-2); font-family: var(--zw-font);
+      pointer-events: none; user-select: none;
+    }
+    .zw-gnodeLabelOn { fill: var(--zw-text); font-weight: 650; }
+    .zw-gnodeDim { opacity: 0.16; }
+    .zw-gnodeBadge {
+      font-size: 8.5px; fill: var(--zw-text-3); font-family: var(--zw-font);
+      pointer-events: none; user-select: none;
+    }
+    .zw-gnodeHit { fill: transparent; }
+    .zw-hull { opacity: 0.1; transition: opacity 200ms; }
+    .zw-hullOn { opacity: 0.2; }
+    .zw-hullOutline { fill: none; stroke-width: 1.2; opacity: 0.5; stroke-dasharray: 6 5; animation: zwHull 22s linear infinite; }
+    .zw-hullLabel { font-size: 10.5px; font-weight: 650; font-family: var(--zw-font); cursor: pointer; }
+    .zw-hullCount { font-size: 9px; fill: var(--zw-text-3); font-family: var(--zw-font); }
+
+    .zw-boxRect {
+      fill: color-mix(in srgb, var(--zw-accent) 10%, transparent);
+      stroke: var(--zw-accent); stroke-width: 1.2; stroke-dasharray: 4 4;
+    }
+    .zw-linkDraft { stroke: var(--zw-accent); stroke-width: 1.8; stroke-dasharray: 5 4; fill: none; }
+    .zw-linkDot { fill: var(--zw-accent); }
+
+    .zw-graphToolbar {
+      position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 4px;
+      padding: 4px; border-radius: 11px; border: 1px solid var(--zw-border);
+      background: color-mix(in srgb, var(--zw-surface) 92%, transparent);
+      backdrop-filter: blur(8px); box-shadow: var(--zw-shadow-md); z-index: 6;
+    }
+    .zw-toolSep { width: 1px; height: 18px; background: var(--zw-border); margin: 0 2px; }
+    .zw-toolBtn {
+      display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 8px;
+      border: 0; border-radius: 7px; background: transparent; color: var(--zw-text-2);
+      font-size: 11.5px; cursor: pointer; white-space: nowrap;
+    }
+    .zw-toolBtn:hover { background: var(--zw-bg-sunken); color: var(--zw-text); }
+    .zw-toolBtnOn { background: var(--zw-accent-soft); color: var(--zw-accent-text); font-weight: 600; }
+    .zw-graphCount {
+      position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px; border-radius: 9px; border: 1px solid var(--zw-border);
+      background: color-mix(in srgb, var(--zw-surface) 90%, transparent); backdrop-filter: blur(6px);
+      font-size: 10.5px; color: var(--zw-text-3); z-index: 5;
+    }
+    .zw-graphHint {
+      position: absolute; right: 12px; bottom: 12px; padding: 5px 10px; border-radius: 9px;
+      border: 1px solid var(--zw-border); background: color-mix(in srgb, var(--zw-surface) 90%, transparent);
+      backdrop-filter: blur(6px); font-size: 10.5px; color: var(--zw-text-3); z-index: 5;
+      display: flex; align-items: center; gap: 8px; max-width: 62%;
+    }
+    .zw-graphPanel {
+      width: 232px; flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0;
+      border-left: 1px solid var(--zw-border); background: var(--zw-bg-soft); overflow-y: auto;
+    }
+    .zw-graphPanelHead {
+      display: flex; align-items: center; gap: 6px; padding: 10px 12px;
+      border-bottom: 1px solid var(--zw-border); font-size: 11px; font-weight: 650;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--zw-text-3);
+    }
+    .zw-graphSection { padding: 9px 12px; border-bottom: 1px solid var(--zw-border); display: flex; flex-direction: column; gap: 6px; }
+    .zw-graphSearch { display: flex; align-items: center; gap: 6px; height: 29px; padding: 0 8px; border: 1px solid var(--zw-border); border-radius: 8px; background: var(--zw-bg); color: var(--zw-text-3); }
+    .zw-legendRow { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--zw-text-2); cursor: pointer; padding: 2px 0; }
+    .zw-legendRowOff { opacity: 0.36; }
+    .zw-legendSample { width: 18px; height: 0; border-top-width: 2px; border-top-style: solid; flex: 0 0 auto; border-radius: 2px; }
+    .zw-legendDot { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; }
+    .zw-legendName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zw-legendCount { font-size: 10px; color: var(--zw-text-3); font-variant-numeric: tabular-nums; }
+
+    /* 批量条 */
+    .zw-batchWrap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; }
+    .zw-batchbar {
+      display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px;
+      border-radius: 13px; border: 1px solid var(--zw-border-strong);
+      background: var(--zw-surface); box-shadow: var(--zw-shadow-lg);
+      animation: zwRise 160ms ease;
+    }
+    .zw-batchCount { font-size: 11.5px; font-weight: 650; color: var(--zw-accent-text); white-space: nowrap; }
+
+    /* Toast */
+    .zw-toastWrap { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 80; display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
+    .zw-toast {
+      display: flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 10px;
+      background: var(--zw-surface); border: 1px solid var(--zw-border-strong);
+      box-shadow: var(--zw-shadow-md); font-size: 12px; animation: zwRise 160ms ease;
+    }
+    .zw-toastOk { color: var(--zw-text); }
+    .zw-toastError { color: var(--zw-danger); border-color: color-mix(in srgb, var(--zw-danger) 36%, transparent); }
+
+    /* 快速新增 */
+    .zw-quickHead { display: flex; flex-direction: column; gap: 2px; }
+    .zw-quickTitle { font-size: 15px; font-weight: 650; }
+    .zw-quickSub { font-size: 11.5px; color: var(--zw-text-3); }
+    .zw-quickProposal { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--zw-accent) 34%, transparent); background: color-mix(in srgb, var(--zw-accent) 4%, transparent); }
+    .zw-quickProposalHead { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 650; color: var(--zw-accent-text); letter-spacing: 0.04em; }
+    .zw-confWrap { display: flex; align-items: center; gap: 6px; }
+    .zw-loadingBar { height: 3px; border-radius: 999px; background: var(--zw-border); overflow: hidden; }
+    .zw-loadingFill { height: 100%; width: 34%; border-radius: 999px; background: linear-gradient(90deg, transparent, var(--zw-accent), transparent); animation: zwLoading 1.1s ease-in-out infinite; }
+
+    .zw-skeleton { border-radius: 10px; background: linear-gradient(90deg, var(--zw-bg-sunken), var(--zw-bg-soft), var(--zw-bg-sunken)); background-size: 200% 100%; animation: zwShimmer 1.3s linear infinite; }
+
+    .zw-fadeIn { animation: zwFade 160ms ease; }
+    .zw-spin { animation: zwSpin 1s linear infinite; }
+
+    @keyframes zwFade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes zwRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes zwSpin { to { transform: rotate(360deg); } }
+    @keyframes zwFlow { to { stroke-dashoffset: -24; } }
+    @keyframes zwHull { to { stroke-dashoffset: -220; } }
+    @keyframes zwLoading { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } }
+    @keyframes zwShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    @media (max-width: 1180px) {
+      .zw-detail { width: 330px; }
+      .zw-graphPanel { width: 204px; }
+      .zw-columns { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 940px) {
+      .zw-rail { width: 62px; }
+      .zw-rail .zw-navLabel, .zw-rail .zw-navCount, .zw-rail .zw-brandText { display: none; }
+      .zw-detail { width: 300px; }
+      .zw-statGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* ================= 补充件：表单外壳 / 卡片视图 / 图层 ================= */
+    .zw-selectWrap { position: relative; display: inline-flex; align-items: center; }
+    .zw-selectWrap .zw-select { appearance: none; padding-right: 24px; }
+    .zw-selectCaret {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      pointer-events: none; color: var(--zw-text-3); display: inline-flex;
+    }
+    .zw-fieldInline { display: flex; align-items: center; gap: 8px; }
+    .zw-fieldInline > .zw-fieldLabel { margin: 0; white-space: nowrap; }
+
+    .zw-cardGrid {
+      display: grid; gap: 12px; padding: 14px 18px 26px;
+      grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+    }
+    .zw-card {
+      position: relative; display: flex; flex-direction: column; gap: 8px;
+      padding: 13px 14px 12px; border: 1px solid var(--zw-border); border-radius: 12px;
+      background: var(--zw-surface); color: inherit; cursor: pointer; text-align: left;
+      transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+    .zw-card:hover { border-color: var(--zw-accent); box-shadow: var(--zw-shadow-sm); transform: translateY(-1px); }
+    .zw-cardOn { border-color: var(--zw-accent); box-shadow: 0 0 0 2px var(--zw-accent-soft); }
+    .zw-cardTop { display: flex; align-items: center; gap: 6px; }
+    .zw-cardTitle {
+      font-size: 13.5px; font-weight: 600; line-height: 1.45; color: var(--zw-text);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .zw-cardSummary {
+      font-size: 12px; line-height: 1.6; color: var(--zw-text-2);
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .zw-cardMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: auto; padding-top: 8px; }
+
+    .zw-pickTitle { font-size: 13px; color: var(--zw-text); }
+    .zw-pickMeta { margin-left: auto; font-size: 11.5px; color: var(--zw-text-3); }
+
+    .zw-detailEmpty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+      padding: 40px 22px; text-align: center; color: var(--zw-text-3); font-size: 12px; line-height: 1.7;
+    }
+    .zw-appDetailCollapsed .zw-detail { width: 46px; padding: 8px 4px; }
+    .zw-appDetailCollapsed .zw-detailScroll, .zw-appDetailCollapsed .zw-detailHead { display: none; }
+
+    .zw-hullLayer, .zw-edgeLayer, .zw-nodeLayer { pointer-events: none; }
+    .zw-hullLayer > * , .zw-edgeLayer > * { pointer-events: auto; }
+    .zw-nodeLayer > * { pointer-events: auto; }
+    .zw-gedgePath { fill: none; stroke-width: 1.35; transition: stroke-width 120ms ease, opacity 120ms ease; }
+    .zw-gedge:hover .zw-gedgePath { stroke-width: 2.1; }
+    .zw-chipOpen { border-color: var(--zw-accent); color: var(--zw-accent-2); background: var(--zw-accent-soft); }
+    .zw-toolLabel {
+      font-size: 11px;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+    /* AI assist panel */
+    .zw-assist {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .zw-assistBar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .zw-assistAction {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 9px;
+      border: 1px solid var(--zw-border);
+      border-radius: 999px;
+      background: var(--zw-surface);
+      color: var(--zw-text-2);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+    }
+    .zw-assistAction:hover {
+      border-color: var(--zw-accent);
+      color: var(--zw-text);
+      background: var(--zw-accent-soft);
+    }
+    .zw-assistActionOn {
+      border-color: var(--zw-accent);
+      color: var(--zw-accent-text);
+      background: var(--zw-accent-soft);
+    }
+    .zw-assistAction:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+    .zw-assistBusy {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--zw-text-3);
+      font-size: 12px;
+    }
+    .zw-assistPanel {
+      border: 1px solid var(--zw-border);
+      border-radius: 10px;
+      background: var(--zw-bg-soft);
+      padding: 10px 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      animation: zwFade 160ms ease;
+    }
+    .zw-assistHead {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--zw-text);
+    }
+    .zw-assistHeadTag {
+      margin-left: auto;
+      font-weight: 400;
+      font-size: 11px;
+      color: var(--zw-text-3);
+    }
+    .zw-assistRow {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .zw-assistKey {
+      flex: 0 0 62px;
+      color: var(--zw-text-3);
+    }
+    .zw-assistVal {
+      flex: 1;
+      min-width: 0;
+      color: var(--zw-text);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+    }
+    .zw-assistReason {
+      color: var(--zw-text-3);
+      font-size: 11px;
+    }
+    .zw-assistFoot {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      border-top: 1px dashed var(--zw-border);
+      padding-top: 8px;
+    }
+    .zw-assistList {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .zw-assistItem {
+      border: 1px solid var(--zw-border);
+      border-radius: 8px;
+      background: var(--zw-surface);
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .zw-assistItemTop {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .zw-assistItemTitle {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--zw-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
+    .zw-assistItemTitle:hover {
+      color: var(--zw-accent-2);
+      text-decoration: underline;
+    }
+    .zw-assistItemMeta {
+      font-size: 11px;
+      color: var(--zw-text-3);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .zw-assistItemBody {
+      font-size: 12px;
+      color: var(--zw-text-2);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .zw-assistScore {
+      font-variant-numeric: tabular-nums;
+      color: var(--zw-text-3);
+      font-size: 11px;
+    }
+    .zw-scoreBar {
+      height: 3px;
+      border-radius: 2px;
+      background: var(--zw-bg-sunken);
+      overflow: hidden;
+    }
+    .zw-scoreFill {
+      height: 100%;
+      background: var(--zw-accent);
+    }
+    .zw-assistSegs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .zw-assistSeg {
+      border: 1px solid var(--zw-border);
+      border-left: 3px solid var(--zw-accent);
+      border-radius: 6px;
+      background: var(--zw-surface);
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .zw-assistSegHead {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .zw-assistSegTitle {
+      font-size: 12px;
+      font-weight: 500;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .zw-assistConflict {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border: 1px solid color-mix(in srgb, var(--zw-warn) 40%, var(--zw-border));
+      background: color-mix(in srgb, var(--zw-warn) 8%, var(--zw-surface));
+      border-radius: 8px;
+      padding: 9px 10px;
+    }
+    .zw-assistConflictHead {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--zw-text);
+    }
+    .zw-assistChoices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .zw-assistChoice {
+      padding: 4px 9px;
+      border: 1px solid var(--zw-border);
+      border-radius: 999px;
+      background: var(--zw-surface);
+      color: var(--zw-text-2);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .zw-assistChoice:hover {
+      border-color: var(--zw-accent);
+      color: var(--zw-text);
+    }
+    .zw-impactCol {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .zw-impactLabel {
+      font-size: 11px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--zw-text-3);
+    }
+    .zw-impactRow {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--zw-text-2);
+    }
+    .zw-impactDepth {
+      font-size: 10px;
+      color: var(--zw-text-3);
+      border: 1px solid var(--zw-border);
+      border-radius: 4px;
+      padding: 0 4px;
+    }
+
+    /* toast action + focus ring */
+    .zw-toastRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .zw-toastText {
+      flex: 1;
+      min-width: 0;
+    }
+    .zw-toastAction {
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      background: transparent;
+      color: inherit;
+      font-size: 12px;
+      padding: 2px 9px;
+      cursor: pointer;
+      opacity: 0.85;
+    }
+    .zw-toastAction:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.14);
+    }
+    :focus-visible {
+      outline: 2px solid var(--zw-accent);
+      outline-offset: 2px;
+    }
+    `
 
     const ICONS = {
-      search: [['circle', { cx: 11, cy: 11, r: 6.5 }], ['path', { d: 'M20 20l-3.6-3.6' }]],
-      plus: [['path', { d: 'M12 5v14M5 12h14' }]],
-      refresh: [['path', { d: 'M20 11a8 8 0 1 0-2.3 6.3' }], ['path', { d: 'M20 5v6h-6' }]],
-      edit: [['path', { d: 'M4 20h4l10-10-4-4L4 16v4Z' }], ['path', { d: 'M13.5 6.5l4 4' }]],
-      trash: [['path', { d: 'M4 7h16' }], ['path', { d: 'M9 7V5h6v2' }], ['path', { d: 'M6.5 7l1 12h9l1-12' }]],
-      star: [['path', { d: 'M12 4.5l2.3 4.7 5.2.8-3.8 3.7.9 5.2-4.6-2.5-4.6 2.5.9-5.2L4.5 10l5.2-.8L12 4.5Z' }]],
-      close: [['path', { d: 'M6 6l12 12M18 6L6 18' }]],
-      book: [['path', { d: 'M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5V5.5Z' }], ['path', { d: 'M5 20.5A2.5 2.5 0 0 1 7.5 18H19' }]],
-      graph: [
-        ['circle', { cx: 6, cy: 17, r: 2.6 }],
-        ['circle', { cx: 12, cy: 6.5, r: 2.6 }],
-        ['circle', { cx: 18.5, cy: 15, r: 2.6 }],
-        ['path', { d: 'M7.6 14.7 10.6 8.8M13.9 8.4l3.1 4.2M8.6 16.4l7.4-1.1' }]
+      search: [
+        ['circle', { cx: 11, cy: 11, r: 6.8 }],
+        ['path', { d: 'M20 20l-3.7-3.7' }]
       ],
-      check: [['path', { d: 'M5 12.5l4.5 4.5L19 7.5' }]],
-      ban: [['circle', { cx: 12, cy: 12, r: 8 }], ['path', { d: 'M7 17 17 7' }]],
-      undo: [['path', { d: 'M4 10h9a5 5 0 1 1 0 10H8' }], ['path', { d: 'M8 6l-4 4 4 4' }]],
-      zoomIn: [['circle', { cx: 11, cy: 11, r: 6.5 }], ['path', { d: 'M20 20l-3.6-3.6M11 8.5v5M8.5 11h5' }]],
-      zoomOut: [['circle', { cx: 11, cy: 11, r: 6.5 }], ['path', { d: 'M20 20l-3.6-3.6M8.5 11h5' }]],
-      frame: [['path', { d: 'M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9' }], ['path', { d: 'M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9' }], ['path', { d: 'M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15' }], ['path', { d: 'M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15' }]],
-      shuffle: [['path', { d: 'M4 7h4l8 10h4' }], ['path', { d: 'M4 17h4l8-10h4' }], ['path', { d: 'M17 4l3 3-3 3M17 14l3 3-3 3' }]],
-      link: [['path', { d: 'M9.5 14.5 14.5 9.5' }], ['path', { d: 'M13 6.5 14.8 4.7a3.8 3.8 0 0 1 5.4 5.4L18.4 12' }], ['path', { d: 'M11 17.5 9.2 19.3a3.8 3.8 0 0 1-5.4-5.4L5.6 12' }]],
-      select: [['path', { d: 'M5.5 3.5 18 11.2l-5 1.1-2.6 4.6-4.9-13.4Z' }]],
-      box: [['path', { d: 'M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8' }], ['path', { d: 'M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8' }], ['path', { d: 'M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16' }], ['path', { d: 'M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16' }]],
-      info: [['circle', { cx: 12, cy: 12, r: 8.5 }], ['path', { d: 'M12 11v5' }], ['path', { d: 'M12 8.2h.01' }]]
+      plus: [
+        ['path', { d: 'M12 5v14' }],
+        ['path', { d: 'M5 12h14' }]
+      ],
+      close: [
+        ['path', { d: 'M6 6l12 12' }],
+        ['path', { d: 'M18 6L6 18' }]
+      ],
+      check: [['path', { d: 'M5 12.5l4.2 4.3L19 6.5' }]],
+      chevronDown: [['path', { d: 'M6 9.5l6 6 6-6' }]],
+      chevronRight: [['path', { d: 'M9.5 6l6 6-6 6' }]],
+      chevronLeft: [['path', { d: 'M14.5 6l-6 6 6 6' }]],
+      star: [
+        ['path', { d: 'M12 3.7l2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.75-5.2 2.75 1-5.8L3.6 9.85l5.8-.85z' }]
+      ],
+      trash: [
+        ['path', { d: 'M4 7h16' }],
+        ['path', { d: 'M9.5 7V4.8h5V7' }],
+        ['path', { d: 'M6.5 7l.9 12.2h9.2L17.5 7' }]
+      ],
+      edit: [
+        ['path', { d: 'M4.5 19.5l.9-3.9L16.4 4.6l3 3L8.4 18.6z' }],
+        ['path', { d: 'M14.6 6.4l3 3' }]
+      ],
+      link: [
+        ['path', { d: 'M9.6 14.4l4.8-4.8' }],
+        ['path', { d: 'M8.4 11.6l-1.7 1.7a3.6 3.6 0 0 0 5.1 5.1l1.7-1.7' }],
+        ['path', { d: 'M15.6 12.4l1.7-1.7a3.6 3.6 0 0 0-5.1-5.1l-1.7 1.7' }]
+      ],
+      graph: [
+        ['circle', { cx: 6, cy: 6.4, r: 2.3 }],
+        ['circle', { cx: 18, cy: 7.4, r: 2.3 }],
+        ['circle', { cx: 12, cy: 18, r: 2.3 }],
+        ['path', { d: 'M8.2 6.9l7.6.5' }],
+        ['path', { d: 'M7.2 8.3l3.9 7.6' }],
+        ['path', { d: 'M16.9 9.5l-3.7 6.3' }]
+      ],
+      layers: [
+        ['path', { d: 'M12 3.2l8.6 4.6L12 12.4 3.4 7.8z' }],
+        ['path', { d: 'M3.4 12.6L12 17.2l8.6-4.6' }],
+        ['path', { d: 'M3.4 16.9L12 21.5l8.6-4.6' }]
+      ],
+      filter: [
+        ['path', { d: 'M3.5 5.5h17' }],
+        ['path', { d: 'M6.5 12h11' }],
+        ['path', { d: 'M10 18.5h4' }]
+      ],
+      sort: [
+        ['path', { d: 'M4 7h9' }],
+        ['path', { d: 'M4 12h6' }],
+        ['path', { d: 'M4 17h4' }],
+        ['path', { d: 'M17.5 5.5v13' }],
+        ['path', { d: 'M14.5 15.5l3 3 3-3' }]
+      ],
+      list: [
+        ['path', { d: 'M8.5 6h11.5' }],
+        ['path', { d: 'M8.5 12h11.5' }],
+        ['path', { d: 'M8.5 18h11.5' }],
+        ['path', { d: 'M4 6h.01' }],
+        ['path', { d: 'M4 12h.01' }],
+        ['path', { d: 'M4 18h.01' }]
+      ],
+      grid: [
+        ['rect', { x: 3.5, y: 3.5, width: 7, height: 7, rx: 2 }],
+        ['rect', { x: 13.5, y: 3.5, width: 7, height: 7, rx: 2 }],
+        ['rect', { x: 3.5, y: 13.5, width: 7, height: 7, rx: 2 }],
+        ['rect', { x: 13.5, y: 13.5, width: 7, height: 7, rx: 2 }]
+      ],
+      more: [
+        ['circle', { cx: 5.5, cy: 12, r: 1.4, fill: 'currentColor', stroke: 'none' }],
+        ['circle', { cx: 12, cy: 12, r: 1.4, fill: 'currentColor', stroke: 'none' }],
+        ['circle', { cx: 18.5, cy: 12, r: 1.4, fill: 'currentColor', stroke: 'none' }]
+      ],
+      refresh: [
+        ['path', { d: 'M20 11.5A8 8 0 1 1 17.4 6' }],
+        ['path', { d: 'M20.4 3.6v5.4h-5.4' }]
+      ],
+      zoomIn: [
+        ['circle', { cx: 11, cy: 11, r: 6.8 }],
+        ['path', { d: 'M20 20l-3.6-3.6' }],
+        ['path', { d: 'M11 8v6' }],
+        ['path', { d: 'M8 11h6' }]
+      ],
+      zoomOut: [
+        ['circle', { cx: 11, cy: 11, r: 6.8 }],
+        ['path', { d: 'M20 20l-3.6-3.6' }],
+        ['path', { d: 'M8 11h6' }]
+      ],
+      frame: [
+        ['path', { d: 'M4 9V4.5h5' }],
+        ['path', { d: 'M20 9V4.5h-5' }],
+        ['path', { d: 'M4 15v4.5h5' }],
+        ['path', { d: 'M20 15v4.5h-5' }]
+      ],
+      shuffle: [
+        ['path', { d: 'M4 7h4l8 10h4' }],
+        ['path', { d: 'M4 17h4l2.4-3' }],
+        ['path', { d: 'M13 9.6L15.4 7H20' }],
+        ['path', { d: 'M17.4 4.4L20 7l-2.6 2.6' }],
+        ['path', { d: 'M17.4 14.4L20 17l-2.6 2.6' }]
+      ],
+      book: [
+        ['path', { d: 'M4.5 5.6a2.6 2.6 0 0 1 2.6-2.6H19.5v15.5H7.1a2.6 2.6 0 0 0-2.6 2.6z' }],
+        ['path', { d: 'M19.5 18.5v2' }]
+      ],
+      inbox: [
+        ['path', { d: 'M3.8 13.2L6 4.6h12l2.2 8.6v6.2H3.8z' }],
+        ['path', { d: 'M3.8 13.2h4.6l1 2.1h5.2l1-2.1h4.6' }]
+      ],
+      folder: [
+        ['path', { d: 'M3.5 7.2a2 2 0 0 1 2-2h3.9l1.9 2.6h7.2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2z' }]
+      ],
+      tag: [
+        ['path', { d: 'M20.4 13.2L13 20.6 3.4 11V3.4h7.6l9.4 9.4z' }],
+        ['circle', { cx: 7.6, cy: 7.6, r: 1.1 }]
+      ],
+      sparkle: [
+        ['path', { d: 'M11.4 3.4l1.7 4.9 4.9 1.7-4.9 1.7-1.7 4.9-1.7-4.9L4.8 10l4.9-1.7z' }],
+        ['path', { d: 'M18.2 14.4l.8 2.3 2.3.8-2.3.8-.8 2.3-.8-2.3-2.3-.8 2.3-.8z' }]
+      ],
+      arrowRight: [
+        ['path', { d: 'M4.5 12h14' }],
+        ['path', { d: 'M13 6.5l5.5 5.5-5.5 5.5' }]
+      ],
+      arrowLeft: [
+        ['path', { d: 'M19.5 12h-14' }],
+        ['path', { d: 'M11 6.5L5.5 12 11 17.5' }]
+      ],
+      clock: [
+        ['circle', { cx: 12, cy: 12, r: 8.4 }],
+        ['path', { d: 'M12 7.4V12l3.2 2.1' }]
+      ],
+      target: [
+        ['circle', { cx: 12, cy: 12, r: 8.2 }],
+        ['circle', { cx: 12, cy: 12, r: 3.4 }]
+      ],
+      warning: [
+        ['path', { d: 'M12 3.4l8.9 16.2H3.1z' }],
+        ['path', { d: 'M12 9.4v5' }],
+        ['path', { d: 'M12 17.2h.01' }]
+      ],
+      eye: [
+        ['path', { d: 'M2.5 12S6.1 5.8 12 5.8 21.5 12 21.5 12 17.9 18.2 12 18.2 2.5 12 2.5 12z' }],
+        ['circle', { cx: 12, cy: 12, r: 2.9 }]
+      ],
+      eyeOff: [
+        ['path', { d: 'M2.5 12S6.1 5.8 12 5.8 21.5 12 21.5 12 17.9 18.2 12 18.2 2.5 12 2.5 12z' }],
+        ['path', { d: 'M4 4l16 16' }]
+      ],
+      collapse: [
+        ['path', { d: 'M8.5 4v4.5H4' }],
+        ['path', { d: 'M15.5 4v4.5H20' }],
+        ['path', { d: 'M8.5 20v-4.5H4' }],
+        ['path', { d: 'M15.5 20v-4.5H20' }]
+      ],
+      expand: [
+        ['path', { d: 'M4 8.5h4.5V4' }],
+        ['path', { d: 'M20 8.5h-4.5V4' }],
+        ['path', { d: 'M4 15.5h4.5V20' }],
+        ['path', { d: 'M20 15.5h-4.5V20' }]
+      ],
+      settings: [
+        ['path', { d: 'M4 7.5h16' }],
+        ['path', { d: 'M4 16.5h16' }],
+        ['circle', { cx: 9.5, cy: 7.5, r: 2 }],
+        ['circle', { cx: 15, cy: 16.5, r: 2 }]
+      ],
+      box: [
+        ['path', { d: 'M4 8.5V4h4.5' }],
+        ['path', { d: 'M20 8.5V4h-4.5' }],
+        ['path', { d: 'M4 15.5V20h4.5' }],
+        ['path', { d: 'M20 15.5V20h-4.5' }]
+      ],
+      select: [['path', { d: 'M5.5 3.5L18 11.2l-5 1.1-2.6 4.6z' }]],
+      home: [
+        ['path', { d: 'M3.5 11L12 3.6l8.5 7.4' }],
+        ['path', { d: 'M5.5 9.8V20h13V9.8' }]
+      ],
+      gavel: [
+        ['rect', { x: 3.6, y: 3.6, width: 16.8, height: 16.8, rx: 4.4 }],
+        ['path', { d: 'M8 12.4l2.9 2.9 5.3-6' }]
+      ],
+      help: [
+        ['circle', { cx: 12, cy: 12, r: 8.4 }],
+        ['path', { d: 'M9.6 9.5a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.2 1-1.2 2' }],
+        ['path', { d: 'M11.8 17.3h.01' }]
+      ],
+      bulb: [
+        ['path', { d: 'M12 3.2a6 6 0 0 0-3.5 10.9c.6.5.9 1.2.9 2h5.2c0-.8.3-1.5.9-2A6 6 0 0 0 12 3.2z' }],
+        ['path', { d: 'M9.4 19h5.2' }],
+        ['path', { d: 'M10.4 21.4h3.2' }]
+      ],
+      bookmark: [
+        ['path', { d: 'M6.4 3.6h11.2v17l-5.6-4.2-5.6 4.2z' }]
+      ],
+      chart: [
+        ['path', { d: 'M4 20V4' }],
+        ['path', { d: 'M4 20h16' }],
+        ['path', { d: 'M8 16.5v-4.6' }],
+        ['path', { d: 'M13 16.5V8.2' }],
+        ['path', { d: 'M18 16.5v-7' }]
+      ],
+      retro: [
+        ['path', { d: 'M3.6 12a8.4 8.4 0 1 0 2.7-6.2' }],
+        ['path', { d: 'M3.2 4.6v5h5' }]
+      ],
+      process: [
+        ['rect', { x: 3.2, y: 4, width: 6.2, height: 5.2, rx: 1.6 }],
+        ['rect', { x: 14.6, y: 14.8, width: 6.2, height: 5.2, rx: 1.6 }],
+        ['path', { d: 'M9.4 6.6h3.4a2.4 2.4 0 0 1 2.4 2.4v5.8' }]
+      ],
+      copy: [
+        ['rect', { x: 9, y: 9, width: 11.4, height: 11.4, rx: 2.4 }],
+        ['path', { d: 'M15 5.4H6.4a2 2 0 0 0-2 2V16' }]
+      ],
+      dot: [['circle', { cx: 12, cy: 12, r: 3.2, fill: 'currentColor', stroke: 'none' }]]
     }
 
     function Icon(props) {
-      const name = props.name
-      const size = props.size || 16
-      const paths = ICONS[name] || []
+      const shape = ICONS[props.name] || ICONS.dot
+      const size = props.size || 14
       return h(
         'svg',
         {
-          viewBox: '0 0 24 24',
           width: size,
           height: size,
-          fill: props.filled ? 'currentColor' : 'none',
-          stroke: 'currentColor',
-          strokeWidth: 1.6,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round',
-          'aria-hidden': true,
-          focusable: 'false'
-        },
-        paths.map((entry, index) => h(entry[0], Object.assign({ key: index }, entry[1])))
-      )
-    }
-
-    function SidebarIcon(props) {
-      const size = props.size || 16
-      return h(
-        'svg',
-        {
           viewBox: '0 0 24 24',
-          width: size,
-          height: size,
           fill: 'none',
           stroke: 'currentColor',
-          strokeWidth: props.active ? 1.8 : 1.6,
+          strokeWidth: props.strokeWidth || 1.8,
           strokeLinecap: 'round',
           strokeLinejoin: 'round',
-          'aria-hidden': true,
+          className: props.className,
+          'aria-hidden': 'true',
           focusable: 'false'
         },
-        h('rect', { x: 6.5, y: 3, width: 14, height: 14, rx: 2.5, opacity: 0.45 }),
-        h('rect', { x: 3.5, y: 6.5, width: 14, height: 14, rx: 2.5 }),
-        h('path', { d: 'M7 11.5h7M7 15h4.5' })
+        shape.map((item, index) => h(item[0], { key: index, ...item[1] }))
       )
     }
 
-    const dayFormat = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })
-    const shortFormat = new Intl.DateTimeFormat(undefined, { month: '2-digit', day: '2-digit' })
-    const timeFormat = new Intl.DateTimeFormat(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    const TYPE_ICON = {
+      decision: 'gavel',
+      rule: 'book',
+      assumption: 'help',
+      question: 'help',
+      proposal: 'bulb',
+      reference: 'bookmark',
+      metric: 'chart',
+      retro: 'retro',
+      process: 'process'
+    }
 
-    function toDate(value) {
+
+    function createTranslator(dict) {
+      const t = (key, vars) => {
+        let text = dict[key]
+        if (text === undefined) text = ZH[key]
+        if (text === undefined) return key
+        if (vars) {
+          for (const name of Object.keys(vars)) {
+            text = text.split('{' + name + '}').join(String(vars[name]))
+          }
+        }
+        return text
+      }
+      t.has = (key) => dict[key] !== undefined || ZH[key] !== undefined
+      return t
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, '0')
+    }
+
+    function parseDate(value) {
+      if (!value) return null
       const date = new Date(value)
-      return Number.isNaN(date.getTime()) ? null : date
+      if (Number.isNaN(date.getTime())) return null
+      return date
     }
 
     function formatDay(value) {
-      const date = toDate(value)
-      return date ? dayFormat.format(date) : ''
+      const date = parseDate(value)
+      if (!date) return ''
+      const now = new Date()
+      const sameYear = date.getFullYear() === now.getFullYear()
+      return (
+        (sameYear ? '' : date.getFullYear() + '-') +
+        pad2(date.getMonth() + 1) +
+        '-' +
+        pad2(date.getDate())
+      )
     }
 
-    function formatShort(value) {
-      const date = toDate(value)
-      return date ? shortFormat.format(date) : ''
-    }
-
-    function formatTime(value) {
-      const date = toDate(value)
-      return date ? timeFormat.format(date) : ''
-    }
-
-    function shortenPath(value) {
-      if (typeof value !== 'string' || !value) return ''
-      return value.length > 44 ? '…' + value.slice(-42) : value
-    }
-
-    function splitTags(value) {
-      return String(value || '')
-        .split(/[,，;；、]/)
-        .map((item) => item.trim().replace(/^#/, ''))
-        .filter(Boolean)
-        .slice(0, 20)
-    }
-
-    function entryHaystack(entry) {
-      const facts = (entry.facts || []).map((fact) => fact.label + ' ' + fact.value).join(' ')
-      const links = (entry.links || []).map((link) => link.label).join(' ')
-      return [entry.title, entry.summary, entry.body, entry.source, (entry.tags || []).join(' '), facts, links].join(' ').toLowerCase()
-    }
-
-    function compareEntries(left, right) {
-      const pinned = (right.pinned ? 1 : 0) - (left.pinned ? 1 : 0)
-      if (pinned !== 0) return pinned
-      return String(right.updatedAt).localeCompare(String(left.updatedAt))
+    function formatDateTime(value) {
+      const date = parseDate(value)
+      if (!date) return ''
+      return (
+        date.getFullYear() +
+        '-' +
+        pad2(date.getMonth() + 1) +
+        '-' +
+        pad2(date.getDate()) +
+        ' ' +
+        pad2(date.getHours()) +
+        ':' +
+        pad2(date.getMinutes())
+      )
     }
 
     function truncate(text, max) {
       const value = String(text || '')
-      return value.length > max ? value.slice(0, max) + '…' : value
+      if (value.length <= max) return value
+      return value.slice(0, Math.max(0, max - 1)) + '…'
     }
 
     function clamp(value, min, max) {
-      return Math.min(Math.max(value, min), max)
+      return Math.min(max, Math.max(min, value))
     }
 
-    function emptyDraft(category) {
-      return {
-        category: category === 'all' ? 'system' : category,
-        title: '',
-        summary: '',
-        body: '',
-        tags: '',
-        facts: [],
-        status: 'draft',
-        pinned: false,
-        source: '',
-        note: ''
+    function countBy(list, pick) {
+      const result = {}
+      for (const item of list) {
+        const key = pick(item)
+        if (!key) continue
+        result[key] = (result[key] || 0) + 1
       }
+      return result
     }
 
-    function draftFrom(entry) {
-      return {
-        category: entry.category,
-        title: entry.title,
-        summary: entry.summary || '',
-        body: entry.body || '',
-        tags: (entry.tags || []).join('，'),
-        facts: (entry.facts || []).map((fact) => ({ label: fact.label, value: fact.value })),
-        status: entry.status,
-        pinned: entry.pinned === true,
-        source: entry.source || '',
-        note: ''
+    function unique(list) {
+      const seen = new Set()
+      const out = []
+      for (const item of list) {
+        if (seen.has(item)) continue
+        seen.add(item)
+        out.push(item)
       }
+      return out
+    }
+
+    function entryHaystack(entry) {
+      return [
+        entry.title,
+        entry.summary,
+        entry.content,
+        (entry.tags || []).join(' '),
+        (entry.domains || []).join(' '),
+        entry.type,
+        entry.status,
+        (entry.facts || []).map((fact) => fact.label + ' ' + fact.value).join(' ')
+      ]
+        .join('\n')
+        .toLowerCase()
+    }
+
+    function matchesQuery(entry, needle) {
+      if (!needle) return true
+      const terms = needle
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean)
+      if (!terms.length) return true
+      const haystack = entryHaystack(entry)
+      return terms.every((term) => haystack.includes(term))
+    }
+
+    function matchesFilters(entry, filters) {
+      if (filters.projectId && entry.projectId !== filters.projectId) return false
+      if (filters.types.length && filters.types.indexOf(entry.type) < 0) return false
+      if (filters.statuses.length && filters.statuses.indexOf(entry.status) < 0) return false
+      if (filters.domains.length && !entry.domains.some((domain) => filters.domains.indexOf(domain) >= 0)) return false
+      if (filters.tags.length && !entry.tags.some((tag) => filters.tags.indexOf(tag) >= 0)) return false
+      return true
+    }
+
+    function sortEntries(list, mode) {
+      const copy = list.slice()
+      copy.sort((left, right) => {
+        if (mode === 'title') return String(left.title).localeCompare(String(right.title), 'zh-Hans-CN')
+        if (mode === 'created') return String(right.createdAt).localeCompare(String(left.createdAt))
+        return String(right.updatedAt).localeCompare(String(left.updatedAt))
+      })
+      return copy
     }
 
     function isOfflineError(error) {
       if (!error) return false
       if (error.offline === true) return true
-      const text = String(error.message || error)
-      return /failed to fetch|network ?error|load failed|econnrefused|networkerror|无法连接插件后台/i.test(text)
+      const text = String((error && error.message) || error)
+      return /failed to fetch|network ?error|load failed|econnrefused|networkerror|无法连接/i.test(text)
     }
 
     function errorText(error, t) {
       if (!error) return ''
       if (isOfflineError(error)) return t('error.offline')
-      return error.message || String(error)
+      return (error && error.message) || String(error)
     }
 
     async function request(url, options) {
@@ -794,7 +2270,7 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       try {
         response = await fetch(url, options)
       } catch (error) {
-        const wrapped = new Error(error && error.message ? error.message : String(error))
+        const wrapped = new Error((error && error.message) || String(error))
         wrapped.offline = true
         throw wrapped
       }
@@ -808,17 +2284,17 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         const message =
           payload && payload.error && payload.error.message
             ? payload.error.message
-            : '请求失败（HTTP ' + response.status + '）'
+            : 'HTTP ' + response.status
         throw new Error(message)
       }
       return payload
     }
 
-    function loadEntries() {
+    function loadState() {
       return request(API, { method: 'GET', headers: { accept: 'application/json' }, cache: 'no-store' })
     }
 
-    function mutateEntries(payload) {
+    function mutateState(payload) {
       return request(API, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'application/json' },
@@ -826,19 +2302,19 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
       })
     }
 
-    function renderBody(text) {
+    function renderProse(text) {
       const blocks = []
-      let list = []
+      let bullets = []
       const flush = () => {
-        if (!list.length) return
+        if (!bullets.length) return
         blocks.push(
           h(
             'ul',
-            { key: 'ul-' + blocks.length, className: 'dm-bodyList' },
-            list.map((item, index) => h('li', { key: index }, item))
+            { key: 'ul-' + blocks.length, className: 'zw-proseUl' },
+            bullets.map((item, index) => h('li', { key: index, className: 'zw-proseLi' }, item))
           )
         )
-        list = []
+        bullets = []
       }
       const lines = String(text || '').split(/\r?\n/)
       lines.forEach((raw, index) => {
@@ -849,43 +2325,44 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         }
         if (/^#{1,4}\s+/.test(line)) {
           flush()
-          blocks.push(h('h4', { key: 'h-' + index, className: 'dm-bodyH' }, line.replace(/^#{1,4}\s+/, '')))
+          blocks.push(
+            h('h5', { key: 'h-' + index, className: 'zw-proseH' }, line.replace(/^#{1,4}\s+/, ''))
+          )
           return
         }
         if (/^[-*•]\s+/.test(line)) {
-          list.push(line.replace(/^[-*•]\s+/, ''))
+          bullets.push(line.replace(/^[-*•]\s+/, ''))
           return
         }
         flush()
-        blocks.push(h('p', { key: 'p-' + index, className: 'dm-bodyP' }, line))
+        blocks.push(h('p', { key: 'p-' + index, className: 'zw-proseP' }, line))
       })
       flush()
       return blocks
     }
 
     /**
-     * The host flips dark mode with body[data-ds-dark-theme]; older shells used
-     * html[data-theme] / data-dsw-theme. Probe all of them and keep listening, so a
-     * live theme switch repaints the panel and the graph without a reload.
+     * DSH 切深浅色用 body[data-ds-dark-theme]，旧外壳用过 html[data-theme] /
+     * data-dsw-theme。全部探测并监听，切换主题时面板与关系图一起重绘。
      */
     function readThemeMode() {
       if (typeof document === 'undefined') return 'light'
       const html = document.documentElement
       const body = document.body
       if (body && body.hasAttribute('data-ds-dark-theme')) return 'dark'
-      const attributeTheme =
+      const attr =
         (body && body.getAttribute('data-theme')) ||
         (html && html.getAttribute('data-theme')) ||
         (html && html.getAttribute('data-dsw-theme')) ||
         (body && body.getAttribute('data-dsw-theme'))
-      if (attributeTheme === 'dark' || attributeTheme === 'light') return attributeTheme
+      if (attr === 'dark' || attr === 'light') return attr
       const source = html && html.dataset ? html.dataset.dsThemeSource : ''
       if (source === 'dark') return 'dark'
       if (source === 'light') return 'light'
       try {
-        if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
-      } catch {
-        /* matchMedia unavailable */
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
+      } catch (error) {
+        /* matchMedia 不可用 */
       }
       return 'light'
     }
@@ -896,132 +2373,2070 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         const sync = () => setMode(readThemeMode())
         sync()
         const observer = typeof MutationObserver === 'function' ? new MutationObserver(sync) : null
-        if (observer && document.body) {
-          observer.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme', 'data-theme', 'data-dsw-theme', 'style'] })
-        }
-        if (observer && document.documentElement) {
-          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-dsw-theme', 'data-ds-theme-source', 'class', 'style'] })
+        if (observer && typeof document !== 'undefined' && document.body) {
+          observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['data-ds-dark-theme', 'data-theme', 'data-dsw-theme', 'class', 'style']
+          })
         }
         let media = null
         try {
-          media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null
-          if (media) {
-            if (typeof media.addEventListener === 'function') media.addEventListener('change', sync)
-            else if (typeof media.addListener === 'function') media.addListener(sync)
+          if (window.matchMedia) {
+            media = window.matchMedia('(prefers-color-scheme: dark)')
+            if (media.addEventListener) media.addEventListener('change', sync)
+            else if (media.addListener) media.addListener(sync)
           }
-        } catch {
+        } catch (error) {
           media = null
         }
         return () => {
           if (observer) observer.disconnect()
           try {
-            if (media) {
-              if (typeof media.removeEventListener === 'function') media.removeEventListener('change', sync)
-              else if (typeof media.removeListener === 'function') media.removeListener(sync)
-            }
-          } catch {
-            /* listener already gone */
+            if (media && media.removeEventListener) media.removeEventListener('change', sync)
+            else if (media && media.removeListener) media.removeListener(sync)
+          } catch (error) {
+            /* ignore */
           }
         }
       }, [])
       return mode
     }
 
-    function CategoryRow(props) {
+    function useDebounced(value, delay) {
+      const [debounced, setDebounced] = useState(value)
+      useEffect(() => {
+        const timer = setTimeout(() => setDebounced(value), delay)
+        return () => clearTimeout(timer)
+      }, [value, delay])
+      return debounced
+    }
+
+    function useOutsideClick(ref, active, onClose) {
+      useEffect(() => {
+        if (!active) return undefined
+        const handler = (event) => {
+          const node = ref.current
+          if (node && !node.contains(event.target)) onClose()
+        }
+        document.addEventListener('mousedown', handler, true)
+        return () => document.removeEventListener('mousedown', handler, true)
+      }, [active, onClose, ref])
+    }
+
+    function useEscape(active, onEscape) {
+      useEffect(() => {
+        if (!active) return undefined
+        const handler = (event) => {
+          if (event.key === 'Escape') {
+            event.stopPropagation()
+            onEscape()
+          }
+        }
+        document.addEventListener('keydown', handler, true)
+        return () => document.removeEventListener('keydown', handler, true)
+      }, [active, onEscape])
+    }
+
+    function collectionColor(color) {
+      return 'var(--zw-region-' + (COLLECTION_COLORS.indexOf(color) >= 0 ? color : 'violet') + ')'
+    }
+
+    function typeColor(type) {
+      return 'var(--zw-type-' + (TYPE_COLOR[type] ? type : 'retro') + ')'
+    }
+
+    function statusTone(status) {
+      if (status === 'active') return 'zw-badge zw-badgeActive'
+      if (status === 'pending') return 'zw-badge zw-badgePending'
+      if (status === 'deprecated') return 'zw-badge zw-badgeDeprecated'
+      if (status === 'archived') return 'zw-badge zw-badgeArchived'
+      return 'zw-badge zw-badgeDraft'
+    }
+
+    function relationColor(type) {
+      return RELATION_COLOR[type] || 'var(--zw-text-3)'
+    }
+
+    function labelOf(t, list, id, prefix) {
+      const key = prefix + '.' + id
+      if (t.has(key)) return t(key)
+      const found = (list || []).find((item) => item.id === id)
+      return found ? found.label : id
+    }
+
+    function hintOf(list, id) {
+      const found = (list || []).find((item) => item.id === id)
+      return found ? found.hint || '' : ''
+    }
+
+
+    function Modal(props) {
+      useEscape(true, props.onClose)
+      const onMaskDown = (event) => {
+        if (event.target === event.currentTarget && props.dismissable !== false) props.onClose()
+      }
+      return h(
+        'div',
+        { className: 'zw-modalMask', onMouseDown: onMaskDown, role: 'presentation' },
+        h(
+          'div',
+          {
+            className: 'zw-modal' + (props.wide ? ' zw-modalWide' : ''),
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': props.title
+          },
+          h(
+            'div',
+            { className: 'zw-modalHead' },
+            props.icon ? h(Icon, { name: props.icon, size: 15 }) : null,
+            h('div', { className: 'zw-modalTitle' }, props.title),
+            props.headExtra || null,
+            h(
+              'button',
+              { type: 'button', className: 'zw-iconBtn', title: props.closeLabel, onClick: props.onClose },
+              h(Icon, { name: 'close', size: 14 })
+            )
+          ),
+          h('div', { className: 'zw-modalBody zw-scroll' }, props.children),
+          props.footer ? h('div', { className: 'zw-modalFoot' }, props.footer) : null
+        )
+      )
+    }
+
+    function Popover(props) {
+      const [open, setOpen] = useState(false)
+      const wrapRef = useRef(null)
+      useOutsideClick(wrapRef, open, () => setOpen(false))
+      useEscape(open, () => setOpen(false))
+      return h(
+        'div',
+        { className: 'zw-popoverHost', ref: wrapRef },
+        props.trigger({ open: open, toggle: () => setOpen(!open) }),
+        open
+          ? h(
+              'div',
+              {
+                className: 'zw-popover zw-scroll',
+                style: props.width ? { minWidth: props.width } : undefined,
+                role: 'menu'
+              },
+              props.children({ close: () => setOpen(false) })
+            )
+          : null
+      )
+    }
+
+    function MultiChips(props) {
+      return h(
+        'div',
+        { className: 'zw-chipPicker', role: 'group', 'aria-label': props.label },
+        props.options.map((option) =>
+          h(
+            'button',
+            {
+              key: option.id,
+              type: 'button',
+              className: 'zw-chipOpt' + (props.value.indexOf(option.id) >= 0 ? ' zw-chipOptOn' : ''),
+              'aria-pressed': props.value.indexOf(option.id) >= 0,
+              title: option.hint || option.label,
+              onClick: () => props.onToggle(option.id)
+            },
+            option.color ? h('span', { className: 'zw-chipDot', style: { background: option.color } }) : null,
+            option.icon ? h(Icon, { name: option.icon, size: 11 }) : null,
+            option.label
+          )
+        )
+      )
+    }
+
+    function Select(props) {
+      const value = props.value === undefined || props.value === null ? '' : String(props.value)
+      return h(
+        'div',
+        { className: 'zw-selectWrap' },
+        h(
+          'select',
+          {
+            className: 'zw-select',
+            value: value,
+            'aria-label': props.label,
+            title: props.title,
+            onChange: (event) => props.onChange(event.target.value),
+            disabled: props.disabled
+          },
+          props.placeholder ? h('option', { value: '' }, props.placeholder) : null,
+          props.options.map((option) =>
+            h('option', { key: option.id, value: option.id }, option.label)
+          )
+        ),
+        h('span', { className: 'zw-selectCaret', 'aria-hidden': 'true' }, h(Icon, { name: 'chevronDown', size: 12 }))
+      )
+    }
+
+    function Field(props) {
+      return h(
+        'label',
+        { className: 'zw-field' + (props.inline ? ' zw-fieldInline' : '') },
+        props.label
+          ? h(
+              'span',
+              { className: 'zw-fieldLabel' },
+              props.label,
+              props.hint ? h('span', { className: 'zw-hint' }, ' · ' + props.hint) : null
+            )
+          : null,
+        props.children
+      )
+    }
+
+    function EmptyState(props) {
+      return h(
+        'div',
+        { className: 'zw-empty' },
+        h('div', { className: 'zw-emptyIcon' }, h(Icon, { name: props.icon || 'layers', size: 20 })),
+        h('div', { className: 'zw-emptyTitle' }, props.title),
+        props.text ? h('div', { className: 'zw-emptyText' }, props.text) : null,
+        props.action || null
+      )
+    }
+
+    function ConfirmButton(props) {
+      const [armed, setArmed] = useState(false)
+      useEffect(() => {
+        if (!armed) return undefined
+        const timer = setTimeout(() => setArmed(false), 3200)
+        return () => clearTimeout(timer)
+      }, [armed])
       return h(
         'button',
         {
           type: 'button',
-          className: 'dm-railRow' + (props.active ? ' dm-railRowActive' : ''),
-          'aria-pressed': props.active,
-          onClick: () => props.onSelect(props.id)
+          className: (props.className || 'zw-btn zw-btnSm') + (armed ? ' zw-btnDanger' : ''),
+          disabled: props.disabled,
+          title: props.title,
+          onClick: (event) => {
+            event.stopPropagation()
+            if (!armed) {
+              setArmed(true)
+              return
+            }
+            setArmed(false)
+            props.onConfirm()
+          }
         },
-        h('span', { className: 'dm-dot' + (props.id === 'all' ? '' : ' dm-dot-' + props.id) }),
-        h('span', { className: 'dm-railLabel' }, props.label),
-        h('span', { className: 'dm-railCount' }, String(props.count || 0))
+        armed ? props.confirmLabel || props.label : props.label
+      )
+    }
+
+    function ToastHost(props) {
+      if (!props.toasts.length) return null
+      return h(
+        'div',
+        { className: 'zw-toastWrap', role: 'status', 'aria-live': 'polite' },
+        props.toasts.map((toast) =>
+          h(
+            'div',
+            {
+              key: toast.id,
+              className: 'zw-toast ' + (toast.tone === 'error' ? 'zw-toastError' : 'zw-toastOk')
+            },
+            h(Icon, { name: toast.tone === 'error' ? 'warning' : 'check', size: 13 }),
+            h(
+              'div',
+              { className: 'zw-toastRow' },
+              h('span', { className: 'zw-toastText' }, toast.text),
+              toast.action
+                ? h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-toastAction',
+                      onClick: () => {
+                        const action = toast.action
+                        if (props.onAction) props.onAction(toast)
+                        if (action && typeof action.onClick === 'function') action.onClick()
+                      }
+                    },
+                    toast.action.label
+                  )
+                : null
+            )
+          )
+        )
+      )
+    }
+
+    function SectionHead(props) {
+      return h(
+        'div',
+        { className: 'zw-panelHead' },
+        h(
+          'div',
+          { className: 'zw-panelTitle' },
+          props.icon ? h(Icon, { name: props.icon, size: 13 }) : null,
+          props.title,
+          props.count !== undefined
+            ? h('span', { className: 'zw-navCount' }, props.count)
+            : null
+        ),
+        props.action || null
+      )
+    }
+
+    function StatusDot(props) {
+      return h('span', {
+        className: 'zw-rowDot',
+        style: { background: props.color || typeColor(props.type) },
+        'aria-hidden': 'true'
+      })
+    }
+
+
+    function LeftRail(props) {
+      const t = props.t
+      const nav = props.nav
+      const collapsed = props.collapsed
+      const stats = props.stats
+      const item = (kind, label, icon, count) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'zw-navItem' + (nav.kind === kind && !nav.id ? ' zw-navItemOn' : ''),
+            title: collapsed ? label : undefined,
+            onClick: () => props.onNav(kind)
+          },
+          h(Icon, { name: icon, size: 14 }),
+          h('span', { className: 'zw-navLabel' }, label),
+          count ? h('span', { className: 'zw-navCount' }, count) : null
+        )
+
+      return h(
+        'aside',
+        {
+          className: 'zw-rail',
+          'data-collapsed': collapsed ? 'true' : 'false',
+          'aria-label': t('app.name')
+        },
+        h(
+          'div',
+          { className: 'zw-brand' },
+          h('div', { className: 'zw-brandMark' }, h(Icon, { name: 'sparkle', size: 17 })),
+          h(
+            'div',
+            { className: 'zw-brandText' },
+            h('span', { className: 'zw-brandName' }, t('app.name')),
+            h('span', { className: 'zw-brandBadge' }, t('app.badge'))
+          )
+        ),
+        h(
+          'button',
+          { type: 'button', className: 'zw-newBtn', onClick: props.onNew, title: t('action.new') },
+          h(Icon, { name: 'plus', size: 15 }),
+          h('span', null, t('action.new'))
+        ),
+        h(
+          'div',
+          { className: 'zw-navGroup' },
+          item('overview', t('nav.overview'), 'home'),
+          item('all', t('nav.all'), 'book', stats.entries),
+          item('inbox', t('nav.inbox'), 'inbox', stats.inbox),
+          item('collections', t('nav.collections'), 'folder', stats.collections),
+          item('favorites', t('nav.favorites'), 'star', stats.favorites),
+          item('recent', t('nav.recent'), 'clock')
+        ),
+        props.projects.length
+          ? h(
+              'div',
+              { className: 'zw-navGroup' },
+              h('div', { className: 'zw-navGroupLabel' }, t('nav.projects')),
+              h(
+                'div',
+                { className: 'zw-projects zw-scroll' },
+                props.projects.map((project) =>
+                  h(
+                    'button',
+                    {
+                      key: project.id,
+                      type: 'button',
+                      className:
+                        'zw-projectRow' +
+                        (nav.kind === 'project' && nav.id === project.id ? ' zw-projectRowOn' : ''),
+                      title: project.name,
+                      onClick: () => props.onNav('project', project.id)
+                    },
+                    h('span', {
+                      className: 'zw-projectDot',
+                      style: { background: project.color || 'var(--zw-accent)' }
+                    }),
+                    h('span', { className: 'zw-projectName' }, project.name),
+                    h(
+                      'span',
+                      { className: 'zw-projectCount' },
+                      props.projectCounts[project.id] || 0
+                    )
+                  )
+                )
+              )
+            )
+          : null,
+        h(
+          'div',
+          { className: 'zw-navGroup' },
+          item('graph', t('nav.graph'), 'graph', stats.relations)
+        ),
+        h('div', { className: 'zw-railSpacer' }),
+        h(
+          'div',
+          { className: 'zw-railFoot' },
+          h('div', { className: 'zw-navGroupLabel' }, t('nav.savedViews')),
+          props.views.length
+            ? props.views.map((view) =>
+                h(
+                  'button',
+                  {
+                    key: view.id,
+                    type: 'button',
+                    className: 'zw-savedView',
+                    title: view.name,
+                    onClick: () => props.onOpenView(view)
+                  },
+                  h(Icon, { name: 'target', size: 12 }),
+                  view.name
+                )
+              )
+            : h('div', { className: 'zw-savedEmpty' }, t('nav.savedViewsEmpty')),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-railToggle',
+              title: collapsed ? t('nav.expand') : t('nav.collapse'),
+              onClick: props.onToggleCollapsed
+            },
+            h(Icon, { name: collapsed ? 'expand' : 'collapse', size: 13 }),
+            h('span', null, collapsed ? t('nav.expand') : t('nav.collapse'))
+          )
+        )
+      )
+    }
+
+    function SidebarIcon() {
+      return h(
+        'svg',
+        {
+          width: 18,
+          height: 18,
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.7,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          'aria-hidden': 'true'
+        },
+        h('circle', { cx: 6.2, cy: 6.6, r: 2.4 }),
+        h('circle', { cx: 17.8, cy: 8.2, r: 2.4 }),
+        h('circle', { cx: 12, cy: 17.6, r: 2.4 }),
+        h('path', { d: 'M8.4 7.1l7 .8' }),
+        h('path', { d: 'M7.2 8.8l3.4 6.6' }),
+        h('path', { d: 'M16.6 10.2l-3.2 5.2' })
+      )
+    }
+
+
+    function FacetMenu(props) {
+      const t = props.t
+      const activeCount = props.value.length
+      return h(Popover, {
+        width: props.width,
+        trigger: ({ toggle, open }) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              className:
+                'zw-chip' + (activeCount ? ' zw-chipOn' : '') + (open ? ' zw-chipOpen' : ''),
+              onClick: toggle,
+              'aria-expanded': open
+            },
+            props.label,
+            activeCount
+              ? h('span', { className: 'zw-popCheck' }, activeCount)
+              : h(Icon, { name: 'chevronDown', size: 11 })
+          ),
+        children: ({ close }) =>
+          h(
+            'div',
+            null,
+            props.options.length
+              ? props.options.map((option) =>
+                  h(
+                    'button',
+                    {
+                      key: option.id,
+                      type: 'button',
+                      className:
+                        'zw-popItem' + (props.value.indexOf(option.id) >= 0 ? ' zw-popItemOn' : ''),
+                      onClick: () => props.onToggle(option.id)
+                    },
+                    option.color
+                      ? h('span', { className: 'zw-legendDot', style: { background: option.color } })
+                      : h('span', {
+                          className: 'zw-rowDot',
+                          style: { background: option.type ? typeColor(option.type) : 'transparent', opacity: 0.9 }
+                        }),
+                    h('span', { className: 'zw-popLabel' }, option.label),
+                    option.count !== undefined
+                      ? h('span', { className: 'zw-legendCount' }, option.count)
+                      : null,
+                    h(
+                      'span',
+                      { className: 'zw-popCheck' },
+                      props.value.indexOf(option.id) >= 0 ? h(Icon, { name: 'check', size: 12 }) : null
+                    )
+                  )
+                )
+              : h('div', { className: 'zw-savedEmpty' }, t('common.empty')),
+            activeCount
+              ? h(
+                  'div',
+                  null,
+                  h('div', { className: 'zw-popSep' }),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-popItem',
+                      onClick: () => {
+                        props.onClear()
+                        close()
+                      }
+                    },
+                    h(Icon, { name: 'close', size: 12 }),
+                    h('span', { className: 'zw-popLabel' }, t('action.reset'))
+                  )
+                )
+              : null
+          )
+      })
+    }
+
+    function FilterBar(props) {
+      const t = props.t
+      const meta = props.meta
+      const filters = props.filters
+      const toggle = (field, value) => {
+        const current = filters[field]
+        const next = current.indexOf(value) >= 0 ? current.filter((item) => item !== value) : current.concat([value])
+        props.onChange({ ...filters, [field]: next })
+      }
+      const typeOptions = meta.entryTypes.map((type) => ({
+        id: type.id,
+        label: labelOf(t, meta.entryTypes, type.id, 'type'),
+        count: props.counts.type[type.id] || 0,
+        type: type.id
+      }))
+      const domainOptions = meta.domains.map((domain) => ({
+        id: domain.id,
+        label: labelOf(t, meta.domains, domain.id, 'domain'),
+        count: props.counts.domain[domain.id] || 0
+      }))
+      const statusOptions = meta.statuses.map((status) => ({
+        id: status.id,
+        label: labelOf(t, meta.statuses, status.id, 'status'),
+        count: props.counts.status[status.id] || 0
+      }))
+      const tagOptions = props.tagOptions
+      const anyActive =
+        filters.types.length + filters.domains.length + filters.statuses.length + filters.tags.length > 0
+
+      return h(
+        'div',
+        { className: 'zw-filterbar' },
+        h('span', { className: 'zw-filterLabel' }, h(Icon, { name: 'filter', size: 12 })),
+        h(FacetMenu, {
+          t: t,
+          label: t('filter.type'),
+          value: filters.types,
+          options: typeOptions,
+          onToggle: (value) => toggle('types', value),
+          onClear: () => props.onChange({ ...filters, types: [] })
+        }),
+        h(FacetMenu, {
+          t: t,
+          label: t('filter.domain'),
+          value: filters.domains,
+          options: domainOptions,
+          onToggle: (value) => toggle('domains', value),
+          onClear: () => props.onChange({ ...filters, domains: [] })
+        }),
+        h(FacetMenu, {
+          t: t,
+          label: t('filter.status'),
+          value: filters.statuses,
+          options: statusOptions,
+          onToggle: (value) => toggle('statuses', value),
+          onClear: () => props.onChange({ ...filters, statuses: [] })
+        }),
+        tagOptions.length
+          ? h(FacetMenu, {
+              t: t,
+              label: t('filter.tag'),
+              value: filters.tags,
+              options: tagOptions,
+              width: 240,
+              onToggle: (value) => toggle('tags', value),
+              onClear: () => props.onChange({ ...filters, tags: [] })
+            })
+          : null,
+        anyActive
+          ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-filterLabel',
+                style: { cursor: 'pointer', marginLeft: 4 },
+                onClick: () =>
+                  props.onChange({ types: [], domains: [], statuses: [], tags: [], projectId: filters.projectId })
+              },
+              t('filter.clearAll')
+            )
+          : null,
+        h('span', { style: { flex: 1 } }),
+        h(
+          'div',
+          { className: 'zw-seg', role: 'group', 'aria-label': t('list.filters') },
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-segBtn' + (props.layout === 'list' ? ' zw-segBtnOn' : ''),
+              title: t('layout.list'),
+              onClick: () => props.onLayout('list')
+            },
+            h(Icon, { name: 'list', size: 12 })
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-segBtn' + (props.layout === 'cards' ? ' zw-segBtnOn' : ''),
+              title: t('layout.cards'),
+              onClick: () => props.onLayout('cards')
+            },
+            h(Icon, { name: 'grid', size: 12 })
+          )
+        ),
+        h(Popover, {
+          trigger: ({ toggle, open }) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-chip' + (open ? ' zw-chipOn' : ''),
+                onClick: toggle,
+                title: t('sort.updated')
+              },
+              h(Icon, { name: 'sort', size: 12 }),
+              t('sort.' + props.sort),
+              h(Icon, { name: 'chevronDown', size: 11 })
+            ),
+          children: ({ close }) =>
+            h(
+              'div',
+              null,
+              ['updated', 'created', 'title'].map((mode) =>
+                h(
+                  'button',
+                  {
+                    key: mode,
+                    type: 'button',
+                    className: 'zw-popItem' + (props.sort === mode ? ' zw-popItemOn' : ''),
+                    onClick: () => {
+                      props.onSort(mode)
+                      close()
+                    }
+                  },
+                  h('span', { className: 'zw-popCheck' }, props.sort === mode ? h(Icon, { name: 'check', size: 12 }) : null),
+                  h('span', { className: 'zw-popLabel' }, t('sort.' + mode))
+                )
+              )
+            )
+        })
       )
     }
 
     function MemoryRow(props) {
+      const t = props.t
       const entry = props.entry
-      const linkCount = (entry.links || []).length
+      const meta = props.meta
+      const collections = props.collectionsFor(entry)
+      const relationCount = props.relationCount(entry)
       return h(
-        'button',
+        'div',
         {
-          type: 'button',
-          className: 'dm-row' + (props.active ? ' dm-rowActive' : ''),
-          disabled: props.disabled,
-          'aria-current': props.active ? 'true' : undefined,
-          onClick: props.onSelect
+          className: 'zw-row' + (props.active ? ' zw-rowOn' : ''),
+          role: 'button',
+          tabIndex: 0,
+          onClick: () => props.onOpen(entry.id),
+          onKeyDown: (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              props.onOpen(entry.id)
+            }
+          }
         },
         h(
-          'span',
-          { className: 'dm-rowTop' },
-          h(
-            'span',
-            { className: 'dm-rowTitle' },
-            entry.pinned ? h('span', { className: 'dm-pinMark' }, h(Icon, { name: 'star', size: 12, filled: true })) : null,
-            entry.title
-          ),
-          h('span', { className: 'dm-statusPill dm-status-' + entry.status }, props.t('status.' + entry.status))
+          'button',
+          {
+            type: 'button',
+            className: 'zw-rowCheck' + (props.checked ? ' zw-rowCheckOn' : ''),
+            'aria-pressed': props.checked,
+            title: t('action.selectAll'),
+            onClick: (event) => {
+              event.stopPropagation()
+              props.onCheck(entry.id)
+            }
+          },
+          props.checked ? h(Icon, { name: 'check', size: 12 }) : null
         ),
-        entry.summary ? h('span', { className: 'dm-rowSummary' }, entry.summary) : null,
         h(
-          'span',
-          { className: 'dm-rowMeta' },
-          h('span', { className: 'dm-dot dm-dot-' + entry.category }),
-          h('span', null, props.t('rail.' + entry.category)),
-          h('span', { className: 'dm-dotSep' }, '·'),
-          h('span', null, formatShort(entry.updatedAt)),
-          linkCount
-            ? h('span', { className: 'dm-rowMetaLinks' }, h(Icon, { name: 'link', size: 11 }), linkCount + ' ' + props.t('list.links'))
+          'div',
+          { className: 'zw-rowBody' },
+          h(
+            'div',
+            { className: 'zw-rowTop' },
+            h(StatusDot, { type: entry.type }),
+            h('span', { className: 'zw-rowTitle' }, entry.title || t('common.empty')),
+            h(
+              'span',
+              { className: 'zw-badge zw-badgeType' },
+              labelOf(t, meta.entryTypes, entry.type, 'type')
+            ),
+            h('span', { className: statusTone(entry.status) }, labelOf(t, meta.statuses, entry.status, 'status'))
+          ),
+          entry.summary
+            ? h('div', { className: 'zw-rowSummary' }, entry.summary)
+            : entry.content
+              ? h('div', { className: 'zw-rowSummary' }, truncate(entry.content.replace(/\n+/g, ' '), 160))
+              : null,
+          h(
+            'div',
+            { className: 'zw-rowMeta' },
+            entry.domains.slice(0, 3).map((domain) =>
+              h('span', { key: domain, className: 'zw-tag' }, labelOf(t, meta.domains, domain, 'domain'))
+            ),
+            collections.slice(0, 2).map((collection) =>
+              h(
+                'span',
+                {
+                  key: collection.id,
+                  className: 'zw-tag',
+                  style: { color: collectionColor(collection.color) }
+                },
+                '# ' + collection.name
+              )
+            ),
+            collections.length > 2
+              ? h('span', { className: 'zw-tag' }, '+' + (collections.length - 2))
+              : null,
+            entry.tags.slice(0, 3).map((tag) => h('span', { key: tag, className: 'zw-tag' }, '#' + tag)),
+            relationCount
+              ? h('span', { className: 'zw-tag' }, relationCount + ' ' + t('detail.relations'))
+              : null
+          )
+        ),
+        h(
+          'div',
+          { className: 'zw-rowSide' },
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-star' + (entry.favorite ? ' zw-starOn' : ''),
+              title: entry.favorite ? t('detail.unfavorite') : t('detail.favorite'),
+              onClick: (event) => {
+                event.stopPropagation()
+                props.onStar(entry.id, !entry.favorite)
+              }
+            },
+            h(Icon, { name: 'star', size: 13 })
+          ),
+          h('span', { className: 'zw-rowDate', title: formatDateTime(entry.updatedAt) }, formatDay(entry.updatedAt))
+        )
+      )
+    }
+
+    function MemoryCard(props) {
+      const t = props.t
+      const entry = props.entry
+      const meta = props.meta
+      return h(
+        'div',
+        {
+          className: 'zw-card' + (props.active ? ' zw-cardOn' : ''),
+          role: 'button',
+          tabIndex: 0,
+          onClick: () => props.onOpen(entry.id),
+          onKeyDown: (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              props.onOpen(entry.id)
+            }
+          }
+        },
+        h(
+          'div',
+          { className: 'zw-cardTop' },
+          h(StatusDot, { type: entry.type }),
+          h('span', { className: 'zw-badge zw-badgeType' }, labelOf(t, meta.entryTypes, entry.type, 'type')),
+          h('span', { className: statusTone(entry.status) }, labelOf(t, meta.statuses, entry.status, 'status')),
+          h('span', { style: { flex: 1 } }),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-star' + (entry.favorite ? ' zw-starOn' : ''),
+              onClick: (event) => {
+                event.stopPropagation()
+                props.onStar(entry.id, !entry.favorite)
+              }
+            },
+            h(Icon, { name: 'star', size: 12 })
+          )
+        ),
+        h('div', { className: 'zw-cardTitle' }, entry.title),
+        h(
+          'div',
+          { className: 'zw-cardSummary' },
+          entry.summary || truncate(String(entry.content || '').replace(/\n+/g, ' '), 120)
+        ),
+        h(
+          'div',
+          { className: 'zw-cardMeta' },
+          entry.domains.slice(0, 2).map((domain) =>
+            h('span', { key: domain, className: 'zw-tag' }, labelOf(t, meta.domains, domain, 'domain'))
+          ),
+          entry.tags.slice(0, 2).map((tag) => h('span', { key: tag, className: 'zw-tag' }, '#' + tag)),
+          h('span', { style: { flex: 1 } }),
+          h('span', { className: 'zw-rowDate' }, formatDay(entry.updatedAt))
+        )
+      )
+    }
+
+    function MemoryList(props) {
+      if (!props.entries.length) {
+        return h(EmptyState, {
+          icon: 'search',
+          title: props.t('list.empty'),
+          text: props.t('list.emptyHint'),
+          action: h(
+            'button',
+            { type: 'button', className: 'zw-btn zw-btnSm', onClick: props.onNew },
+            h(Icon, { name: 'plus', size: 13 }),
+            props.t('action.new')
+          )
+        })
+      }
+      if (props.layout === 'cards') {
+        return h(
+          'div',
+          { className: 'zw-cardGrid' },
+          props.entries.map((entry) =>
+            h(MemoryCard, {
+              key: entry.id,
+              t: props.t,
+              meta: props.meta,
+              entry: entry,
+              active: props.selectedId === entry.id,
+              onOpen: props.onOpen,
+              onStar: props.onStar
+            })
+          )
+        )
+      }
+      return h(
+        'div',
+        { className: 'zw-list' },
+        props.entries.map((entry) =>
+          h(MemoryRow, {
+            key: entry.id,
+            t: props.t,
+            meta: props.meta,
+            entry: entry,
+            active: props.selectedId === entry.id,
+            checked: props.selection.indexOf(entry.id) >= 0,
+            onOpen: props.onOpen,
+            onCheck: props.onCheck,
+            onStar: props.onStar,
+            collectionsFor: props.collectionsFor,
+            relationCount: props.relationCount
+          })
+        )
+      )
+    }
+
+
+    function StatTile(props) {
+      return h(
+        'button',
+        { type: 'button', className: 'zw-stat', onClick: props.onClick },
+        h('div', { className: 'zw-statValue' }, props.value),
+        h(
+          'div',
+          { className: 'zw-statLabel' },
+          h(Icon, { name: props.icon, size: 12 }),
+          props.label
+        )
+      )
+    }
+
+    function MiniRows(props) {
+      if (!props.entries.length) {
+        return h('div', { className: 'zw-savedEmpty' }, props.emptyText)
+      }
+      return h(
+        'div',
+        { className: 'zw-miniList' },
+        props.entries.map((entry) =>
+          h(
+            'button',
+            {
+              key: entry.id,
+              type: 'button',
+              className: 'zw-mini',
+              onClick: () => props.onOpen(entry.id)
+            },
+            h(StatusDot, { type: entry.type }),
+            h(
+              'div',
+              { className: 'zw-miniBody' },
+              h('span', { className: 'zw-miniTitle' }, entry.title),
+              h(
+                'span',
+                { className: 'zw-miniMeta' },
+                props.metaOf(entry),
+                ' · ',
+                formatDay(entry.updatedAt)
+              )
+            ),
+            h(Icon, { name: 'chevronRight', size: 12 })
+          )
+        )
+      )
+    }
+
+    function OverviewView(props) {
+      const t = props.t
+      const meta = props.meta
+      const labelOfEntry = (entry) =>
+        [
+          labelOf(t, meta.entryTypes, entry.type, 'type'),
+          entry.domains.length ? labelOf(t, meta.domains, entry.domains[0], 'domain') : ''
+        ]
+          .filter(Boolean)
+          .join(' · ')
+
+      const recent = sortEntries(props.entries, 'updated').slice(0, 6)
+      const inbox = sortEntries(
+        props.entries.filter((entry) => entry.status === 'draft' || entry.status === 'pending'),
+        'updated'
+      ).slice(0, 5)
+      const decisions = sortEntries(
+        props.entries.filter((entry) => entry.type === 'decision' && entry.status === 'active'),
+        'updated'
+      ).slice(0, 5)
+      const favorites = sortEntries(
+        props.entries.filter((entry) => entry.favorite),
+        'updated'
+      ).slice(0, 5)
+
+      return h(
+        'div',
+        { className: 'zw-overview zw-scroll zw-fadeIn' },
+        props.entries.length
+          ? null
+          : h(EmptyState, {
+              icon: 'sparkle',
+              title: t('overview.empty'),
+              action: h(
+                'button',
+                { type: 'button', className: 'zw-btn zw-btnPrimary zw-btnSm', onClick: props.onNew },
+                h(Icon, { name: 'plus', size: 13 }),
+                t('action.new')
+              )
+            }),
+        h(
+          'div',
+          { className: 'zw-statGrid' },
+          h(StatTile, {
+            value: props.stats.entries,
+            label: t('overview.stat.total'),
+            icon: 'book',
+            onClick: () => props.onNav('all')
+          }),
+          h(StatTile, {
+            value: props.stats.inbox,
+            label: t('overview.stat.inbox'),
+            icon: 'inbox',
+            onClick: () => props.onNav('inbox')
+          }),
+          h(StatTile, {
+            value: props.stats.collections,
+            label: t('overview.stat.collections'),
+            icon: 'folder',
+            onClick: () => props.onNav('collections')
+          }),
+          h(StatTile, {
+            value: props.stats.relations,
+            label: t('overview.stat.relations'),
+            icon: 'graph',
+            onClick: () => props.onNav('graph')
+          })
+        ),
+        props.suggestedRelations.length
+          ? h(
+              'div',
+              { className: 'zw-panelCard' },
+              h(SectionHead, {
+                icon: 'sparkle',
+                title: t('overview.suggestedRelations'),
+                count: props.suggestedRelations.length,
+                action: h(
+                  'button',
+                  { type: 'button', className: 'zw-panelLink', onClick: () => props.onNav('graph') },
+                  t('nav.graph')
+                )
+              }),
+              h(
+                'div',
+                { className: 'zw-miniList' },
+                props.suggestedRelations.slice(0, 4).map((item) =>
+                  h(
+                    'div',
+                    { key: item.relation.id, className: 'zw-mini' },
+                    h(Icon, { name: 'link', size: 12 }),
+                    h(
+                      'div',
+                      { className: 'zw-miniBody' },
+                      h(
+                        'span',
+                        { className: 'zw-miniTitle' },
+                        item.from + ' → ' + item.to
+                      ),
+                      h(
+                        'span',
+                        { className: 'zw-miniMeta' },
+                        labelOf(t, meta.relationTypes, item.relation.relationType, 'relation') +
+                          (item.relation.description ? ' · ' + item.relation.description : '')
+                      )
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm',
+                        onClick: () => props.onDecide(item.relation.id, 'confirmed')
+                      },
+                      t('action.accept')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm zw-btnGhost',
+                        onClick: () => props.onDecide(item.relation.id, 'rejected')
+                      },
+                      t('action.ignore')
+                    )
+                  )
+                )
+              )
+            )
+          : null,
+        h(
+          'div',
+          { className: 'zw-columns' },
+          h(
+            'div',
+            { className: 'zw-panelCard' },
+            h(SectionHead, {
+              icon: 'clock',
+              title: t('overview.recent'),
+              action: h(
+                'button',
+                { type: 'button', className: 'zw-panelLink', onClick: () => props.onNav('all') },
+                t('common.all')
+              )
+            }),
+            h(MiniRows, {
+              entries: recent,
+              metaOf: labelOfEntry,
+              emptyText: t('common.empty'),
+              onOpen: props.onOpen
+            })
+          ),
+          h(
+            'div',
+            { className: 'zw-panelCard' },
+            h(SectionHead, {
+              icon: 'inbox',
+              title: t('overview.inbox'),
+              count: props.stats.inbox,
+              action: h(
+                'button',
+                { type: 'button', className: 'zw-panelLink', onClick: () => props.onNav('inbox') },
+                t('action.open')
+              )
+            }),
+            h(MiniRows, {
+              entries: inbox,
+              metaOf: labelOfEntry,
+              emptyText: t('common.empty'),
+              onOpen: props.onOpen
+            })
+          ),
+          h(
+            'div',
+            { className: 'zw-panelCard' },
+            h(SectionHead, {
+              icon: 'gavel',
+              title: t('overview.decisions'),
+              action: h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-panelLink',
+                  onClick: () =>
+                    props.onFilterNav('all', { types: ['decision'], statuses: ['active'] })
+                },
+                t('common.all')
+              )
+            }),
+            h(MiniRows, {
+              entries: decisions,
+              metaOf: labelOfEntry,
+              emptyText: t('common.empty'),
+              onOpen: props.onOpen
+            })
+          ),
+          h(
+            'div',
+            { className: 'zw-panelCard' },
+            h(SectionHead, {
+              icon: 'star',
+              title: t('overview.favorites'),
+              count: props.stats.favorites,
+              action: h(
+                'button',
+                { type: 'button', className: 'zw-panelLink', onClick: () => props.onNav('favorites') },
+                t('common.all')
+              )
+            }),
+            h(MiniRows, {
+              entries: favorites,
+              metaOf: labelOfEntry,
+              emptyText: t('common.empty'),
+              onOpen: props.onOpen
+            })
+          )
+        )
+      )
+    }
+
+    function CollectionCard(props) {
+      const t = props.t
+      const collection = props.collection
+      return h(
+        'div',
+        {
+          className: 'zw-collectionCard',
+          style: { '--zw-hullColor': collectionColor(collection.color) },
+          role: 'button',
+          tabIndex: 0,
+          onClick: () => props.onOpen(collection.id),
+          onKeyDown: (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              props.onOpen(collection.id)
+            }
+          }
+        },
+        h(
+          'div',
+          { className: 'zw-collectionTop' },
+          h('span', { className: 'zw-legendDot', style: { background: collectionColor(collection.color) } }),
+          h('span', { className: 'zw-collectionName' }, collection.name),
+          collection.source === 'ai'
+            ? h(
+                'span',
+                { className: 'zw-collectionAi', title: t('collections.aiSource') },
+                h(Icon, { name: 'sparkle', size: 11 })
+              )
+            : null
+        ),
+        h('div', { className: 'zw-collectionDesc' }, collection.description || t('common.empty')),
+        h(
+          'div',
+          { className: 'zw-collectionMeta' },
+          h(Icon, { name: 'layers', size: 11 }),
+          collection.memberIds.length + ' ' + t('collections.memberCount'),
+          collection.tags && collection.tags.length
+            ? h('span', { className: 'zw-tag' }, '#' + collection.tags[0])
+            : null,
+          h('span', { style: { flex: 1 } }),
+          collection.status === 'suggested'
+            ? h('span', { className: 'zw-badge zw-badgePending' }, t('collections.aiSource'))
             : null
         )
       )
     }
 
-    function FactsEditor(props) {
-      const facts = props.facts || []
+    function CollectionsView(props) {
       const t = props.t
+      const collections = props.collections.filter((collection) => collection.status !== 'suggested')
+      const suggestions = props.suggestions
       return h(
         'div',
-        { className: 'dm-factsEdit' },
+        { className: 'zw-overview zw-scroll zw-fadeIn' },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          h('div', { className: 'zw-viewSub' }, t('collections.subtitle')),
+          h('span', { style: { flex: 1 } }),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-btn zw-btnSm' + (props.suggesting ? ' zw-btnGhost' : ''),
+              disabled: props.suggesting,
+              onClick: props.onSuggest
+            },
+            h(Icon, { name: 'sparkle', size: 12, className: props.suggesting ? 'zw-spin' : undefined }),
+            t('collections.suggestAi')
+          ),
+          h(
+            'button',
+            { type: 'button', className: 'zw-btn zw-btnSm zw-btnPrimary', onClick: props.onCreate },
+            h(Icon, { name: 'plus', size: 12 }),
+            t('collections.new')
+          )
+        ),
+        suggestions.length
+          ? h(
+              'div',
+              { className: 'zw-panelCard' },
+              h(SectionHead, {
+                icon: 'sparkle',
+                title: t('collections.aiFound'),
+                count: suggestions.length
+              }),
+              h(
+                'div',
+                { className: 'zw-miniList' },
+                suggestions.map((suggestion) =>
+                  h(
+                    'div',
+                    { key: suggestion.id || suggestion.name, className: 'zw-mini' },
+                    h(Icon, { name: 'folder', size: 12 }),
+                    h(
+                      'div',
+                      { className: 'zw-miniBody' },
+                      h('span', { className: 'zw-miniTitle' }, suggestion.name),
+                      h(
+                        'span',
+                        { className: 'zw-miniMeta' },
+                        (suggestion.description || '') +
+                          (suggestion.memberIds ? ' · ' + suggestion.memberIds.length + ' ' + t('collections.memberCount') : '')
+                      ),
+                      suggestion.reasons && suggestion.reasons.length
+                        ? h(
+                            'span',
+                            { className: 'zw-miniMeta' },
+                            t('collections.reasons') + '：' + suggestion.reasons.join('；')
+                          )
+                        : null
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm',
+                        onClick: () => props.onAccept(suggestion)
+                      },
+                      t('collections.accept')
+                    )
+                  )
+                )
+              )
+            )
+          : null,
+        h(
+          'div',
+          { className: 'zw-collectionGrid' },
+          collections.length
+            ? collections.map((collection) =>
+                h(CollectionCard, {
+                  key: collection.id,
+                  t: t,
+                  collection: collection,
+                  onOpen: props.onOpen
+                })
+              )
+            : h(EmptyState, {
+                icon: 'folder',
+                title: t('collections.empty'),
+                text: t('collections.emptyHint'),
+                action: h(
+                  'button',
+                  { type: 'button', className: 'zw-btn zw-btnSm', onClick: props.onCreate },
+                  h(Icon, { name: 'plus', size: 12 }),
+                  t('collections.new')
+                )
+              })
+        )
+      )
+    }
+
+    function CollectionDetail(props) {
+      const t = props.t
+      const meta = props.meta
+      const collection = props.collection
+      const [editing, setEditing] = useState(false)
+      const [name, setName] = useState(collection.name)
+      const [description, setDescription] = useState(collection.description || '')
+      const [merging, setMerging] = useState(false)
+      useEffect(() => {
+        setName(collection.name)
+        setDescription(collection.description || '')
+      }, [collection.id])
+      const members = props.members
+
+      const saveHeader = () => {
+        setEditing(false)
+        if (name.trim() !== collection.name || description !== (collection.description || '')) {
+          props.onUpdate({ name: name.trim() || collection.name, description: description })
+        }
+      }
+
+      return h(
+        'div',
+        { className: 'zw-overview zw-scroll zw-fadeIn' },
+        h(
+          'div',
+          { style: { display: 'flex', alignItems: 'flex-start', gap: 10 } },
+          h('span', {
+            className: 'zw-legendDot',
+            style: { width: 14, height: 14, marginTop: 4, background: collectionColor(collection.color) }
+          }),
+          h(
+            'div',
+            { style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 } },
+            editing
+              ? h('input', {
+                  className: 'zw-input',
+                  value: name,
+                  autoFocus: true,
+                  onChange: (event) => setName(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Enter') saveHeader()
+                    if (event.key === 'Escape') setEditing(false)
+                  }
+                })
+              : h('h3', { className: 'zw-viewTitle', style: { fontSize: 18 } }, collection.name),
+            editing
+              ? h('textarea', {
+                  className: 'zw-textarea',
+                  style: { minHeight: 62 },
+                  value: description,
+                  onChange: (event) => setDescription(event.target.value)
+                })
+              : h(
+                  'div',
+                  { className: 'zw-viewSub' },
+                  collection.description || t('collections.descPlaceholder')
+                )
+          ),
+          h(
+            'div',
+            { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+            editing
+              ? h(
+                  'button',
+                  { type: 'button', className: 'zw-btn zw-btnSm zw-btnPrimary', onClick: saveHeader },
+                  t('action.save')
+                )
+              : h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-iconBtn',
+                    title: t('action.edit'),
+                    onClick: () => setEditing(true)
+                  },
+                  h(Icon, { name: 'edit', size: 13 })
+                ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-iconBtn',
+                title: t('assist.summary'),
+                onClick: () => props.onSummarize && props.onSummarize()
+              },
+              h(Icon, { name: 'sparkle', size: 13 })
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-iconBtn',
+                title: t('collections.mergeInto'),
+                onClick: () => setMerging(!merging)
+              },
+              h(Icon, { name: 'layers', size: 13 })
+            ),
+            h(ConfirmButton, {
+              className: 'zw-iconBtn',
+              label: h(Icon, { name: 'trash', size: 13 }),
+              confirmLabel: h(Icon, { name: 'check', size: 13 }),
+              title: t('action.delete'),
+              onConfirm: () => props.onDelete(collection.id)
+            })
+          )
+        ),
+        merging
+          ? h(
+              'div',
+              { className: 'zw-panelCard' },
+              h(SectionHead, { icon: 'layers', title: t('collections.mergeInto') }),
+              h(
+                'div',
+                { className: 'zw-miniList' },
+                props.collections
+                  .filter((item) => item.id !== collection.id && item.status !== 'suggested')
+                  .map((item) =>
+                    h(
+                      'button',
+                      {
+                        key: item.id,
+                        type: 'button',
+                        className: 'zw-mini',
+                        onClick: () => {
+                          props.onMerge(collection.id, item.id)
+                          setMerging(false)
+                        }
+                      },
+                      h('span', {
+                        className: 'zw-legendDot',
+                        style: { background: collectionColor(item.color) }
+                      }),
+                      h(
+                        'div',
+                        { className: 'zw-miniBody' },
+                        h('span', { className: 'zw-miniTitle' }, item.name),
+                        h(
+                          'span',
+                          { className: 'zw-miniMeta' },
+                          item.memberIds.length + ' ' + t('collections.memberCount')
+                        )
+                      ),
+                      h(Icon, { name: 'arrowRight', size: 12 })
+                    )
+                  )
+              )
+            )
+          : null,
+        h(
+          'div',
+          { className: 'zw-panelCard' },
+          h(SectionHead, {
+            icon: 'layers',
+            title: t('collections.members'),
+            count: members.length,
+            action: h(
+              'button',
+              { type: 'button', className: 'zw-panelLink', onClick: props.onAddMembers },
+              t('collections.addMembers')
+            )
+          }),
+          members.length
+            ? h(
+                'div',
+                { className: 'zw-miniList' },
+                members.map((entry) =>
+                  h(
+                    'div',
+                    { key: entry.id, className: 'zw-mini' },
+                    h(StatusDot, { type: entry.type }),
+                    h(
+                      'div',
+                      { className: 'zw-miniBody', role: 'button', onClick: () => props.onOpen(entry.id) },
+                      h('span', { className: 'zw-miniTitle' }, entry.title),
+                      h(
+                        'span',
+                        { className: 'zw-miniMeta' },
+                        labelOf(t, meta.entryTypes, entry.type, 'type') +
+                          ' · ' +
+                          labelOf(t, meta.statuses, entry.status, 'status')
+                      )
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-iconBtn',
+                        title: t('collections.removeMember'),
+                        onClick: () => props.onRemoveMember(entry.id)
+                      },
+                      h(Icon, { name: 'close', size: 12 })
+                    )
+                  )
+                )
+              )
+            : h('div', { className: 'zw-savedEmpty' }, t('collections.noMembers'))
+        )
+      )
+    }
+
+
+    function RelationRow(props) {
+      const t = props.t
+      const relation = props.relation
+      const other = props.other
+      const suggested = relation.status === 'suggested'
+      return h(
+        'div',
+        { className: 'zw-relRow' + (suggested ? ' zw-relSuggested' : '') },
+        h(
+          'span',
+          { className: 'zw-relGlyph', style: { color: relationColor(relation.relationType) } },
+          h(Icon, { name: props.direction === 'in' ? 'arrowLeft' : 'arrowRight', size: 12 })
+        ),
+        h(
+          'div',
+          { className: 'zw-relBody' },
+          h(
+            'div',
+            { className: 'zw-relName' },
+            h(
+              'span',
+              { style: { color: relationColor(relation.relationType) } },
+              props.direction === 'in' ? '‹ ' : ''
+            ),
+            h(
+              'span',
+              { role: 'button', tabIndex: 0, onClick: () => props.onOpen(other.id) },
+              other.title
+            ),
+            h(
+              'span',
+              { className: 'zw-relNote' },
+              ' · ',
+              labelOf(t, props.meta.relationTypes, relation.relationType, 'relation')
+            ),
+            h(
+              'span',
+              { className: 'zw-tag', title: t('graph.byRelation') },
+              labelOf(t, props.meta.relationStatuses, relation.status, 'relStatus')
+            )
+          ),
+          relation.description
+            ? h('div', { className: 'zw-relNote' }, relation.description)
+            : null,
+          suggested
+            ? h(
+                'div',
+                { className: 'zw-relActions' },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm',
+                    onClick: () => props.onDecide(relation.id, 'confirmed')
+                  },
+                  h(Icon, { name: 'check', size: 11 }),
+                  t('action.accept')
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm zw-btnGhost',
+                    onClick: () => props.onDecide(relation.id, 'rejected')
+                  },
+                  t('action.ignore')
+                )
+              )
+            : null
+        ),
+        suggested
+          ? h(
+              'span',
+              { className: 'zw-badge zw-badgePending' },
+              h(Icon, { name: 'sparkle', size: 10 }),
+              t('relation.suggested')
+            )
+          : h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-iconBtn',
+                title: t('relation.delete'),
+                onClick: () => props.onDelete(relation.id)
+              },
+              h(Icon, { name: 'close', size: 11 })
+            )
+      )
+    }
+
+    function DetailRail(props) {
+      const t = props.t
+      const meta = props.meta
+      const entry = props.entry
+      const [confirmDelete, setConfirmDelete] = useState(false)
+      useEffect(() => {
+        setConfirmDelete(false)
+      }, [entry ? entry.id : null])
+
+      if (!entry) {
+        return h(
+          'aside',
+          { className: 'zw-detail' + (props.collapsed ? '' : ' zw-detailEmpty'), 'data-collapsed': props.collapsed ? 'true' : 'false' },
+          props.collapsed
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-iconBtn',
+                  title: t('detail.expand'),
+                  onClick: props.onExpand
+                },
+                h(Icon, { name: 'chevronLeft', size: 14 })
+              )
+            : h(
+                'div',
+                { className: 'zw-empty', style: { padding: '40px 16px' } },
+                h('div', { className: 'zw-emptyIcon' }, h(Icon, { name: 'book', size: 22 })),
+                h('div', { className: 'zw-emptyTitle' }, t('detail.emptyTitle')),
+                h('div', { className: 'zw-emptyText' }, t('detail.emptyText'))
+              )
+        )
+      }
+
+      const groups = props.relationGroups
+      const assist = props.assist || {}
+      return h(
+        'aside',
+        { className: 'zw-detail', 'data-collapsed': props.collapsed ? 'true' : 'false' },
+        props.collapsed
+          ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-iconBtn',
+                title: t('detail.expand'),
+                onClick: props.onExpand
+              },
+              h(Icon, { name: 'chevronLeft', size: 14 })
+            )
+          : h(
+              'div',
+              { className: 'zw-detailHead' },
+              h(
+                'div',
+                { className: 'zw-detailTitleWrap' },
+                h('h2', { className: 'zw-detailTitle' }, entry.title),
+                h(
+                  'div',
+                  { className: 'zw-detailMeta' },
+                  h(
+                    'span',
+                    {
+                      className: 'zw-badge zw-badgeType',
+                      style: {
+                        color: typeColor(entry.type),
+                        borderColor: typeColor(entry.type)
+                      }
+                    },
+                    h(Icon, { name: TYPE_ICON[entry.type] || 'book', size: 10 }),
+                    labelOf(t, meta.entryTypes, entry.type, 'type')
+                  ),
+                  h(
+                    'span',
+                    { className: statusTone(entry.status) },
+                    labelOf(t, meta.statuses, entry.status, 'status')
+                  ),
+                  entry.domains.map((domain) =>
+                    h(
+                      'span',
+                      { key: domain, className: 'zw-tag' },
+                      labelOf(t, meta.domains, domain, 'domain')
+                    )
+                  ),
+                  h(
+                    'span',
+                    { className: 'zw-rowDate' },
+                    formatDay(entry.updatedAt)
+                  )
+                )
+              ),
+              h(
+                'div',
+                { className: 'zw-detailActions' },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-iconBtn',
+                    title: entry.favorite ? t('action.unstar') : t('action.star'),
+                    onClick: () => props.onStar(entry.id, !entry.favorite)
+                  },
+                  h(Icon, { name: 'star', size: 14, fill: entry.favorite ? 'currentColor' : 'none' })
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-iconBtn',
+                    title: t('action.edit'),
+                    onClick: () => props.onEdit(entry.id)
+                  },
+                  h(Icon, { name: 'edit', size: 14 })
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-iconBtn',
+                    title: t('detail.collapse'),
+                    onClick: props.onCollapse
+                  },
+                  h(Icon, { name: 'chevronRight', size: 14 })
+                )
+              )
+            ),
+        props.collapsed
+          ? null
+          : h(
+              'div',
+              { className: 'zw-detailScroll' },
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('span', { className: 'zw-blockTitle' }, t('detail.status')),
+                  h(
+                    'span',
+                    { className: 'zw-blockHint' },
+                    hintOf(meta.statuses, entry.status)
+                  )
+                ),
+                h(
+                  'div',
+                  { className: 'zw-seg' },
+                  meta.statuses.map((status) =>
+                    h(
+                      'button',
+                      {
+                        key: status.id,
+                        type: 'button',
+                        className:
+                          'zw-segBtn' + (entry.status === status.id ? ' zw-segBtnOn' : ''),
+                        onClick: () => props.onSetStatus(entry.id, status.id)
+                      },
+                      labelOf(t, meta.statuses, status.id, 'status')
+                    )
+                  )
+                )
+              ),
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('span', { className: 'zw-blockTitle' }, t('detail.content'))
+                ),
+                h('div', { className: 'zw-prose' }, renderProse(entry.content))
+              ),
+              entry.facts.length
+                ? h(
+                    'div',
+                    { className: 'zw-block' },
+                    h(
+                      'div',
+                      { className: 'zw-blockHead' },
+                      h('span', { className: 'zw-blockTitle' }, t('detail.facts'))
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-factGrid' },
+                      entry.facts.map((fact, index) =>
+                        h(
+                          'div',
+                          { key: index, className: 'zw-fact' },
+                          h('span', { className: 'zw-factLabel' }, fact.label),
+                          h('span', { className: 'zw-factValue' }, fact.value)
+                        )
+                      )
+                    )
+                  )
+                : null,
+              entry.tags.length
+                ? h(
+                    'div',
+                    { className: 'zw-block' },
+                    h(
+                      'div',
+                      { className: 'zw-blockHead' },
+                      h('span', { className: 'zw-blockTitle' }, t('detail.tags'))
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-tagRow' },
+                      entry.tags.map((tag) =>
+                        h('span', { key: tag, className: 'zw-tag' }, '#' + tag)
+                      )
+                    )
+                  )
+                : null,
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('span', { className: 'zw-blockTitle' }, t('detail.collections')),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-panelLink',
+                      onClick: () => props.onEditCollections(entry.id)
+                    },
+                    t('action.edit')
+                  )
+                ),
+                props.collections.length
+                  ? h(
+                      'div',
+                      { className: 'zw-tagRow' },
+                      props.collections.map((collection) =>
+                        h(
+                          'button',
+                          {
+                            key: collection.id,
+                            type: 'button',
+                            className: 'zw-tag zw-tagBtn',
+                            onClick: () => props.onOpenCollection(collection.id)
+                          },
+                          h('span', {
+                            className: 'zw-legendDot',
+                            style: { background: collectionColor(collection.color), width: 7, height: 7 }
+                          }),
+                          collection.name
+                        )
+                      )
+                    )
+                  : h('div', { className: 'zw-savedEmpty' }, t('detail.noCollections'))
+              ),
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h(
+                    'span',
+                    { className: 'zw-blockTitle' },
+                    t('detail.relations') + ' · ' + props.relationCount
+                  ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-panelLink',
+                      onClick: () => props.onCreateLink(entry.id)
+                    },
+                    h(Icon, { name: 'plus', size: 11 }),
+                    t('relation.create')
+                  )
+                ),
+                groups.length
+                  ? groups.map((group) =>
+                      h(
+                        'div',
+                        { key: group.type, className: 'zw-relGroup' },
+                        h(
+                          'div',
+                          { className: 'zw-relGroupTitle' },
+                          h('span', {
+                            className: 'zw-legendDot',
+                            style: { background: relationColor(group.type), width: 6, height: 6 }
+                          }),
+                          labelOf(t, meta.relationTypes, group.type, 'relation'),
+                          ' · ',
+                          group.items.length
+                        ),
+                        h(
+                          'div',
+                          { className: 'zw-relLine' },
+                          group.items.map((item) =>
+                            h(RelationRow, {
+                              key: item.relation.id,
+                              t: t,
+                              meta: meta,
+                              relation: item.relation,
+                              other: item.other,
+                              direction: item.direction,
+                              onOpen: props.onOpen,
+                              onDecide: props.onDecideRelation,
+                              onDelete: props.onDeleteRelation
+                            })
+                          )
+                        )
+                      )
+                    )
+                  : h('div', { className: 'zw-savedEmpty' }, t('detail.noRelations'))
+              ),
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('span', { className: 'zw-blockTitle' }, t('assist.title')),
+                  h('span', { className: 'zw-blockHint' }, t('assist.notApplied'))
+                ),
+                h(AssistPanel, {
+                  t: t,
+                  meta: meta,
+                  scope: 'entry',
+                  busy: assist.busy,
+                  action: assist.action,
+                  result: assist.result,
+                  error: assist.error,
+                  onRun: props.onAssist,
+                  onClose: assist.onClose,
+                  onOpenEntry: props.onOpen,
+                  onOpenCollection: props.onOpenCollection,
+                  onSplit: props.onSplitSegment,
+                  onApply: props.onApplyOrganize,
+                  onRelate: props.onRelateSuggestion,
+                  onResolve: props.onResolveConflict,
+                  onShowMembers: props.onShowMembers
+                })
+              ),              entry.history && entry.history.length
+                ? h(
+                    'div',
+                    { className: 'zw-block' },
+                    h(
+                      'div',
+                      { className: 'zw-blockHead' },
+                      h('span', { className: 'zw-blockTitle' }, t('detail.history'))
+                    ),
+                    entry.history.slice(0, 5).map((item, index) =>
+                      h(
+                        'div',
+                        { key: index, className: 'zw-historyRow' },
+                        h('span', { className: 'zw-historyDot' }),
+                        h(
+                          'span',
+                          null,
+                          formatDateTime(item.at) + ' · ' + item.note
+                        )
+                      )
+                    )
+                  )
+                : null,
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h('span', { className: 'zw-blockTitle' }, t('detail.meta')),
+                  h(
+                    'span',
+                    { className: 'zw-blockHint' },
+                    labelOf(t, meta.sourceKinds, entry.source.kind, 'source') +
+                      (entry.source.label ? ' · ' + entry.source.label : '')
+                  )
+                ),
+                h(
+                  'div',
+                  { className: 'zw-blockHint' },
+                  t('detail.created') + ' ' + formatDateTime(entry.createdAt)
+                ),
+                entry.legacy
+                  ? h('div', { className: 'zw-blockHint' }, t('detail.legacy'))
+                  : null,
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm' + (confirmDelete ? ' zw-btnDanger' : ' zw-btnGhost'),
+                    style: { marginTop: 8 },
+                    onClick: () => {
+                      if (confirmDelete) {
+                        props.onDelete(entry.id)
+                        setConfirmDelete(false)
+                      } else {
+                        setConfirmDelete(true)
+                        setTimeout(() => setConfirmDelete(false), 3200)
+                      }
+                    }
+                  },
+                  h(Icon, { name: confirmDelete ? 'check' : 'trash', size: 12 }),
+                  confirmDelete ? t('action.deleteConfirm') : t('action.delete')
+                )
+              )
+            )
+      )
+    }
+
+
+    function FactsEditor(props) {
+      const t = props.t
+      const facts = props.value
+      const update = (index, patch) => {
+        const next = facts.slice()
+        next[index] = Object.assign({}, next[index], patch)
+        props.onChange(next)
+      }
+      return h(
+        'div',
+        { className: 'zw-facts' },
         facts.map((fact, index) =>
           h(
             'div',
-            { className: 'dm-factEditRow', key: index },
+            { key: index, className: 'zw-factRow' },
             h('input', {
-              className: 'dm-input',
+              className: 'zw-input',
+              placeholder: t('editor.factLabel'),
               value: fact.label,
-              placeholder: t('editor.facts.label'),
-              'aria-label': t('editor.facts.label'),
-              onChange: (event) => {
-                const next = facts.slice()
-                next[index] = Object.assign({}, fact, { label: event.target.value })
-                props.onChange(next)
-              }
+              onChange: (event) => update(index, { label: event.target.value })
             }),
             h('input', {
-              className: 'dm-input',
+              className: 'zw-input',
+              placeholder: t('editor.factValue'),
               value: fact.value,
-              placeholder: t('editor.facts.value'),
-              'aria-label': t('editor.facts.value'),
-              onChange: (event) => {
-                const next = facts.slice()
-                next[index] = Object.assign({}, fact, { value: event.target.value })
-                props.onChange(next)
-              }
+              onChange: (event) => update(index, { value: event.target.value })
             }),
             h(
               'button',
               {
                 type: 'button',
-                className: 'dm-iconBtn',
-                title: t('editor.facts.remove'),
-                'aria-label': t('editor.facts.remove'),
-                onClick: () => props.onChange(facts.filter((_item, position) => position !== index))
+                className: 'zw-iconBtn',
+                title: t('action.delete'),
+                onClick: () => props.onChange(facts.filter((_, i) => i !== index))
               },
-              h(Icon, { name: 'trash', size: 15 })
+              h(Icon, { name: 'close', size: 12 })
             )
           )
         ),
@@ -1029,801 +4444,1890 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           'button',
           {
             type: 'button',
-            className: 'dm-textBtn',
-            onClick: () => props.onChange(facts.concat([{ label: '', value: '' }])),
-            'data-testid': 'dm-add-fact'
+            className: 'zw-btn zw-btnSm zw-btnGhost',
+            onClick: () => props.onChange(facts.concat([{ label: '', value: '' }]))
           },
-          h(Icon, { name: 'plus', size: 13 }),
-          t('editor.facts.add')
+          h(Icon, { name: 'plus', size: 12 }),
+          t('editor.addFact')
         )
       )
     }
 
-    function StatusNote(props) {
-      const entry = props.entry
+    function EntryEditor(props) {
       const t = props.t
-      if (entry.status === 'draft') {
-        return h(
-          'div',
-          { className: 'dm-statusNote dm-statusNote-warn', role: 'note' },
-          h('span', { className: 'dm-statusNoteIcon' }, h(Icon, { name: 'info', size: 15 })),
-          h('span', { className: 'dm-statusNoteBody' }, t('status.draftExplain')),
-          h(
-            'span',
-            { className: 'dm-statusNoteActions' },
+      const meta = props.meta
+      const source = props.entry
+      const [draft, setDraft] = useState(() => ({
+        title: source ? source.title : '',
+        content: source ? source.content : '',
+        type: source ? source.type : 'decision',
+        status: source ? source.status : 'active',
+        projectId: source ? source.projectId : props.defaultProjectId,
+        domains: source ? source.domains.slice() : [],
+        tags: source ? source.tags.slice() : [],
+        facts: source ? source.facts.map((fact) => ({ label: fact.label, value: fact.value })) : [],
+        sourceKind: source ? source.source.kind : 'manual',
+        sourceLabel: source ? source.source.label || '' : '',
+        collectionIds: source ? props.collectionsOf(source.id).map((collection) => collection.id) : [],
+        favorite: source ? Boolean(source.favorite) : false,
+        pinned: source ? Boolean(source.pinned) : false
+      }))
+      const [tagInput, setTagInput] = useState('')
+      const [error, setError] = useState('')
+
+      const patch = (key, value) => setDraft((prev) => Object.assign({}, prev, { [key]: value }))
+      const toggleIn = (key, value) =>
+        setDraft((prev) => {
+          const list = prev[key]
+          return Object.assign({}, prev, {
+            [key]: list.includes(value) ? list.filter((item) => item !== value) : list.concat([value])
+          })
+        })
+
+      const addTags = () => {
+        const parts = tagInput
+          .split(/[,，\s]+/)
+          .map((item) => item.trim())
+          .filter(Boolean)
+        if (!parts.length) return
+        patch('tags', unique(draft.tags.concat(parts)))
+        setTagInput('')
+      }
+
+      const submit = () => {
+        if (!draft.content.trim() && !draft.title.trim()) {
+          setError(t('editor.needContent'))
+          return
+        }
+        props.onSave(
+          Object.assign({}, draft, {
+            id: source ? source.id : undefined,
+            source: { kind: draft.sourceKind, label: draft.sourceLabel },
+            tags: draft.tags,
+            facts: draft.facts.filter((fact) => fact.label.trim() || fact.value.trim())
+          })
+        )
+      }
+
+      return h(
+        Modal,
+        {
+          title: source ? t('editor.editTitle') : t('editor.newTitle'),
+          icon: source ? 'edit' : 'plus',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          wide: true,
+          footer: h(
+            React.Fragment,
+            null,
+            props.onDelete
+              ? h(ConfirmButton, {
+                  className: 'zw-btn zw-btnSm zw-btnGhost',
+                  label: t('action.delete'),
+                  confirmLabel: t('action.deleteConfirm'),
+                  onConfirm: () => props.onDelete(source.id)
+                })
+              : null,
+            h('span', { className: 'zw-modalFootSpacer' }),
             h(
               'button',
-              {
-                type: 'button',
-                className: 'dm-btn dm-btnPrimary dm-btnSmall',
-                disabled: props.busy,
-                title: t('status.confirm'),
-                onClick: () => props.onSetStatus('confirmed')
-              },
-              h(Icon, { name: 'check', size: 13 }),
-              t('status.confirm')
+              { type: 'button', className: 'zw-btn zw-btnSm zw-btnGhost', onClick: props.onClose },
+              t('action.cancel')
             ),
             h(
               'button',
               {
                 type: 'button',
-                className: 'dm-btn dm-btnGhostDanger dm-btnSmall',
-                disabled: props.busy,
-                title: t('status.deprecate'),
-                onClick: () => props.onSetStatus('deprecated')
+                className: 'zw-btn zw-btnSm zw-btnPrimary',
+                disabled: props.saving,
+                onClick: submit
               },
-              h(Icon, { name: 'ban', size: 13 }),
-              t('status.deprecate')
+              props.saving ? h(Icon, { name: 'refresh', size: 12, className: 'zw-spin' }) : null,
+              t('action.save')
             )
           )
-        )
-      }
-      if (entry.status === 'deprecated') {
-        return h(
+        },
+        h(
           'div',
-          { className: 'dm-statusNote dm-statusNote-dim', role: 'note' },
-          h('span', { className: 'dm-statusNoteIcon' }, h(Icon, { name: 'info', size: 15 })),
-          h('span', { className: 'dm-statusNoteBody' }, t('status.deprecatedExplain')),
+          { className: 'zw-form' },
           h(
-            'span',
-            { className: 'dm-statusNoteActions' },
+            Field,
+            { label: t('editor.title') },
+            h('input', {
+              className: 'zw-input',
+              value: draft.title,
+              placeholder: t('editor.titlePlaceholder'),
+              onChange: (event) => patch('title', event.target.value)
+            })
+          ),
+          h(
+            Field,
+            { label: t('editor.content'), hint: t('editor.contentHint') },
+            h('textarea', {
+              className: 'zw-textarea',
+              value: draft.content,
+              placeholder: t('editor.contentPlaceholder'),
+              onChange: (event) => patch('content', event.target.value)
+            })
+          ),
+          h(
+            Field,
+            { label: t('editor.type') },
+            h(MultiChips, {
+              options: meta.entryTypes.map((item) => ({
+                id: item.id,
+                label: item.label,
+                icon: TYPE_ICON[item.id],
+                color: typeColor(item.id)
+              })),
+              value: [draft.type],
+              onToggle: (id) => patch('type', id)
+            })
+          ),
+          h(
+            'div',
+            { className: 'zw-formRow' },
+            h(
+              Field,
+              { label: t('editor.status') },
+              h(Select, {
+                value: draft.status,
+                options: meta.statuses.map((item) => ({ id: item.id, label: item.label })),
+                onChange: (value) => patch('status', value)
+              })
+            ),
+            h(
+              Field,
+              { label: t('editor.project') },
+              h(Select, {
+                value: draft.projectId,
+                options: props.projects.map((item) => ({ id: item.id, label: item.name })),
+                onChange: (value) => patch('projectId', value)
+              })
+            )
+          ),
+          h(
+            Field,
+            { label: t('editor.domains') },
+            h(MultiChips, {
+              options: meta.domains.map((item) => ({ id: item.id, label: item.label })),
+              value: draft.domains,
+              onToggle: (id) => toggleIn('domains', id)
+            })
+          ),
+          h(
+            Field,
+            { label: t('editor.tags') },
+            h(
+              'div',
+              { className: 'zw-tagRow' },
+              draft.tags.map((tag) =>
+                h(
+                  'span',
+                  { key: tag, className: 'zw-tag zw-tagOn' },
+                  '#' + tag,
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-chipX',
+                      onClick: () => patch('tags', draft.tags.filter((item) => item !== tag))
+                    },
+                    h(Icon, { name: 'close', size: 9 })
+                  )
+                )
+              )
+            ),
+            h('input', {
+              className: 'zw-input',
+              value: tagInput,
+              placeholder: t('editor.tagsPlaceholder'),
+              onChange: (event) => setTagInput(event.target.value),
+              onKeyDown: (event) => {
+                if (event.key === 'Enter' || event.key === ',') {
+                  event.preventDefault()
+                  addTags()
+                }
+              },
+              onBlur: addTags
+            })
+          ),
+          h(
+            Field,
+            { label: t('editor.facts'), hint: t('editor.factsHint') },
+            h(FactsEditor, {
+              t: t,
+              value: draft.facts,
+              onChange: (value) => patch('facts', value)
+            })
+          ),
+          h(
+            Field,
+            { label: t('editor.collections'), hint: t('editor.collectionsHint') },
+            props.allCollections.filter((collection) => collection.status !== 'suggested').length
+              ? h(MultiChips, {
+                  options: props.allCollections
+                    .filter((collection) => collection.status !== 'suggested')
+                    .map((collection) => ({
+                      id: collection.id,
+                      label: collection.name,
+                      color: collectionColor(collection.color),
+                      dot: true
+                    })),
+                  value: draft.collectionIds,
+                  onToggle: (id) => toggleIn('collectionIds', id)
+                })
+              : h('div', { className: 'zw-hint' }, t('editor.noCollections'))
+          ),
+          h(
+            'div',
+            { className: 'zw-formRow' },
+            h(
+              Field,
+              { label: t('editor.source') },
+              h(Select, {
+                value: draft.sourceKind,
+                options: meta.sourceKinds.map((item) => ({ id: item.id, label: item.label })),
+                onChange: (value) => patch('sourceKind', value)
+              })
+            ),
+            h(
+              Field,
+              { label: t('editor.sourceLabel') },
+              h('input', {
+                className: 'zw-input',
+                value: draft.sourceLabel,
+                placeholder: t('editor.sourceLabelPlaceholder'),
+                onChange: (event) => patch('sourceLabel', event.target.value)
+              })
+            )
+          ),
+          h(
+            'div',
+            { className: 'zw-tagRow' },
             h(
               'button',
               {
                 type: 'button',
-                className: 'dm-btn dm-btnSmall',
-                disabled: props.busy,
-                title: t('status.reopen'),
-                onClick: () => props.onSetStatus('confirmed')
+                className: 'zw-btn zw-btnSm' + (draft.favorite ? '' : ' zw-btnGhost'),
+                onClick: () => patch('favorite', !draft.favorite)
               },
-              h(Icon, { name: 'undo', size: 13 }),
-              t('status.reopen')
+              h(Icon, { name: 'star', size: 12, fill: draft.favorite ? 'currentColor' : 'none' }),
+              t('editor.favorite')
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm' + (draft.pinned ? '' : ' zw-btnGhost'),
+                onClick: () => patch('pinned', !draft.pinned)
+              },
+              h(Icon, { name: 'bookmark', size: 12 }),
+              t('editor.pin')
+            )
+          ),
+          error ? h('div', { className: 'zw-error' }, error) : null
+        )
+      )
+    }
+
+
+    function QuickAdd(props) {
+      const t = props.t
+      const meta = props.meta
+      const [text, setText] = useState('')
+      const [phase, setPhase] = useState('input')
+      const [suggestion, setSuggestion] = useState(null)
+      const [title, setTitle] = useState('')
+      const [type, setType] = useState('decision')
+      const [domains, setDomains] = useState([])
+      const [tags, setTags] = useState([])
+      const [projectId, setProjectId] = useState(props.defaultProjectId)
+      const [busy, setBusy] = useState(false)
+      const [error, setError] = useState('')
+
+      const analyze = async () => {
+        if (!text.trim()) {
+          setError(t('quick.needText'))
+          return
+        }
+        setBusy(true)
+        setError('')
+        try {
+          const result = await props.onSuggest(text.trim())
+          const next = result || {}
+          setSuggestion(next)
+          setTitle(next.title || '')
+          setType(next.type || 'decision')
+          setDomains(Array.isArray(next.domains) ? next.domains : [])
+          setTags(Array.isArray(next.tags) ? next.tags : [])
+          setProjectId(next.projectId || props.defaultProjectId)
+          setPhase('review')
+        } catch (err) {
+          setError(errorText(err, t('error.offline')))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      const save = (raw) => {
+        if (!text.trim() && !(raw && raw.title)) {
+          setError(t('quick.needText'))
+          return
+        }
+        props.onSave({
+          title: raw && raw.title ? raw.title : title,
+          content: text.trim(),
+          type: raw && raw.type ? raw.type : type,
+          domains: raw && raw.domains ? raw.domains : domains,
+          tags: raw && raw.tags ? raw.tags : tags,
+          projectId: raw && raw.projectId ? raw.projectId : projectId,
+          summary: suggestion ? suggestion.summary : '',
+          source: { kind: 'manual', label: t('quick.sourceLabel') },
+          suggestRelations: Boolean(suggestion)
+        })
+      }
+
+      return h(
+        Modal,
+        {
+          title: t('quick.title'),
+          icon: 'sparkle',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm zw-btnGhost',
+                disabled: props.saving,
+                onClick: () => save({ title: '', type: 'decision', domains: [], tags: [], projectId })
+              },
+              t('quick.saveRaw')
+            ),
+            h('span', { className: 'zw-modalFootSpacer' }),
+            phase === 'input'
+              ? h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm zw-btnPrimary',
+                    disabled: busy || props.saving,
+                    onClick: analyze
+                  },
+                  h(Icon, {
+                    name: busy ? 'refresh' : 'sparkle',
+                    size: 12,
+                    className: busy ? 'zw-spin' : undefined
+                  }),
+                  t('quick.analyze')
+                )
+              : h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm zw-btnPrimary',
+                    disabled: props.saving,
+                    onClick: () => save(null)
+                  },
+                  t('quick.confirm')
+                )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h(
+            'div',
+            { className: 'zw-quickHead' },
+            h('div', { className: 'zw-quickTitle' }, t('quick.subtitle')),
+            h('div', { className: 'zw-quickSub' }, t('quick.subtitleHint'))
+          ),
+          h('textarea', {
+            className: 'zw-textarea zw-textareaBig',
+            value: text,
+            autoFocus: true,
+            placeholder: t('quick.placeholder'),
+            onChange: (event) => {
+              setText(event.target.value)
+              if (phase === 'review') setPhase('input')
+            }
+          }),
+          phase === 'review' && suggestion
+            ? h(
+                'div',
+                { className: 'zw-quickProposal' },
+                h(
+                  'div',
+                  { className: 'zw-quickProposalHead' },
+                  h(Icon, { name: 'sparkle', size: 12 }),
+                  t('quick.proposal'),
+                  suggestion.confidence != null
+                    ? h(
+                        'span',
+                        { className: 'zw-count' },
+                        Math.round(suggestion.confidence * 100) + '%'
+                      )
+                    : null
+                ),
+                h(
+                  Field,
+                  { label: t('editor.title') },
+                  h('input', {
+                    className: 'zw-input',
+                    value: title,
+                    onChange: (event) => setTitle(event.target.value)
+                  })
+                ),
+                suggestion.summary
+                  ? h(
+                      'div',
+                      { className: 'zw-hint' },
+                      h(Icon, { name: 'copy', size: 11 }),
+                      ' ',
+                      suggestion.summary
+                    )
+                  : null,
+                suggestion.segments && suggestion.segments.length
+                  ? h(
+                      Field,
+                      { label: t('assist.segments'), hint: t('assist.notApplied') },
+                      h(
+                        'div',
+                        { className: 'zw-assistSegs' },
+                        suggestion.segments.map((segment, index) =>
+                          h(
+                            'div',
+                            { key: 'seg-' + index, className: 'zw-assistSeg' },
+                            h(
+                              'div',
+                              { className: 'zw-assistSegHead' },
+                              h('span', { className: 'zw-assistSegTitle', title: segment.title }, segment.title),
+                              h(
+                                'button',
+                                {
+                                  type: 'button',
+                                  className: 'zw-btn zw-btnGhost zw-btnSm',
+                                  disabled: props.saving,
+                                  onClick: () =>
+                                    props.onSaveSegment({
+                                      title: segment.title,
+                                      content: segment.content,
+                                      type: segment.type || type,
+                                      domains: segment.domains && segment.domains.length ? segment.domains : domains,
+                                      tags: segment.tags && segment.tags.length ? segment.tags : tags,
+                                      projectId: projectId
+                                    })
+                                },
+                                t('assist.splitOne')
+                              )
+                            ),
+                            h('div', { className: 'zw-assistItemBody' }, segment.content)
+                          )
+                        )
+                      )
+                    )
+                  : null,                h(
+                  Field,
+                  { label: t('editor.type'), hint: suggestion.typeReason || '' },
+                  h(MultiChips, {
+                    options: meta.entryTypes.map((item) => ({
+                      id: item.id,
+                      label: item.label,
+                      icon: TYPE_ICON[item.id],
+                      color: typeColor(item.id)
+                    })),
+                    value: [type],
+                    onToggle: (id) => setType(id)
+                  })
+                ),
+                h(
+                  Field,
+                  { label: t('editor.domains'), hint: suggestion.domainReason || '' },
+                  h(MultiChips, {
+                    options: meta.domains.map((item) => ({ id: item.id, label: item.label })),
+                    value: domains,
+                    onToggle: (id) =>
+                      setDomains((prev) =>
+                        prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat([id])
+                      )
+                  })
+                ),
+                tags.length
+                  ? h(
+                      Field,
+                      { label: t('editor.tags') },
+                      h(
+                        'div',
+                        { className: 'zw-tagRow' },
+                        tags.map((tag) =>
+                          h(
+                            'span',
+                            { key: tag, className: 'zw-tag zw-tagOn' },
+                            '#' + tag,
+                            h(
+                              'button',
+                              {
+                                type: 'button',
+                                className: 'zw-chipX',
+                                onClick: () => setTags(tags.filter((item) => item !== tag))
+                              },
+                              h(Icon, { name: 'close', size: 9 })
+                            )
+                          )
+                        )
+                      )
+                    )
+                  : null,
+                h(
+                  Field,
+                  { label: t('editor.project'), hint: suggestion.projectReason || '' },
+                  h(Select, {
+                    value: projectId,
+                    options: props.projects.map((item) => ({ id: item.id, label: item.name })),
+                    onChange: setProjectId
+                  })
+                ),
+                suggestion.relations && suggestion.relations.length
+                  ? h(
+                      Field,
+                      { label: t('quick.related') },
+                      h(
+                        'div',
+                        { className: 'zw-miniList' },
+                        suggestion.relations.slice(0, 5).map((item) =>
+                          h(
+                            'div',
+                            { key: item.targetMemoryId, className: 'zw-mini' },
+                            h(Icon, { name: 'link', size: 11 }),
+                            h(
+                              'div',
+                              { className: 'zw-miniBody' },
+                              h('span', { className: 'zw-miniTitle' }, item.title || item.targetMemoryId),
+                              h(
+                                'span',
+                                { className: 'zw-miniMeta' },
+                                labelOf(t, meta.relationTypes, item.relationType, 'relation') +
+                                  (item.description ? ' · ' + item.description : '')
+                              )
+                            ),
+                            item.confidence != null
+                              ? h(
+                                  'span',
+                                  { className: 'zw-count' },
+                                  Math.round(item.confidence * 100) + '%'
+                                )
+                              : null
+                          )
+                        )
+                      )
+                    )
+                  : null,
+                suggestion.collections && suggestion.collections.length
+                  ? h(
+                      Field,
+                      { label: t('quick.collections') },
+                      h(
+                        'div',
+                        { className: 'zw-tagRow' },
+                        suggestion.collections.map((item) =>
+                          h(
+                            'span',
+                            { key: item.name || item.id, className: 'zw-tag' },
+                            h(Icon, { name: 'folder', size: 10 }),
+                            item.name
+                          )
+                        )
+                      )
+                    )
+                  : null
+              )
+            : null,
+          error ? h('div', { className: 'zw-error' }, error) : null
+        )
+      )
+    }
+
+
+    function RelationDialog(props) {
+      const t = props.t
+      const meta = props.meta
+      const [targetId, setTargetId] = useState(props.initialTargetId || '')
+      const [relationType, setRelationType] = useState('references')
+      const [description, setDescription] = useState('')
+      const [query, setQuery] = useState('')
+      const [error, setError] = useState('')
+
+      const candidates = props.entries.filter(
+        (entry) => entry.id !== props.sourceId && (!query.trim() || matchesQuery(entry, query))
+      )
+      const target = props.entries.find((entry) => entry.id === targetId) || null
+
+      const submit = () => {
+        if (!targetId) {
+          setError(t('relation.needTarget'))
+          return
+        }
+        props.onSave({
+          sourceMemoryId: props.sourceId,
+          targetMemoryId: targetId,
+          relationType: relationType,
+          description: description.trim()
+        })
+      }
+
+      return h(
+        Modal,
+        {
+          title: t('relation.create'),
+          icon: 'link',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h(
+              'button',
+              { type: 'button', className: 'zw-btn zw-btnSm zw-btnGhost', onClick: props.onClose },
+              t('action.cancel')
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm zw-btnPrimary',
+                disabled: props.saving,
+                onClick: submit
+              },
+              t('relation.create')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h(
+            Field,
+            { label: t('relation.from') },
+            h(
+              'div',
+              { className: 'zw-mini', style: { cursor: 'default' } },
+              h(Icon, { name: 'book', size: 12 }),
+              h(
+                'div',
+                { className: 'zw-miniBody' },
+                h(
+                  'span',
+                  { className: 'zw-miniTitle' },
+                  props.entries.find((entry) => entry.id === props.sourceId)
+                    ? props.entries.find((entry) => entry.id === props.sourceId).title
+                    : props.sourceId
+                )
+              )
+            )
+          ),
+          h(
+            Field,
+            { label: t('relation.to') },
+            h('input', {
+              className: 'zw-input',
+              placeholder: t('relation.searchPlaceholder'),
+              value: query,
+              onChange: (event) => setQuery(event.target.value)
+            }),
+            h(
+              'div',
+              { className: 'zw-pickList' },
+              candidates.slice(0, 40).map((entry) =>
+                h(
+                  'button',
+                  {
+                    key: entry.id,
+                    type: 'button',
+                    className: 'zw-pickRow' + (entry.id === targetId ? ' zw-pickRowOn' : ''),
+                    onClick: () => setTargetId(entry.id)
+                  },
+                  h(StatusDot, { type: entry.type }),
+                  h('span', { className: 'zw-pickTitle' }, entry.title),
+                  h(
+                    'span',
+                    { className: 'zw-pickMeta' },
+                    labelOf(t, meta.statuses, entry.status, 'status')
+                  ),
+                  entry.id === targetId ? h(Icon, { name: 'check', size: 12 }) : null
+                )
+              )
+            )
+          ),
+          h(
+            Field,
+            { label: t('relation.type') },
+            h(MultiChips, {
+              options: meta.relationTypes.map((item) => ({
+                id: item.id,
+                label: item.label,
+                color: relationColor(item.id)
+              })),
+              value: [relationType],
+              onToggle: (id) => setRelationType(id)
+            }),
+            h('div', { className: 'zw-hint' }, hintOf(meta.relationTypes, relationType))
+          ),
+          h(
+            Field,
+            { label: t('relation.description') },
+            h('input', {
+              className: 'zw-input',
+              value: description,
+              placeholder: t('relation.descriptionPlaceholder'),
+              onChange: (event) => setDescription(event.target.value)
+            })
+          ),
+          target
+            ? h(
+                'div',
+                { className: 'zw-hint' },
+                h(Icon, { name: 'info', size: 11 }),
+                ' ',
+                t('relation.preview') +
+                  '：' +
+                  target.title +
+                  ' ' +
+                  (relationType === 'affects' || relationType === 'depends_on' ? '←' : '→') +
+                  ' ' +
+                  t('relation.previewSelf')
+              )
+            : null,
+          error ? h('div', { className: 'zw-error' }, error) : null
+        )
+      )
+    }
+
+    function CollectionCreate(props) {
+      const t = props.t
+      const [name, setName] = useState('')
+      const [description, setDescription] = useState('')
+      const [color, setColor] = useState(COLLECTION_COLORS[0])
+      const [projectId, setProjectId] = useState(props.defaultProjectId)
+      const [error, setError] = useState('')
+      return h(
+        Modal,
+        {
+          title: t('collections.new'),
+          icon: 'folder',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h(
+              'button',
+              { type: 'button', className: 'zw-btn zw-btnSm zw-btnGhost', onClick: props.onClose },
+              t('action.cancel')
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm zw-btnPrimary',
+                disabled: props.saving,
+                onClick: () => {
+                  if (!name.trim()) {
+                    setError(t('collections.needName'))
+                    return
+                  }
+                  props.onCreate({
+                    name: name.trim(),
+                    description: description.trim(),
+                    color: color,
+                    projectId: projectId,
+                    memberIds: []
+                  })
+                }
+              },
+              t('action.save')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h(
+            Field,
+            { label: t('collections.name') },
+            h('input', {
+              className: 'zw-input',
+              value: name,
+              autoFocus: true,
+              onChange: (event) => setName(event.target.value)
+            })
+          ),
+          h(
+            Field,
+            { label: t('collections.description') },
+            h('textarea', {
+              className: 'zw-textarea',
+              style: { minHeight: 64 },
+              value: description,
+              onChange: (event) => setDescription(event.target.value)
+            })
+          ),
+          h(
+            Field,
+            { label: t('collections.color') },
+            h(
+              'div',
+              { className: 'zw-tagRow' },
+              COLLECTION_COLORS.map((item) =>
+                h(
+                  'button',
+                  {
+                    key: item,
+                    type: 'button',
+                    className: 'zw-iconBtn' + (color === item ? ' zw-iconBtnOn' : ''),
+                    title: item,
+                    onClick: () => setColor(item)
+                  },
+                  h('span', { className: 'zw-legendDot', style: { background: collectionColor(item) } })
+                )
+              )
+            )
+          ),
+          h(
+            Field,
+            { label: t('collections.project') },
+            h(Select, {
+              value: projectId,
+              options: props.projects.map((item) => ({ id: item.id, label: item.name })),
+              onChange: setProjectId
+            })
+          ),
+          error ? h('div', { className: 'zw-error' }, error) : null
+        )
+      )
+    }
+
+    function CollectionPicker(props) {
+      const t = props.t
+      const [picked, setPicked] = useState(() => unique((props.value || []).slice()))
+      const toggle = (id) =>
+        setPicked((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat([id])))
+      return h(
+        Modal,
+        {
+          title: props.title || t('detail.collections'),
+          icon: 'folder',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h('span', { className: 'zw-count' }, picked.length + ' ' + t('collections.selected')),
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h(
+              'button',
+              { type: 'button', className: 'zw-btn zw-btnSm zw-btnGhost', onClick: props.onClose },
+              t('action.cancel')
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm zw-btnPrimary',
+                disabled: props.saving,
+                onClick: () => props.onApply(picked)
+              },
+              t('action.confirm')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          props.collections.length
+            ? h(
+                'div',
+                { className: 'zw-pickList' },
+                props.collections.map((collection) =>
+                  h(
+                    'button',
+                    {
+                      key: collection.id,
+                      type: 'button',
+                      className: 'zw-pickRow' + (picked.includes(collection.id) ? ' zw-pickRowOn' : ''),
+                      onClick: () => toggle(collection.id)
+                    },
+                    h('span', {
+                      className: 'zw-rowCheck' + (picked.includes(collection.id) ? ' zw-rowCheckOn' : '')
+                    }),
+                    h('span', {
+                      className: 'zw-legendDot',
+                      style: { background: collectionColor(collection.color) }
+                    }),
+                    h('span', { className: 'zw-pickTitle' }, collection.name),
+                    h(
+                      'span',
+                      { className: 'zw-pickMeta' },
+                      collection.memberIds.length + ' ' + t('collections.memberCount')
+                    )
+                  )
+                )
+              )
+            : h('div', { className: 'zw-savedEmpty' }, t('collections.empty'))
+        )
+      )
+    }
+
+    function MembersPicker(props) {
+      const t = props.t
+      const [query, setQuery] = useState('')
+      const [picked, setPicked] = useState(() => unique(props.memberIds.slice()))
+      const candidates = props.entries.filter(
+        (entry) => !query.trim() || matchesQuery(entry, query)
+      )
+      const toggle = (id) =>
+        setPicked((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat([id])))
+      return h(
+        Modal,
+        {
+          title: props.title || t('collections.addMembers'),
+          icon: 'layers',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h('span', { className: 'zw-count' }, picked.length + ' ' + t('collections.selected')),
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h(
+              'button',
+              { type: 'button', className: 'zw-btn zw-btnSm zw-btnGhost', onClick: props.onClose },
+              t('action.cancel')
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm zw-btnPrimary',
+                disabled: props.saving,
+                onClick: () => props.onApply(picked)
+              },
+              t('action.confirm')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h('input', {
+            className: 'zw-input',
+            placeholder: t('list.searchPlaceholder'),
+            value: query,
+            autoFocus: true,
+            onChange: (event) => setQuery(event.target.value)
+          }),
+          h(
+            'div',
+            { className: 'zw-pickList' },
+            candidates.slice(0, 200).map((entry) =>
+              h(
+                'button',
+                {
+                  key: entry.id,
+                  type: 'button',
+                  className: 'zw-pickRow' + (picked.includes(entry.id) ? ' zw-pickRowOn' : ''),
+                  onClick: () => toggle(entry.id)
+                },
+                h('span', {
+                  className: 'zw-rowCheck' + (picked.includes(entry.id) ? ' zw-rowCheckOn' : '')
+                }),
+                h(StatusDot, { type: entry.type }),
+                h('span', { className: 'zw-pickTitle' }, entry.title),
+                h(
+                  'span',
+                  { className: 'zw-pickMeta' },
+                  (entry.domains[0]
+                    ? labelOf(t, props.meta.domains, entry.domains[0], 'domain')
+                    : '') + ' · ' + formatDay(entry.updatedAt)
+                )
+              )
+            )
+          )
+        )
+      )
+    }
+
+
+    // ---------------------------------------------------------------------
+    // AI assist panel
+    //
+    // Analysis always runs on the host: the browser only renders what came
+    // back and asks the user to confirm before anything is written. Every
+    // suggestion therefore carries a reason the user can read.
+    // ---------------------------------------------------------------------
+
+    function AssistChip(props) {
+      return h(
+        'button',
+        {
+          type: 'button',
+          className: 'zw-assistAction' + (props.active ? ' zw-assistActionOn' : ''),
+          title: props.title || props.label,
+          disabled: props.disabled,
+          onClick: props.onClick
+        },
+        h(Icon, { name: props.icon, size: 12 }),
+        h('span', null, props.label)
+      )
+    }
+
+    function AssistReason(props) {
+      if (!props.text) return null
+      return h('span', { className: 'zw-assistReason' }, props.t('assist.reason') + '：' + props.text)
+    }
+
+    function AssistItemHead(props) {
+      return h(
+        'div',
+        { className: 'zw-assistItemTop' },
+        props.children
+      )
+    }
+
+    function TypeBadge(props) {
+      const meta = props.meta || {}
+      const type = (meta.entryTypes || []).find((item) => item.id === props.type)
+      if (!type) return null
+      return h(
+        'span',
+        {
+          className: 'zw-badge zw-badgeType',
+          style: { color: typeColor(props.type), borderColor: 'transparent' },
+          title: type.hint || type.label
+        },
+        h(Icon, { name: TYPE_ICON[props.type] || 'dot', size: 10 }),
+        h('span', null, type.label)
+      )
+    }
+
+    function AssistOrganize(props) {
+      const result = props.result
+      const t = props.t
+      const meta = props.meta
+      const rows = []
+      if (result.title) {
+        rows.push(
+          h(
+            'div',
+            { className: 'zw-assistRow', key: 'title' },
+            h('span', { className: 'zw-assistKey' }, t('assist.titleSug')),
+            h('span', { className: 'zw-assistVal' }, result.title)
+          )
+        )
+      }
+      if (result.type) {
+        rows.push(
+          h(
+            'div',
+            { className: 'zw-assistRow', key: 'type' },
+            h('span', { className: 'zw-assistKey' }, t('assist.typeSug')),
+            h(
+              'span',
+              { className: 'zw-assistVal' },
+              h(TypeBadge, { meta: meta, type: result.type }),
+              h(AssistReason, { t: t, text: result.typeReason })
             )
           )
         )
       }
-      return null
-    }
-
-    function LinkSection(props) {
-      const entry = props.entry
-      const t = props.t
-      const links = entry.links || []
-      const [target, setTarget] = useState('')
-      const [label, setLabel] = useState('')
-      const all = props.entries || []
-      const byId = useMemo(() => new Map(all.map((item) => [item.id, item])), [all])
-      const linkedIds = new Set(links.map((link) => link.to))
-      const candidates = all.filter((item) => item.id !== entry.id && !linkedIds.has(item.id))
-      const backlinks = all.filter((item) => item.id !== entry.id && (item.links || []).some((link) => link.to === entry.id))
-      const submit = () => {
-        if (!target) return
-        props.onAdd(target, label.trim())
-        setTarget('')
-        setLabel('')
-      }
-      return h(
-        'section',
-        { className: 'dm-section' },
-        h('h3', { className: 'dm-sectionTitle' }, t('detail.links') + (links.length ? ' (' + links.length + ')' : '')),
-        links.length
-          ? h(
-              'div',
-              { className: 'dm-links' },
-              links.map((link) => {
-                const item = byId.get(link.to)
-                return h(
-                  'div',
-                  { className: 'dm-linkRow', key: link.to },
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dm-linkRowMain',
-                      onClick: () => (item ? props.onSelect(item.id) : null),
-                      title: item ? item.title : link.to
-                    },
-                    h('span', { className: 'dm-linkRowTitle' }, item ? item.title : '（已删除）'),
-                    h(
-                      'span',
-                      { className: 'dm-linkRowNote' },
-                      item ? t('rail.' + item.category) + (link.label ? ' · ' + link.label : '') : link.to
-                    )
-                  ),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dm-iconBtn',
-                      title: t('detail.linkRemove'),
-                      'aria-label': t('detail.linkRemove'),
-                      disabled: props.busy,
-                      onClick: () => props.onRemove(link.to)
-                    },
-                    h(Icon, { name: 'close', size: 13 })
-                  )
-                )
-              })
-            )
-          : h('div', { className: 'dm-linkEmpty' }, t('detail.noLinks')),
-        candidates.length
-          ? h(
-              'div',
-              { className: 'dm-linkAdd' },
-              h(
-                'select',
-                {
-                  value: target,
-                  'aria-label': t('detail.linkPick'),
-                  onChange: (event) => setTarget(event.target.value)
-                },
-                h('option', { value: '' }, t('detail.linkPick')),
-                candidates.map((item) => h('option', { key: item.id, value: item.id }, '【' + t('rail.' + item.category) + '】' + item.title))
+      if (result.domains && result.domains.length) {
+        rows.push(
+          h(
+            'div',
+            { className: 'zw-assistRow', key: 'domains' },
+            h('span', { className: 'zw-assistKey' }, t('assist.domainSug')),
+            h(
+              'span',
+              { className: 'zw-assistVal' },
+              result.domains.map((domain) =>
+                h('span', { className: 'zw-tag', key: domain }, labelOf(t, meta.domains, domain, 'domain'))
               ),
-              h('input', {
-                value: label,
-                placeholder: t('detail.linkLabel'),
-                'aria-label': t('detail.linkLabel'),
-                onChange: (event) => setLabel(event.target.value)
-              }),
-              h(
-                'button',
-                { type: 'button', className: 'dm-btn dm-btnSmall', disabled: props.busy || !target, onClick: submit },
-                h(Icon, { name: 'link', size: 13 }),
-                t('detail.linkAdd')
-              )
+              h(AssistReason, { t: t, text: result.domainReason })
             )
-          : h('p', { className: 'dm-linkEmpty' }, t('detail.linkNothing')),
-        backlinks.length
-          ? h(
+          )
+        )
+      }
+      if (result.tags && result.tags.length) {
+        rows.push(
+          h(
+            'div',
+            { className: 'zw-assistRow', key: 'tags' },
+            h('span', { className: 'zw-assistKey' }, t('assist.tagSug')),
+            h(
+              'span',
+              { className: 'zw-assistVal' },
+              result.tags.map((tag) => h('span', { className: 'zw-tag', key: tag }, '#' + tag))
+            )
+          )
+        )
+      }
+      if (result.summary) {
+        rows.push(
+          h(
+            'div',
+            { className: 'zw-assistRow', key: 'summary' },
+            h('span', { className: 'zw-assistKey' }, t('assist.summarySug')),
+            h('span', { className: 'zw-assistVal' }, result.summary)
+          )
+        )
+      }
+
+      const sections = []
+      if (result.segments && result.segments.length) {
+        sections.push(
+          h(
+            'div',
+            { className: 'zw-assistSegs', key: 'segments' },
+            h(
               'div',
-              { className: 'dm-section' },
-              h('h3', { className: 'dm-sectionTitle' }, t('detail.backlinks') + ' (' + backlinks.length + ')'),
+              { className: 'zw-assistHead' },
+              h(Icon, { name: 'layers', size: 12 }),
+              h('span', null, t('assist.segments')),
+              h('span', { className: 'zw-assistHeadTag' }, result.segments.length + ' ' + t('assist.segmentCount'))
+            ),
+            result.segments.map((segment, index) =>
               h(
                 'div',
-                { className: 'dm-links' },
-                backlinks.map((item) =>
+                { className: 'zw-assistSeg', key: 'seg-' + index },
+                h(
+                  'div',
+                  { className: 'zw-assistSegHead' },
+                  h(TypeBadge, { meta: meta, type: segment.type }),
+                  h('span', { className: 'zw-assistSegTitle', title: segment.title }, segment.title),
                   h(
                     'button',
-                    { type: 'button', className: 'dm-linkRow', key: item.id, onClick: () => props.onSelect(item.id) },
-                    h(
-                      'span',
-                      { className: 'dm-linkRowMain' },
-                      h('span', { className: 'dm-linkRowTitle' }, item.title),
-                      h('span', { className: 'dm-linkRowNote' }, t('rail.' + item.category))
-                    ),
-                    h(Icon, { name: 'link', size: 13 })
+                    {
+                      type: 'button',
+                      className: 'zw-btn zw-btnGhost zw-btnSm',
+                      onClick: () => props.onSplit(segment)
+                    },
+                    t('assist.splitOne')
                   )
-                )
+                ),
+                h('div', { className: 'zw-assistItemBody' }, segment.content),
+                h(AssistReason, { t: t, text: segment.reason })
               )
             )
-          : null
-      )
-    }
+          )
+        )
+      }
 
-    function MemoryDetail(props) {
-      const entry = props.entry
-      const t = props.t
-      const region = props.region || null
+      if (result.collections && result.collections.length) {
+        sections.push(
+          h(
+            'div',
+            { className: 'zw-assistList', key: 'collections' },
+            result.collections.map((item) =>
+              h(
+                'div',
+                { className: 'zw-assistItem', key: item.collectionId },
+                h(
+                  AssistItemHead,
+                  null,
+                  h(Icon, { name: 'layers', size: 12 }),
+                  h(
+                    'span',
+                    {
+                      className: 'zw-assistItemTitle',
+                      title: item.description || item.name,
+                      onClick: () => props.onOpenCollection(item.collectionId)
+                    },
+                    item.name
+                  )
+                ),
+                h(AssistReason, { t: t, text: item.reason })
+              )
+            )
+          )
+        )
+      }
+
+      if (result.relations && result.relations.length) {
+        sections.push(
+          h(
+            'div',
+            { className: 'zw-assistList', key: 'relations' },
+            h(
+              'div',
+              { className: 'zw-assistHead' },
+              h(Icon, { name: 'link', size: 12 }),
+              h('span', null, t('assist.relations'))
+            ),
+            result.relations.map((item, index) =>
+              h(
+                'div',
+                { className: 'zw-assistItem', key: 'rel-' + index },
+                h(
+                  AssistItemHead,
+                  null,
+                  h(
+                    'span',
+                    { className: 'zw-tag', style: { color: relationColor(item.relationType) } },
+                    labelOf(t, meta.relationTypes, item.relationType, 'relation')
+                  ),
+                  h(
+                    'span',
+                    {
+                      className: 'zw-assistItemTitle',
+                      title: item.description,
+                      onClick: () => props.onOpenEntry(item.targetMemoryId)
+                    },
+                    item.title
+                  ),
+                  h(AssistChip, {
+                    icon: 'link',
+                    label: t('relation.create'),
+                    disabled: !item.targetMemoryId,
+                    onClick: () => props.onRelate(item)
+                  })
+                ),
+                h(AssistReason, { t: t, text: (item.reasons || []).join(' · ') })
+              )
+            )
+          )
+        )
+      }
+
       return h(
-        'article',
-        { className: 'dm-detailInner' },
+        'div',
+        { className: 'zw-assistPanel' },
         h(
           'div',
-          { className: 'dm-detailMeta' },
-          h('span', { className: 'dm-catChip dm-cat-' + entry.category }, t('rail.' + entry.category)),
-          h('span', { className: 'dm-statusPill dm-status-' + entry.status }, t('status.' + entry.status)),
-          region
-            ? h('span', { className: 'dm-regionChip', title: t('detail.region') }, h(Icon, { name: 'box', size: 12 }), region.name)
-            : null,
-          h('span', { className: 'dm-detailDate' }, t('detail.updated') + ' ' + formatDay(entry.updatedAt))
+          { className: 'zw-assistHead' },
+          h(Icon, { name: 'sparkle', size: 13 }),
+          h('span', null, t('assist.done')),
+          h('span', { className: 'zw-assistHeadTag' }, t('assist.notApplied'))
         ),
+        rows.length ? h('div', null, rows) : null,
+        sections,
         h(
           'div',
-          { className: 'dm-detailHead' },
-          h('h2', { className: 'dm-detailTitle' }, entry.title),
+          { className: 'zw-assistFoot' },
           h(
             'button',
             {
               type: 'button',
-              className: 'dm-iconBtn' + (entry.pinned ? ' dm-iconBtnOn' : ''),
-              title: entry.pinned ? t('detail.unpin') : t('detail.pin'),
-              'aria-label': entry.pinned ? t('detail.unpin') : t('detail.pin'),
-              'aria-pressed': entry.pinned === true,
-              disabled: props.busy,
-              onClick: props.onTogglePin
+              className: 'zw-btn zw-btnGhost zw-btnSm',
+              onClick: props.onClose
             },
-            h(Icon, { name: 'star', size: 16, filled: entry.pinned === true })
+            t('action.close')
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-btn zw-btnPrimary zw-btnSm',
+              onClick: () => props.onApply(result)
+            },
+            t('assist.apply')
           )
+        )
+      )
+    }
+
+    function AssistSimilar(props) {
+      const t = props.t
+      const items = props.result.items || []
+      if (!items.length) {
+        return h(
+          'div',
+          { className: 'zw-assistPanel' },
+          h('div', { className: 'zw-assistHead' }, h(Icon, { name: 'search', size: 13 }), h('span', null, t('assist.similar'))),
+          h('div', { className: 'zw-assistItemBody' }, t('assist.empty'))
+        )
+      }
+      return h(
+        'div',
+        { className: 'zw-assistPanel' },
+        h(
+          'div',
+          { className: 'zw-assistHead' },
+          h(Icon, { name: 'search', size: 13 }),
+          h('span', null, t('assist.similar')),
+          h('span', { className: 'zw-assistHeadTag' }, items.length + ' ' + t('assist.similarCount'))
         ),
-        entry.summary ? h('p', { className: 'dm-detailSummary' }, entry.summary) : null,
-        h(StatusNote, { entry, t, busy: props.busy, onSetStatus: props.onSetStatus }),
-        entry.facts && entry.facts.length
-          ? h(
-              'section',
-              { className: 'dm-section' },
-              h('h3', { className: 'dm-sectionTitle' }, t('detail.facts')),
+        h(
+          'div',
+          { className: 'zw-assistList' },
+          items.map((item) =>
+            h(
+              'div',
+              { className: 'zw-assistItem', key: item.entryId },
               h(
-                'div',
-                { className: 'dm-facts' },
-                entry.facts.map((fact, index) =>
+                AssistItemHead,
+                null,
+                h(TypeBadge, { meta: props.meta, type: item.type }),
+                h(
+                  'span',
+                  {
+                    className: 'zw-assistItemTitle',
+                    title: item.title,
+                    onClick: () => props.onOpenEntry(item.entryId)
+                  },
+                  item.title
+                ),
+                h('span', { className: 'zw-assistScore' }, item.scoreLabel + '%')
+              ),
+              h('div', { className: 'zw-scoreBar' }, h('div', { className: 'zw-scoreFill', style: { width: item.scoreLabel + '%' } })),
+              h(AssistReason, { t: t, text: (item.reasons || []).join(' · ') })
+            )
+          )
+        )
+      )
+    }
+
+    function AssistRelations(props) {
+      const t = props.t
+      const items = props.result.items || []
+      return h(
+        'div',
+        { className: 'zw-assistPanel' },
+        h(
+          'div',
+          { className: 'zw-assistHead' },
+          h(Icon, { name: 'link', size: 13 }),
+          h('span', null, t('assist.relations')),
+          h('span', { className: 'zw-assistHeadTag' }, t('assist.notApplied'))
+        ),
+        items.length
+          ? h(
+              'div',
+              { className: 'zw-assistList' },
+              items.map((item) =>
+                h(
+                  'div',
+                  { className: 'zw-assistItem', key: item.targetMemoryId + item.relationType },
                   h(
-                    'div',
-                    { className: 'dm-factRow', key: index },
-                    h('span', { className: 'dm-factLabel' }, fact.label || '—'),
-                    h('span', { className: 'dm-factValue' }, fact.value)
-                  )
+                    AssistItemHead,
+                    null,
+                    h(
+                      'span',
+                      { className: 'zw-tag', style: { color: relationColor(item.relationType) } },
+                      labelOf(t, props.meta.relationTypes, item.relationType, 'relation')
+                    ),
+                    h(
+                      'span',
+                      {
+                        className: 'zw-assistItemTitle',
+                        title: item.description || item.title,
+                        onClick: () => props.onOpenEntry(item.targetMemoryId)
+                      },
+                      item.title
+                    ),
+                    item.alreadyLinked
+                      ? h('span', { className: 'zw-assistItemMeta' }, t('relation.suggested'))
+                      : h(AssistChip, {
+                          icon: 'link',
+                          label: t('relation.create'),
+                          onClick: () => props.onRelate(item)
+                        })
+                  ),
+                  h(AssistReason, { t: t, text: (item.reasons || []).join(' · ') })
+                )
+              )
+            )
+          : h('div', { className: 'zw-assistItemBody' }, t('assist.empty'))
+      )
+    }
+
+    function AssistSummary(props) {
+      const t = props.t
+      const result = props.result
+      return h(
+        'div',
+        { className: 'zw-assistPanel' },
+        h(
+          'div',
+          { className: 'zw-assistHead' },
+          h(Icon, { name: 'sparkle', size: 13 }),
+          h('span', null, result.title || t('assist.summary')),
+          h('span', { className: 'zw-assistHeadTag' }, t('assist.notApplied'))
+        ),
+        result.overview ? h('div', { className: 'zw-assistItemBody' }, result.overview) : null,
+        (result.bullets || []).length
+          ? h(
+              'div',
+              { className: 'zw-prose' },
+              h(
+                'ul',
+                { className: 'zw-proseUl' },
+                result.bullets.map((bullet, index) => h('li', { className: 'zw-proseLi', key: 'b-' + index }, bullet))
+              )
+            )
+          : null,
+        (result.themes || []).length
+          ? h(
+              'div',
+              { className: 'zw-assistRow' },
+              h('span', { className: 'zw-assistKey' }, t('assist.themes')),
+              h(
+                'span',
+                { className: 'zw-assistVal' },
+                result.themes.map((theme) =>
+                  h('span', { className: 'zw-tag', key: theme.label }, theme.label + ' · ' + theme.count)
                 )
               )
             )
           : null,
-        entry.body
-          ? h(
-              'section',
-              { className: 'dm-section' },
-              h('h3', { className: 'dm-sectionTitle' }, t('editor.body.title')),
-              h('div', { className: 'dm-bodyText' }, renderBody(entry.body))
-            )
-          : null,
-        h(LinkSection, {
-          entry,
-          entries: props.entries,
-          t,
-          busy: props.busy,
-          onAdd: props.onAddLink,
-          onRemove: props.onRemoveLink,
-          onSelect: props.onSelectEntry
-        }),
-        entry.tags && entry.tags.length
+        result.memberIds && result.memberIds.length
           ? h(
               'div',
-              { className: 'dm-tags' },
-              entry.tags.map((tag, index) => h('span', { className: 'dm-tag', key: index }, '#' + tag))
-            )
-          : null,
-        h(
-          'div',
-          { className: 'dm-detailFoot' },
-          h(
-            'div',
-            { className: 'dm-footMeta' },
-            entry.source ? h('div', { className: 'dm-footLine' }, t('detail.source') + ' · ' + entry.source) : null,
-            h('div', { className: 'dm-footLine' }, t('detail.id') + ' · ' + entry.id)
-          ),
-          h(
-            'div',
-            { className: 'dm-footActions' },
-            props.confirmDelete
-              ? h(
-                  'span',
-                  { className: 'dm-confirm' },
-                  h('span', { className: 'dm-confirmText' }, t('detail.deleteConfirm')),
-                  h(
-                    'button',
-                    { type: 'button', className: 'dm-btn dm-btnDanger', disabled: props.busy, onClick: props.onConfirmDelete },
-                    t('action.delete')
-                  ),
-                  h('button', { type: 'button', className: 'dm-btn', onClick: props.onCancelDelete }, t('action.cancel'))
-                )
-              : h(
-                  'span',
-                  { className: 'dm-footBtns' },
-                  h(
-                    'button',
-                    { type: 'button', className: 'dm-btn', disabled: props.busy, onClick: props.onEdit },
-                    h(Icon, { name: 'edit', size: 15 }),
-                    t('action.edit')
-                  ),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dm-btn dm-btnGhostDanger',
-                      disabled: props.busy,
-                      onClick: props.onRequestDelete
-                    },
-                    h(Icon, { name: 'trash', size: 15 }),
-                    t('action.delete')
-                  )
-                )
-          )
-        ),
-        entry.history && entry.history.length
-          ? h(
-              'details',
-              { className: 'dm-history' },
-              h('summary', { className: 'dm-historySummary' }, t('detail.history') + ' (' + entry.history.length + ')'),
+              { className: 'zw-assistRow' },
+              h('span', { className: 'zw-assistKey' }, t('assist.members')),
               h(
-                'ul',
-                { className: 'dm-historyList' },
-                entry.history
-                  .slice()
-                  .reverse()
-                  .map((item, index) =>
-                    h(
-                      'li',
-                      { className: 'dm-historyItem', key: index },
-                      h('span', { className: 'dm-historyDate' }, formatTime(item.at)),
-                      h('span', { className: 'dm-historyNote' }, item.note || t('detail.historyNoNote'))
-                    )
-                  )
+                'span',
+                { className: 'zw-assistVal' },
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnGhost zw-btnSm',
+                    onClick: () => props.onShowMembers(result.memberIds)
+                  },
+                  result.memberIds.length + ' ' + t('assist.segmentCount')
+                )
               )
             )
           : null
       )
     }
 
-    function MemoryEditor(props) {
-      const draft = props.draft
+    function AssistConflicts(props) {
       const t = props.t
-      const update = (patch) => props.onChange(Object.assign({}, draft, patch))
+      const items = props.result.items || []
+      if (!items.length) {
+        return h(
+          'div',
+          { className: 'zw-assistPanel' },
+          h('div', { className: 'zw-assistHead' }, h(Icon, { name: 'shield', size: 13 }), h('span', null, t('assist.conflicts'))),
+          h('div', { className: 'zw-assistItemBody' }, t('assist.empty'))
+        )
+      }
       return h(
         'div',
-        {
-          className: 'dm-editor',
-          onKeyDown: (event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-              event.preventDefault()
-              props.onSave()
-            }
-          }
-        },
+        { className: 'zw-assistPanel' },
         h(
           'div',
-          { className: 'dm-editorTop' },
-          h('span', { className: 'dm-editorMode' }, props.mode === 'create' ? t('editor.mode.create') : t('editor.mode.edit')),
-          h('span', { className: 'dm-editorHint' }, t('editor.hint'))
+          { className: 'zw-assistHead' },
+          h(Icon, { name: 'warning', size: 13 }),
+          h('span', null, t('assist.conflicts')),
+          h('span', { className: 'zw-assistHeadTag' }, items.length + ' ' + t('assist.segmentCount'))
         ),
-        h('input', {
-          className: 'dm-input dm-titleInput',
-          value: draft.title,
-          placeholder: t('editor.title.placeholder'),
-          'aria-label': t('editor.fields.title'),
-          autoFocus: true,
-          onChange: (event) => update({ title: event.target.value })
-        }),
-        h(
-          'div',
-          { className: 'dm-editorRow' },
-          h(
-            'label',
-            { className: 'dm-field' },
-            h('span', { className: 'dm-fieldLabel' }, t('editor.fields.category')),
-            h(
-              'select',
-              {
-                className: 'dm-input dm-select',
-                value: draft.category,
-                onChange: (event) => update({ category: event.target.value })
-              },
-              CATEGORIES.map((item) => h('option', { key: item.id, value: item.id }, t(item.labelKey)))
-            )
-          ),
-          h(
-            'label',
-            { className: 'dm-field' },
-            h('span', { className: 'dm-fieldLabel' }, t('editor.fields.status')),
-            h(
-              'select',
-              {
-                className: 'dm-input dm-select',
-                value: draft.status,
-                onChange: (event) => update({ status: event.target.value })
-              },
-              STATUSES.map((item) => h('option', { key: item.id, value: item.id }, t(item.labelKey)))
-            )
-          ),
-          h(
-            'label',
-            { className: 'dm-check' },
-            h('input', {
-              type: 'checkbox',
-              checked: draft.pinned === true,
-              onChange: (event) => update({ pinned: event.target.checked })
-            }),
-            t('detail.pin')
-          )
-        ),
-        h('input', {
-          className: 'dm-input',
-          value: draft.summary,
-          placeholder: t('editor.summary.placeholder'),
-          'aria-label': t('editor.fields.summary'),
-          onChange: (event) => update({ summary: event.target.value })
-        }),
-        h(
-          'div',
-          { className: 'dm-editorSection' },
+        items.map((item) =>
           h(
             'div',
-            { className: 'dm-editorSectionHead' },
-            h('span', { className: 'dm-fieldLabel' }, t('editor.facts.title')),
-            h('span', { className: 'dm-fieldHint' }, t('editor.facts.hint'))
-          ),
-          h(FactsEditor, { facts: draft.facts, onChange: (facts) => update({ facts }), t })
-        ),
-        h(
-          'div',
-          { className: 'dm-editorSection' },
-          h(
-            'div',
-            { className: 'dm-editorSectionHead' },
-            h('span', { className: 'dm-fieldLabel' }, t('editor.body.title')),
-            h('span', { className: 'dm-fieldHint' }, t('editor.body.hint'))
-          ),
-          h('textarea', {
-            className: 'dm-input dm-textarea',
-            value: draft.body,
-            placeholder: t('editor.body.placeholder'),
-            'aria-label': t('editor.body.title'),
-            onChange: (event) => update({ body: event.target.value })
-          })
-        ),
-        h('input', {
-          className: 'dm-input',
-          value: draft.tags,
-          placeholder: t('editor.tags.placeholder'),
-          'aria-label': t('editor.fields.tags'),
-          onChange: (event) => update({ tags: event.target.value })
-        }),
-        h('input', {
-          className: 'dm-input',
-          value: draft.source,
-          placeholder: t('editor.source.placeholder'),
-          'aria-label': t('detail.source'),
-          onChange: (event) => update({ source: event.target.value })
-        }),
-        props.mode === 'edit'
-          ? h('input', {
-              className: 'dm-input',
-              value: draft.note,
-              placeholder: t('editor.note.placeholder'),
-              'aria-label': t('editor.fields.note'),
-              onChange: (event) => update({ note: event.target.value })
-            })
-          : null,
-        props.error ? h('div', { className: 'dm-formError', role: 'alert' }, props.error) : null,
-        h(
-          'div',
-          { className: 'dm-editorActions' },
-          h('span', { className: 'dm-saveHint' }, t('editor.saveHint')),
-          h('button', { type: 'button', className: 'dm-btn', disabled: props.busy, onClick: props.onCancel }, t('action.cancel')),
-          h(
-            'button',
-            { type: 'button', className: 'dm-btn dm-btnPrimary', disabled: props.busy, onClick: props.onSave },
-            props.busy ? t('action.saving') : t('action.save')
+            { className: 'zw-assistConflict', key: item.entryId },
+            h(
+              'div',
+              { className: 'zw-assistConflictHead' },
+              h(Icon, { name: item.kind === 'number-mismatch' ? 'chart' : 'book', size: 12 }),
+              h(
+                'span',
+                {
+                  className: 'zw-assistItemTitle',
+                  title: item.title,
+                  onClick: () => props.onOpenEntry(item.entryId)
+                },
+                item.title
+              ),
+              h(TypeBadge, { meta: props.meta, type: item.type })
+            ),
+            h(AssistReason, { t: t, text: (item.reasons || []).join(' · ') }),
+            h('div', { className: 'zw-assistItemMeta' }, item.note || ''),
+            h(
+              'div',
+              { className: 'zw-assistChoices' },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-assistChoice',
+                  onClick: () => props.onResolve(item, 'supersede')
+                },
+                t('assist.supersede')
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-assistChoice',
+                  onClick: () => props.onResolve(item, 'both-apply')
+                },
+                t('assist.bothApply')
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-assistChoice',
+                  onClick: () => props.onResolve(item, 'keep-both')
+                },
+                t('assist.keepBoth')
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'zw-assistChoice',
+                  onClick: () => props.onResolve(item, 'no-conflict')
+                },
+                t('assist.noConflict')
+              )
+            )
           )
         )
       )
     }
 
-    function pairKey(left, right) {
-      return left < right ? left + '|' + right : right + '|' + left
+    function AssistImpact(props) {
+      const t = props.t
+      const result = props.result
+      const column = (label, rows, direction) =>
+        h(
+          'div',
+          { className: 'zw-impactCol' },
+          h('div', { className: 'zw-impactLabel' }, label),
+          rows.length
+            ? rows.map((row, index) =>
+                h(
+                  'div',
+                  { className: 'zw-impactRow', key: direction + '-' + index },
+                  h(Icon, { name: direction === 'up' ? 'arrowLeft' : 'arrowRight', size: 11 }),
+                  h(
+                    'span',
+                    {
+                      className: 'zw-assistItemTitle',
+                      title: row.title,
+                      onClick: () => props.onOpenEntry(row.entryId)
+                    },
+                    row.title
+                  ),
+                  h('span', { className: 'zw-tag', style: { color: relationColor(row.relationType) } }, row.relationLabel),
+                  h('span', { className: 'zw-impactDepth' }, 'D' + row.depth)
+                )
+              )
+            : h('div', { className: 'zw-assistItemMeta' }, t('common.none'))
+        )
+      return h(
+        'div',
+        { className: 'zw-assistPanel' },
+        h(
+          'div',
+          { className: 'zw-assistHead' },
+          h(Icon, { name: 'graph', size: 13 }),
+          h('span', null, t('assist.impact')),
+          h('span', { className: 'zw-assistHeadTag' }, t('assist.notApplied'))
+        ),
+        column(t('assist.upstream'), result.incoming || [], 'up'),
+        column(t('assist.downstream'), result.outgoing || [], 'down'),
+        result.note ? h('div', { className: 'zw-assistItemMeta' }, result.note) : null
+      )
     }
 
-    const REGION_COLORS = ['violet', 'blue', 'teal', 'amber', 'rose', 'lime']
-
-    function roundCoord(value) {
-      return Math.round(value * 10) / 10
+    function AssistResult(props) {
+      const result = props.result
+      if (!result) return null
+      if (result.kind === 'organize') return h(AssistOrganize, props)
+      if (result.kind === 'similar') return h(AssistSimilar, props)
+      if (result.kind === 'relations') return h(AssistRelations, props)
+      if (result.kind === 'summary') return h(AssistSummary, props)
+      if (result.kind === 'conflicts') return h(AssistConflicts, props)
+      if (result.kind === 'impact') return h(AssistImpact, props)
+      return null
     }
 
-    function hashNumber(text) {
-      let hash = 7
-      for (let index = 0; index < text.length; index += 1) hash = (hash * 31 + text.charCodeAt(index)) % 1000003
-      return hash
+    function AssistPanel(props) {
+      const t = props.t
+      const scope = props.scope || 'entry'
+      const actions =
+        scope === 'entry'
+          ? [
+              { id: 'organize', icon: 'sparkle', label: t('assist.organize') },
+              { id: 'similar', icon: 'search', label: t('assist.similar') },
+              { id: 'relations', icon: 'link', label: t('assist.relations') },
+              { id: 'conflicts', icon: 'warning', label: t('assist.conflicts') },
+              { id: 'impact', icon: 'graph', label: t('assist.impact') }
+            ]
+          : [{ id: 'summary', icon: 'sparkle', label: t('assist.summary') }]
+
+      return h(
+        'div',
+        { className: 'zw-assist' },
+        h(
+          'div',
+          { className: 'zw-assistBar' },
+          actions.map((action) =>
+            h(AssistChip, {
+              key: action.id,
+              icon: action.icon,
+              label: action.label,
+              active: props.action === action.id,
+              disabled: props.busy,
+              onClick: () => props.onRun(action.id)
+            })
+          )
+        ),
+        props.busy
+          ? h(
+              'div',
+              { className: 'zw-assistBusy' },
+              h(Icon, { name: 'refresh', size: 12 }),
+              h('span', null, t('assist.running')),
+              h('div', { className: 'zw-loadingBar' }, h('div', { className: 'zw-loadingFill' }))
+            )
+          : null,
+        props.error
+          ? h('div', { className: 'zw-error' }, props.error)
+          : h(AssistResult, Object.assign({}, props, { result: props.result }))
+      )
     }
 
-    function normalized(area) {
-      return {
-        x0: Math.min(area.x0, area.x1),
-        y0: Math.min(area.y0, area.y1),
-        x1: Math.max(area.x0, area.x1),
-        y1: Math.max(area.y0, area.y1)
+    function hullPath(points, padding) {
+      if (!points.length) return ''
+      if (points.length === 1) {
+        const radius = 40 + padding
+        const point = points[0]
+        return (
+          'M' +
+          (point.x - radius) +
+          ',' +
+          point.y +
+          'a' +
+          radius +
+          ',' +
+          radius +
+          ' 0 1,0 ' +
+          radius * 2 +
+          ',0a' +
+          radius +
+          ',' +
+          radius +
+          ' 0 1,0 ' +
+          -radius * 2 +
+          ',0Z'
+        )
       }
-    }
-
-    function buildGraph(entries, includeAuto) {
-      const nodes = entries.map((entry) => ({ id: entry.id, entry }))
-      const index = new Map(nodes.map((node, position) => [node.id, position]))
-      const byPair = new Map()
-      const degree = new Map(nodes.map((node) => [node.id, 0]))
-      for (const entry of entries) {
-        for (const link of entry.links || []) {
-          if (!index.has(link.to) || link.to === entry.id) continue
-          const key = pairKey(entry.id, link.to)
-          let edge = byPair.get(key)
-          if (!edge) {
-            edge = { key, a: entry.id, b: link.to, manual: true, labels: [], auto: false, tags: [] }
-            byPair.set(key, edge)
-            degree.set(entry.id, (degree.get(entry.id) || 0) + 1)
-            degree.set(link.to, (degree.get(link.to) || 0) + 1)
-          }
-          edge.manual = true
-          if (link.label && edge.labels.indexOf(link.label) === -1) edge.labels.push(link.label)
-          if (entry.id === edge.a) edge.dirAB = true
-          if (entry.id === edge.b) edge.dirBA = true
-        }
-      }
-      if (includeAuto) {
-        for (let i = 0; i < entries.length; i += 1) {
-          for (let j = i + 1; j < entries.length; j += 1) {
-            const left = entries[i]
-            const right = entries[j]
-            const key = pairKey(left.id, right.id)
-            if (byPair.has(key)) continue
-            const shared = []
-            for (const tag of left.tags || []) {
-              if ((right.tags || []).some((item) => item.toLowerCase() === tag.toLowerCase())) shared.push(tag)
-            }
-            if (shared.length < 2) continue
-            byPair.set(key, { key, a: left.id, b: right.id, manual: false, labels: [], auto: true, tags: shared })
-            degree.set(left.id, (degree.get(left.id) || 0) + 1)
-            degree.set(right.id, (degree.get(right.id) || 0) + 1)
-          }
-        }
-      }
-      const edges = Array.from(byPair.values())
-      for (const node of nodes) node.degree = degree.get(node.id) || 0
-      return { nodes, edges }
-    }
-
-    function nodeRadius(degree) {
-      return 19 + Math.min(degree || 0, 9) * 1.7
-    }
-
-    function convexHull(points) {
-      const sorted = points.slice().sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x))
-      if (sorted.length < 3) return sorted
-      const cross = (origin, left, right) =>
-        (left.x - origin.x) * (right.y - origin.y) - (left.y - origin.y) * (right.x - origin.x)
+      const sorted = points.slice().sort((left, right) => (left.x === right.x ? left.y - right.y : left.x - right.x))
+      const cross = (origin, a, b) =>
+        (a.x - origin.x) * (b.y - origin.y) - (a.y - origin.y) * (b.x - origin.x)
       const lower = []
-      for (const point of sorted) {
+      sorted.forEach((point) => {
         while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) lower.pop()
         lower.push(point)
-      }
+      })
       const upper = []
-      for (let index = sorted.length - 1; index >= 0; index -= 1) {
-        const point = sorted[index]
-        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop()
-        upper.push(point)
-      }
+      sorted
+        .slice()
+        .reverse()
+        .forEach((point) => {
+          while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop()
+          upper.push(point)
+        })
       lower.pop()
       upper.pop()
-      return lower.concat(upper)
-    }
-
-    function centroidOf(points) {
-      return points.reduce(
-        (accumulator, point) => ({
-          x: accumulator.x + point.x / points.length,
-          y: accumulator.y + point.y / points.length
-        }),
-        { x: 0, y: 0 }
-      )
-    }
-
-    function circlePath(point, radius) {
-      return (
-        'M' + roundCoord(point.x - radius) + ',' + roundCoord(point.y) +
-        'a' + roundCoord(radius) + ',' + roundCoord(radius) + ' 0 1,0 ' + roundCoord(radius * 2) + ',0' +
-        'a' + roundCoord(radius) + ',' + roundCoord(radius) + ' 0 1,0 ' + roundCoord(-radius * 2) + ',0'
-      )
-    }
-
-    function regionBlobPath(points, pad) {
-      if (!points.length) return ''
-      if (points.length === 1) return circlePath(points[0], pad)
-      if (points.length === 2) {
-        const middle = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 }
-        const span = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) / 2
-        return circlePath(middle, pad + span)
-      }
-      const hull = convexHull(points)
+      const hull = lower.concat(upper)
       if (hull.length < 3) {
-        const middle = centroidOf(points)
-        const span = points.reduce((best, point) => Math.max(best, Math.hypot(point.x - middle.x, point.y - middle.y)), 0)
-        return circlePath(middle, pad + span * 0.35)
+        const a = points[0]
+        const b = points[points.length - 1]
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+        const dx = b.x - a.x
+        const dy = b.y - a.y
+        const length = Math.sqrt(dx * dx + dy * dy) || 1
+        const nx = (-dy / length) * (padding + 30)
+        const ny = (dx / length) * (padding + 30)
+        return (
+          'M' +
+          (a.x + nx) +
+          ',' +
+          (a.y + ny) +
+          'Q' +
+          (mid.x + nx * 1.6) +
+          ',' +
+          (mid.y + ny * 1.6) +
+          ' ' +
+          (b.x + nx) +
+          ',' +
+          (b.y + ny) +
+          'Q' +
+          (mid.x - nx * 0.4) +
+          ',' +
+          (mid.y - ny * 0.4) +
+          ' ' +
+          (a.x + nx) +
+          ',' +
+          (a.y + ny) +
+          'Z'
+        )
       }
-      const center = centroidOf(hull)
-      const inflated = hull.map((point) => {
+      const center = hull.reduce((acc, point) => ({ x: acc.x + point.x / hull.length, y: acc.y + point.y / hull.length }), { x: 0, y: 0 })
+      const expanded = hull.map((point) => {
         const dx = point.x - center.x
         const dy = point.y - center.y
-        const distance = Math.hypot(dx, dy) || 1
-        return { x: point.x + (dx / distance) * pad, y: point.y + (dy / distance) * pad }
+        const length = Math.sqrt(dx * dx + dy * dy) || 1
+        return { x: point.x + (dx / length) * padding, y: point.y + (dy / length) * padding }
       })
-      const midpoint = (left, right) => ({ x: (left.x + right.x) / 2, y: (left.y + right.y) / 2 })
-      const first = midpoint(inflated[inflated.length - 1], inflated[0])
-      let path = 'M' + roundCoord(first.x) + ',' + roundCoord(first.y)
-      for (let index = 0; index < inflated.length; index += 1) {
-        const current = inflated[index]
-        const next = inflated[(index + 1) % inflated.length]
-        const middle = midpoint(current, next)
-        path += 'Q' + roundCoord(current.x) + ',' + roundCoord(current.y) + ' ' + roundCoord(middle.x) + ',' + roundCoord(middle.y)
-      }
+      let path = ''
+      expanded.forEach((point, index) => {
+        const next = expanded[(index + 1) % expanded.length]
+        const midX = (point.x + next.x) / 2
+        const midY = (point.y + next.y) / 2
+        if (index === 0) path += 'M' + midX + ',' + midY
+        path += 'Q' + point.x + ',' + point.y + ' ' + midX + ',' + midY
+      })
       return path + 'Z'
     }
 
-    function layoutNodes(nodes, edges, startPositions, iterations, clusters) {
+    function layoutGraph(nodes, edges, clusterAnchors, startPositions, iterations) {
+      const anchors = new Map()
+      const groups = new Map()
+      nodes.forEach((node) => {
+        const key = node.clusterId || 'none'
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key).push(node)
+      })
+      let index = 0
+      groups.forEach((group, key) => {
+        const angle = index * 2.399963
+        const radius = key === 'none' ? 0 : 180 + 80 * Math.sqrt(index)
+        anchors.set(key, { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius })
+        index += 1
+      })
       const positions = new Map()
-      const golden = Math.PI * (3 - Math.sqrt(5))
-      const groups = clusters || []
-      const groupOf = new Map()
-      groups.forEach((members, index) => {
-        for (const id of members) groupOf.set(id, index)
-      })
-      const anchors = groups.map((members, index) => {
-        const angle = (index / Math.max(groups.length, 1)) * Math.PI * 2 - Math.PI / 2
-        const radius = 210 + 90 * Math.sqrt(index)
-        return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
-      })
-      nodes.forEach((node, index) => {
-        const previous = startPositions && startPositions.get(node.id)
-        if (previous) {
-          positions.set(node.id, { x: previous.x, y: previous.y })
+      nodes.forEach((node, order) => {
+        const start = startPositions && startPositions.get(node.id)
+        if (start) {
+          positions.set(node.id, { x: start.x, y: start.y })
           return
         }
-        const angle = index * golden
-        const group = groupOf.has(node.id) ? groupOf.get(node.id) : null
-        const anchor = group === null ? null : anchors[group]
-        const ring = anchor ? 54 + 22 * Math.sqrt(index % 9) : 120 + 46 * Math.sqrt(index)
-        const base = anchor || { x: 0, y: 0 }
-        positions.set(node.id, { x: base.x + Math.cos(angle) * ring, y: base.y + Math.sin(angle) * ring })
+        const angle = order * 2.399963
+        const radius = 26 + 22 * Math.sqrt(order + 1)
+        const anchor = anchors.get(node.clusterId || 'none') || { x: 0, y: 0 }
+        positions.set(node.id, {
+          x: anchor.x + Math.cos(angle) * radius,
+          y: anchor.y + Math.sin(angle) * radius
+        })
       })
-      const ids = nodes.map((node) => node.id)
-      const damping = startPositions && startPositions.size ? 0.24 : 0.42
-      for (let step = 0; step < iterations; step += 1) {
-        const disp = new Map(ids.map((id) => [id, { x: 0, y: 0 }]))
-        for (let i = 0; i < ids.length; i += 1) {
-          for (let j = i + 1; j < ids.length; j += 1) {
-            const left = positions.get(ids[i])
-            const right = positions.get(ids[j])
+      const adjacency = new Map()
+      nodes.forEach((node) => adjacency.set(node.id, []))
+      edges.forEach((edge) => {
+        if (adjacency.has(edge.source) && adjacency.has(edge.target)) {
+          adjacency.get(edge.source).push(edge.target)
+          adjacency.get(edge.target).push(edge.source)
+        }
+      })
+      const steps = Math.max(0, iterations || 0)
+      for (let step = 0; step < steps; step += 1) {
+        const forces = new Map()
+        nodes.forEach((node) => forces.set(node.id, { x: 0, y: 0 }))
+        for (let i = 0; i < nodes.length; i += 1) {
+          const left = positions.get(nodes[i].id)
+          for (let j = i + 1; j < nodes.length; j += 1) {
+            const right = positions.get(nodes[j].id)
             let dx = left.x - right.x
             let dy = left.y - right.y
-            let distanceSquared = dx * dx + dy * dy
-            if (distanceSquared < 1) {
-              dx = (i - j || 1) * 0.6
-              dy = 0.9
-              distanceSquared = dx * dx + dy * dy
+            let distance = Math.sqrt(dx * dx + dy * dy)
+            if (distance < 1) {
+              dx = (Math.random() - 0.5) * 2
+              dy = (Math.random() - 0.5) * 2
+              distance = 2
             }
-            const distance = Math.sqrt(distanceSquared)
-            const force = 15000 / distanceSquared
-            const ux = dx / distance
-            const uy = dy / distance
-            const leftDisp = disp.get(ids[i])
-            const rightDisp = disp.get(ids[j])
-            leftDisp.x += ux * force
-            leftDisp.y += uy * force
-            rightDisp.x -= ux * force
-            rightDisp.y -= uy * force
+            const force = 14000 / (distance * distance)
+            const fx = (dx / distance) * force
+            const fy = (dy / distance) * force
+            const leftForce = forces.get(nodes[i].id)
+            const rightForce = forces.get(nodes[j].id)
+            leftForce.x += fx
+            leftForce.y += fy
+            rightForce.x -= fx
+            rightForce.y -= fy
           }
         }
-        for (const edge of edges) {
-          const left = positions.get(edge.a)
-          const right = positions.get(edge.b)
-          if (!left || !right) continue
+        edges.forEach((edge) => {
+          const left = positions.get(edge.source)
+          const right = positions.get(edge.target)
+          if (!left || !right) return
           const dx = right.x - left.x
           const dy = right.y - left.y
-          const distance = Math.hypot(dx, dy) || 1
-          const target = edge.auto ? 320 : 240
-          const force = (distance - target) * (edge.auto ? 0.018 : 0.05)
-          const ux = dx / distance
-          const uy = dy / distance
-          const leftDisp = disp.get(edge.a)
-          const rightDisp = disp.get(edge.b)
-          leftDisp.x += ux * force
-          leftDisp.y += uy * force
-          rightDisp.x -= ux * force
-          rightDisp.y -= uy * force
-        }
-        for (const [id, group] of groupOf) {
-          const anchor = anchors[group]
-          const point = positions.get(id)
-          const delta = disp.get(id)
-          if (!anchor || !point || !delta) continue
-          delta.x += (anchor.x - point.x) * 0.014
-          delta.y += (anchor.y - point.y) * 0.014
-        }
-        for (const id of ids) {
-          const point = positions.get(id)
-          const delta = disp.get(id)
-          point.x += clamp(delta.x * damping, -34, 34)
-          point.y += clamp(delta.y * damping, -34, 34)
-          point.x *= 0.997
-          point.y *= 0.997
-        }
+          const distance = Math.sqrt(dx * dx + dy * dy) || 1
+          const targetLength = edge.kind === 'suggested' ? 250 : 200
+          const force = (distance - targetLength) * 0.045
+          const fx = (dx / distance) * force
+          const fy = (dy / distance) * force
+          const leftForce = forces.get(edge.source)
+          const rightForce = forces.get(edge.target)
+          leftForce.x += fx
+          leftForce.y += fy
+          rightForce.x -= fx
+          rightForce.y -= fy
+        })
+        nodes.forEach((node) => {
+          const force = forces.get(node.id)
+          const position = positions.get(node.id)
+          const anchor = anchors.get(node.clusterId || 'none') || { x: 0, y: 0 }
+          force.x += (anchor.x - position.x) * 0.012
+          force.y += (anchor.y - position.y) * 0.012
+          position.x = position.x + clamp(force.x, -30, 30) * 0.85
+          position.y = position.y + clamp(force.y, -30, 30) * 0.85
+        })
       }
       return positions
     }
 
-    /**
-     * Neural-network style relationship graph.
-     *
-     * Besides the original pan / zoom / drag, two direct-manipulation tools live on the
-     * canvas: 「划线」(drag from one memory to another to create a link) and 「圈区」
-     * (drag a box around several memories to group them into one 记忆区). Regions render
-     * as translucent hulls behind their members; links render as curved synapses with a
-     * travelling signal pulse.
-     */
     function GraphView(props) {
       const t = props.t
-      const entries = props.entries
-      const regions = props.regions || []
+      const meta = props.meta
       const wrapRef = useRef(null)
       const svgRef = useRef(null)
       const positionsRef = useRef(new Map())
-      const viewRef = useRef({ scale: 1, x: 0, y: 0 })
+      const viewRef = useRef({ x: 0, y: 0, k: 1 })
       const dragRef = useRef(null)
-      const [tick, setTick] = useState(0)
-      const [showAuto, setShowAuto] = useState(true)
-      const [isolate, setIsolate] = useState(false)
-      const [tool, setTool] = useState('select')
+      const seed = props.initialConfig || {}
+      const [size, setSize] = useState({ width: 900, height: 560 })
+      const [view, setView] = useState({ x: 0, y: 0, k: 1 })
+      const [tool, setTool] = useState(seed.tool || 'select')
+      const [panelOpen, setPanelOpen] = useState(false)
+      const [showSuggested, setShowSuggested] = useState(seed.showSuggested !== false)
+      const [hiddenTypes, setHiddenTypes] = useState(seed.hiddenTypes || [])
+      const [hiddenRelations, setHiddenRelations] = useState(seed.hiddenRelations || [])
+      const [hiddenDomains, setHiddenDomains] = useState(seed.hiddenDomains || [])
+      const [collapsed, setCollapsed] = useState(seed.collapsed || [])
+      const [hiddenCollections, setHiddenCollections] = useState(seed.hiddenCollections || [])
+      const [search, setSearch] = useState(seed.search || '')
       const [linkDraft, setLinkDraft] = useState(null)
       const [boxDraft, setBoxDraft] = useState(null)
-      const [hoverId, setHoverId] = useState(null)
-      const [focusRegionId, setFocusRegionId] = useState(null)
-      const [editingRegionId, setEditingRegionId] = useState(null)
-      const [nameDraft, setNameDraft] = useState('')
-      const [armedRegionId, setArmedRegionId] = useState(null)
+      const [hoverEdge, setHoverEdge] = useState('')
       const [flash, setFlash] = useState('')
-
-      const graph = useMemo(() => buildGraph(entries, showAuto), [entries, showAuto])
-      const nodes = graph.nodes
-      const edges = graph.edges
-      const nodeById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes])
-      const nodeKey = nodes.map((node) => node.id).join('|')
-      const edgeKey = edges.map((edge) => edge.key + (edge.manual ? 'm' : 'a')).join('|')
-      const regionKey = regions
-        .map((region) => region.id + ':' + region.color + ':' + region.memberIds.join(','))
-        .join('|')
-      const clusters = useMemo(
-        () =>
-          regions
-            .map((region) => region.memberIds.filter((id) => nodeById.has(id)))
-            .filter((members) => members.length > 0),
-        [regions, nodeById]
-      )
-      const regionByEntry = useMemo(() => {
-        const map = new Map()
-        for (const region of regions) for (const id of region.memberIds) map.set(id, region)
-        return map
-      }, [regions])
-
-      const bump = () => setTick((value) => value + 1)
+      const [tick, setTick] = useState(0)
+      const selection = props.selection || []
 
       useEffect(() => {
-        positionsRef.current = layoutNodes(nodes, edges, null, 300, clusters)
-        bump()
-        const timer = setTimeout(() => fitToWindow(), 30)
-        return () => clearTimeout(timer)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [nodeKey])
-
-      useEffect(() => {
-        if (!nodeKey) return
-        positionsRef.current = layoutNodes(nodes, edges, positionsRef.current, 120, clusters)
-        bump()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [edgeKey, regionKey])
+        const node = wrapRef.current
+        if (!node) return undefined
+        const measure = () => {
+          const rect = node.getBoundingClientRect()
+          setSize({ width: Math.max(320, Math.round(rect.width)), height: Math.max(320, Math.round(rect.height)) })
+        }
+        measure()
+        if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', measure)
+        return () => {
+          if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('resize', measure)
+        }
+      }, [])
 
       useEffect(() => {
         if (!flash) return undefined
@@ -1831,116 +6335,215 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
         return () => clearTimeout(timer)
       }, [flash])
 
-      function viewportSize() {
-        const rect = wrapRef.current ? wrapRef.current.getBoundingClientRect() : null
-        return { width: (rect && rect.width) || 960, height: (rect && rect.height) || 620 }
-      }
-
-      function fitToWindow() {
-        const positions = positionsRef.current
-        if (!positions.size) return
-        const size = viewportSize()
-        const xs = []
-        const ys = []
-        positions.forEach((point) => {
-          xs.push(point.x)
-          ys.push(point.y)
+      useEffect(() => {
+        if (typeof props.onState !== 'function') return
+        props.onState({
+          tool: tool,
+          showSuggested: showSuggested,
+          hiddenTypes: hiddenTypes,
+          hiddenRelations: hiddenRelations,
+          hiddenDomains: hiddenDomains,
+          hiddenCollections: hiddenCollections,
+          collapsed: collapsed,
+          search: search
         })
-        const minX = Math.min.apply(null, xs) - 110
-        const maxX = Math.max.apply(null, xs) + 110
-        const minY = Math.min.apply(null, ys) - 110
-        const maxY = Math.max.apply(null, ys) + 100
-        const width = Math.max(maxX - minX, 1)
-        const height = Math.max(maxY - minY, 1)
-        const scale = clamp(Math.min(size.width / width, size.height / height), 0.16, 1.4)
-        viewRef.current = {
-          scale,
-          x: (size.width - width * scale) / 2 - minX * scale,
-          y: (size.height - height * scale) / 2 - minY * scale
-        }
-        bump()
-      }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [
+        tool,
+        showSuggested,
+        hiddenTypes.join(','),
+        hiddenRelations.join(','),
+        hiddenDomains.join(','),
+        hiddenCollections.join(','),
+        collapsed.join(','),
+        search
+      ])
 
-      function relayout() {
-        positionsRef.current = layoutNodes(nodes, edges, null, 300, clusters)
-        bump()
-        setTimeout(() => fitToWindow(), 10)
-      }
+      const model = useMemo(() => {
+        const entryById = new Map(props.entries.map((entry) => [entry.id, entry]))
+        const clusters = props.collections
+          .filter((collection) => collection.status !== 'suggested')
+          .filter((collection) => !hiddenCollections.includes(collection.id))
+          .map((collection) => ({
+            id: collection.id,
+            name: collection.name,
+            color: collection.color,
+            memberIds: collection.memberIds.filter((id) => entryById.has(id))
+          }))
+          .filter((collection) => collection.memberIds.length > 0)
+        const clusterOf = new Map()
+        clusters.forEach((cluster) => {
+          cluster.memberIds.forEach((id) => {
+            if (!clusterOf.has(id)) clusterOf.set(id, cluster.id)
+          })
+        })
+        const collapsedSet = new Set(collapsed)
+        const nodes = []
+        const visibleIds = new Set()
+        props.entries
+          .filter((entry) => !hiddenTypes.includes(entry.type))
+          .filter((entry) => !entry.domains.length || entry.domains.some((domain) => !hiddenDomains.includes(domain)))
+          .forEach((entry) => {
+            const clusterId = clusterOf.get(entry.id)
+            if (clusterId && collapsedSet.has(clusterId)) return
+            visibleIds.add(entry.id)
+            nodes.push({ id: entry.id, entry: entry, clusterId: clusterId || '' })
+          })
+        clusters.forEach((cluster) => {
+          if (!collapsedSet.has(cluster.id)) return
+          const members = cluster.memberIds.filter((id) => entryById.has(id))
+          if (!members.length) return
+          visibleIds.add(cluster.id)
+          nodes.push({
+            id: cluster.id,
+            clusterCollapsed: true,
+            cluster: cluster,
+            count: members.length,
+            memberIds: members
+          })
+        })
+        const edges = []
+        props.relations
+          .filter((relation) => showSuggested || relation.status !== 'suggested')
+          .filter((relation) => !hiddenRelations.includes(relation.relationType))
+          .forEach((relation) => {
+            let source = relation.sourceMemoryId
+            let target = relation.targetMemoryId
+            const sourceCluster = clusterOf.get(source)
+            const targetCluster = clusterOf.get(target)
+            if (sourceCluster && collapsedSet.has(sourceCluster)) source = sourceCluster
+            if (targetCluster && collapsedSet.has(targetCluster)) target = targetCluster
+            if (source === target) return
+            if (!visibleIds.has(source) || !visibleIds.has(target)) return
+            edges.push({
+              id: relation.id,
+              relation: relation,
+              source: source,
+              target: target,
+              kind: relation.status === 'suggested' ? 'suggested' : 'confirmed'
+            })
+          })
+        const degree = new Map()
+        nodes.forEach((node) => degree.set(node.id, 0))
+        edges.forEach((edge) => {
+          degree.set(edge.source, (degree.get(edge.source) || 0) + 1)
+          degree.set(edge.target, (degree.get(edge.target) || 0) + 1)
+        })
+        nodes.forEach((node) => {
+          node.degree = degree.get(node.id) || 0
+          node.radius = node.clusterCollapsed
+            ? 24 + Math.min(node.count, 12) * 1.4
+            : 11 + Math.min(node.degree, 9) * 1.5 + (node.entry.status === 'active' ? 0 : 0)
+        })
+        return { nodes: nodes, edges: edges, clusters: clusters, clusterOf: clusterOf }
+      }, [
+        props.entries,
+        props.relations,
+        props.collections,
+        showSuggested,
+        hiddenTypes.join(','),
+        hiddenRelations.join(','),
+        hiddenDomains.join(','),
+        hiddenCollections.join(','),
+        collapsed.join(',')
+      ])
 
-      function zoomBy(factor) {
-        const size = viewportSize()
-        const view = viewRef.current
-        const next = clamp(view.scale * factor, 0.14, 3)
-        const ratio = next / view.scale
-        viewRef.current = {
-          scale: next,
-          x: size.width / 2 - (size.width / 2 - view.x) * ratio,
-          y: size.height / 2 - (size.height / 2 - view.y) * ratio
-        }
-        bump()
-      }
+      const clusterAnchors = useMemo(
+        () =>
+          model.clusters.map((cluster) => ({
+            id: cluster.id,
+            memberIds: cluster.memberIds.filter((id) => model.nodes.some((node) => node.id === id))
+          })),
+        [model]
+      )
 
-      function toGraph(clientX, clientY) {
-        const rect = svgRef.current.getBoundingClientRect()
-        const view = viewRef.current
-        return {
-          x: (clientX - rect.left - view.x) / view.scale,
-          y: (clientY - rect.top - view.y) / view.scale
-        }
-      }
-
-      function capturePointer(pointerId) {
-        try {
-          if (svgRef.current) svgRef.current.setPointerCapture(pointerId)
-        } catch {
-          /* pointer capture unsupported */
-        }
-      }
-
-      function releasePointer(pointerId) {
-        try {
-          if (svgRef.current) svgRef.current.releasePointerCapture(pointerId)
-        } catch {
-          /* already released */
-        }
-      }
+      const nodeKey = model.nodes
+        .map((node) => node.id)
+        .sort()
+        .join('|')
 
       useEffect(() => {
-        const svg = svgRef.current
-        if (!svg) return undefined
-        const onWheel = (event) => {
-          event.preventDefault()
-          const rect = svg.getBoundingClientRect()
-          const view = viewRef.current
-          const factor = Math.exp(-event.deltaY * 0.0016)
-          const next = clamp(view.scale * factor, 0.14, 3)
-          const ratio = next / view.scale
-          const px = event.clientX - rect.left
-          const py = event.clientY - rect.top
-          viewRef.current = {
-            scale: next,
-            x: px - (px - view.x) * ratio,
-            y: py - (py - view.y) * ratio
-          }
-          bump()
-        }
-        svg.addEventListener('wheel', onWheel, { passive: false })
-        return () => svg.removeEventListener('wheel', onWheel)
+        positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, positionsRef.current, 300)
+        fitToWindow()
+        setTick((value) => value + 1)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [nodes.length])
+      }, [nodeKey])
 
-      function nodeAt(point) {
-        const positions = positionsRef.current
-        for (const node of nodes) {
-          const position = positions.get(node.id)
-          if (!position) continue
-          const radius = nodeRadius(node.degree) + 7
-          if (Math.hypot(point.x - position.x, point.y - position.y) <= radius) return node
+      useEffect(() => {
+        if (!positionsRef.current.size) return
+        positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, positionsRef.current, 80)
+        setTick((value) => value + 1)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [model.edges.length])
+
+      const positionOf = (id) => positionsRef.current.get(id) || { x: 0, y: 0 }
+
+      const fitToWindow = () => {
+        const nodes = model.nodes
+        if (!nodes.length) {
+          viewRef.current = { x: size.width / 2, y: size.height / 2, k: 1 }
+          setView(viewRef.current)
+          return
         }
-        return null
+        let minX = Infinity
+        let maxX = -Infinity
+        let minY = Infinity
+        let maxY = -Infinity
+        nodes.forEach((node) => {
+          const point = positionOf(node.id)
+          minX = Math.min(minX, point.x - node.radius - 70)
+          maxX = Math.max(maxX, point.x + node.radius + 70)
+          minY = Math.min(minY, point.y - node.radius - 54)
+          maxY = Math.max(maxY, point.y + node.radius + 54)
+        })
+        const width = Math.max(120, maxX - minX)
+        const height = Math.max(120, maxY - minY)
+        const scale = clamp(Math.min((size.width - 60) / width, (size.height - 60) / height), 0.2, 1.6)
+        const next = {
+          x: size.width / 2 - ((minX + maxX) / 2) * scale,
+          y: size.height / 2 - ((minY + maxY) / 2) * scale,
+          k: scale
+        }
+        viewRef.current = next
+        setView(next)
       }
 
-      function startPan(event) {
+      const toGraph = (screenX, screenY) => {
+        const current = viewRef.current
+        return { x: (screenX - current.x) / current.k, y: (screenY - current.y) / current.k }
+      }
+
+      const localPoint = (event) => {
+        const svg = svgRef.current
+        if (svg && svg.getBoundingClientRect) {
+          const rect = svg.getBoundingClientRect()
+          return { x: event.clientX - rect.left, y: event.clientY - rect.top }
+        }
+        return { x: event.clientX, y: event.clientY }
+      }
+
+      const zoomBy = (factor) => {
+        const current = viewRef.current
+        const nextScale = clamp(current.k * factor, 0.15, 3)
+        const ratio = nextScale / current.k
+        const next = {
+          k: nextScale,
+          x: size.width / 2 - (size.width / 2 - current.x) * ratio,
+          y: size.height / 2 - (size.height / 2 - current.y) * ratio
+        }
+        viewRef.current = next
+        setView(next)
+      }
+
+      const relayout = () => {
+        positionsRef.current = new Map()
+        positionsRef.current = layoutGraph(model.nodes, model.edges, clusterAnchors, null, 320)
+        fitToWindow()
+        setTick((value) => value + 1)
+      }
+
+      const startPan = (event) => {
+        if (event.button !== 0) return
         dragRef.current = {
           kind: 'pan',
           pointerId: event.pointerId,
@@ -1950,424 +6553,266 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           originY: viewRef.current.y,
           moved: false
         }
-        capturePointer(event.pointerId)
+        if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
       }
 
-      function startNodeDrag(event, node) {
+      const startNodeDrag = (event, node) => {
+        if (event.button !== 0) return
         event.stopPropagation()
-        const point = toGraph(event.clientX, event.clientY)
-        const current = positionsRef.current.get(node.id) || { x: 0, y: 0 }
+        const point = localPoint(event)
+        if (tool === 'link') {
+          dragRef.current = {
+            kind: 'link',
+            pointerId: event.pointerId,
+            fromId: node.clusterCollapsed ? '' : node.id,
+            fromCluster: node.clusterCollapsed ? node.id : '',
+            start: point,
+            moved: false
+          }
+          setLinkDraft({ from: point, to: point, cluster: Boolean(node.clusterCollapsed) })
+          if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
+          return
+        }
+        const graphPoint = toGraph(point.x, point.y)
+        const current = positionOf(node.id)
         dragRef.current = {
           kind: 'node',
+          pointerId: event.pointerId,
           id: node.id,
-          pointerId: event.pointerId,
-          startX: event.clientX,
-          startY: event.clientY,
-          offsetX: current.x - point.x,
-          offsetY: current.y - point.y,
-          moved: false
-        }
-        capturePointer(event.pointerId)
-      }
-
-      function startLink(event, node) {
-        event.stopPropagation()
-        const point = toGraph(event.clientX, event.clientY)
-        dragRef.current = {
-          kind: 'link',
-          fromId: node.id,
-          pointerId: event.pointerId,
+          node: node,
+          dx: graphPoint.x - current.x,
+          dy: graphPoint.y - current.y,
           startX: event.clientX,
           startY: event.clientY,
           moved: false
         }
-        setLinkDraft({ fromId: node.id, x: point.x, y: point.y })
-        capturePointer(event.pointerId)
+        if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
       }
 
-      function startBox(event) {
-        const point = toGraph(event.clientX, event.clientY)
+      const startBox = (event) => {
+        if (event.button !== 0) return
+        if (tool !== 'box') return
+        const point = localPoint(event)
         dragRef.current = {
           kind: 'box',
           pointerId: event.pointerId,
-          startX: event.clientX,
-          startY: event.clientY,
-          originX: point.x,
-          originY: point.y,
+          start: point,
           moved: false
         }
-        setBoxDraft({ x0: point.x, y0: point.y, x1: point.x, y1: point.y })
-        capturePointer(event.pointerId)
-      }
-
-      const startPointer = (event) => {
-        if (event.button !== 0) return
-        const point = toGraph(event.clientX, event.clientY)
-        const node = tool === 'region' ? null : nodeAt(point)
-        if (node && (tool === 'link' || event.shiftKey)) {
-          startLink(event, node)
-          return
-        }
-        if (tool === 'region' || (tool === 'select' && event.altKey)) {
-          startBox(event)
-          return
-        }
-        if (node) {
-          startNodeDrag(event, node)
-          return
-        }
-        startPan(event)
+        setBoxDraft({ from: point, to: point })
+        if (event.currentTarget && event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId)
       }
 
       const onPointerMove = (event) => {
         const drag = dragRef.current
-        const point = toGraph(event.clientX, event.clientY)
-        if (!drag) {
-          const node = nodeAt(point)
-          const next = node ? node.id : null
-          if (next !== hoverId) setHoverId(next)
-          return
-        }
-        if (drag.pointerId !== event.pointerId) return
-        const dx = event.clientX - drag.startX
-        const dy = event.clientY - drag.startY
-        if (!drag.moved && Math.hypot(dx, dy) > 4) drag.moved = true
+        if (!drag) return
         if (drag.kind === 'pan') {
-          viewRef.current = {
-            scale: viewRef.current.scale,
-            x: drag.originX + dx,
-            y: drag.originY + dy
-          }
-          bump()
+          const dx = event.clientX - drag.startX
+          const dy = event.clientY - drag.startY
+          if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true
+          const next = { x: drag.originX + dx, y: drag.originY + dy, k: viewRef.current.k }
+          viewRef.current = next
+          setView(next)
           return
         }
         if (drag.kind === 'node') {
-          positionsRef.current.set(drag.id, { x: point.x + drag.offsetX, y: point.y + drag.offsetY })
-          bump()
+          const point = localPoint(event)
+          const graphPoint = toGraph(point.x, point.y)
+          if (Math.abs(event.clientX - drag.startX) + Math.abs(event.clientY - drag.startY) > 3) drag.moved = true
+          positionsRef.current.set(drag.id, { x: graphPoint.x - drag.dx, y: graphPoint.y - drag.dy })
+          setTick((value) => value + 1)
           return
         }
         if (drag.kind === 'link') {
-          setLinkDraft({ fromId: drag.fromId, x: point.x, y: point.y })
-          const node = nodeAt(point)
-          const next = node ? node.id : null
-          if (next !== hoverId) setHoverId(next)
+          const point = localPoint(event)
+          if (Math.abs(point.x - drag.start.x) + Math.abs(point.y - drag.start.y) > 3) drag.moved = true
+          setLinkDraft({ from: drag.start, to: point, cluster: Boolean(drag.fromCluster) })
           return
         }
         if (drag.kind === 'box') {
-          setBoxDraft({ x0: drag.originX, y0: drag.originY, x1: point.x, y1: point.y })
+          const point = localPoint(event)
+          if (Math.abs(point.x - drag.start.x) + Math.abs(point.y - drag.start.y) > 3) drag.moved = true
+          setBoxDraft({ from: drag.start, to: point })
         }
       }
 
       const endDrag = (event) => {
         const drag = dragRef.current
-        if (!drag || drag.pointerId !== event.pointerId) return
         dragRef.current = null
-        releasePointer(event.pointerId)
-        const point = toGraph(event.clientX, event.clientY)
+        if (!drag) return
         if (drag.kind === 'node') {
-          if (!drag.moved) props.onSelect(drag.id)
+          if (!drag.moved) props.onSelect(drag.id, Boolean(event && event.shiftKey))
           return
         }
         if (drag.kind === 'link') {
+          const point = localPoint(event)
           setLinkDraft(null)
-          setHoverId(null)
-          if (!drag.moved) return
-          const target = nodeAt(point)
-          if (!target) {
+          if (drag.fromCluster) {
+            setFlash(t('graph.clusterHint'))
+            return
+          }
+          const graphPoint = toGraph(point.x, point.y)
+          let hit = null
+          model.nodes.forEach((node) => {
+            if (node.clusterCollapsed) return
+            const center = positionOf(node.id)
+            const distance = Math.sqrt(
+              Math.pow(center.x - graphPoint.x, 2) + Math.pow(center.y - graphPoint.y, 2)
+            )
+            if (distance <= node.radius + 14) hit = node
+          })
+          if (!hit) {
             setFlash(t('graph.linkNeedTarget'))
             return
           }
-          if (target.id === drag.fromId) {
+          if (hit.id === drag.fromId) {
             setFlash(t('graph.linkSelf'))
             return
           }
+          props.onCreateRelation(drag.fromId, hit.id)
+          setTool('select')
           setFlash(t('graph.linkDone'))
-          if (typeof props.onCreateLink === 'function') props.onCreateLink(drag.fromId, target.id)
           return
         }
         if (drag.kind === 'box') {
+          const box = boxDraft
           setBoxDraft(null)
-          const area = normalized({ x0: drag.originX, y0: drag.originY, x1: point.x, y1: point.y })
-          const members = []
-          for (const node of nodes) {
-            const position = positionsRef.current.get(node.id)
-            if (!position) continue
-            if (position.x < area.x0 || position.x > area.x1) continue
-            if (position.y < area.y0 || position.y > area.y1) continue
-            members.push(node.id)
-          }
-          if (!members.length) {
-            setFlash(t('graph.boxEmpty'))
-            return
-          }
-          setFlash(t('graph.boxDone'))
-          if (typeof props.onSaveRegion === 'function') {
-            props.onSaveRegion({
-              name: t('graph.regionName') + ' ' + (regions.length + 1),
-              color: REGION_COLORS[regions.length % REGION_COLORS.length],
-              memberIds: members
-            })
-          }
+          if (!box) return
+          const left = Math.min(box.from.x, box.to.x)
+          const right = Math.max(box.from.x, box.to.x)
+          const top = Math.min(box.from.y, box.to.y)
+          const bottom = Math.max(box.from.y, box.to.y)
+          const picked = []
+          model.nodes.forEach((node) => {
+            const point = positionOf(node.id)
+            const screenX = point.x * viewRef.current.k + viewRef.current.x
+            const screenY = point.y * viewRef.current.k + viewRef.current.y
+            if (screenX >= left && screenX <= right && screenY >= top && screenY <= bottom) picked.push(node.id)
+          })
+          if (!picked.length) setFlash(t('graph.boxEmpty'))
+          else props.onMultiSelect(picked)
           setTool('select')
         }
       }
 
-      function cycleColor(region) {
-        const index = REGION_COLORS.indexOf(region.color)
-        const color = REGION_COLORS[(index + 1) % REGION_COLORS.length]
-        if (typeof props.onUpdateRegion === 'function') props.onUpdateRegion({ regionId: region.id, color })
-      }
-
-      function commitRename(region) {
-        const name = nameDraft.trim()
-        setEditingRegionId(null)
-        if (!name || name === region.name) return
-        if (typeof props.onUpdateRegion === 'function') props.onUpdateRegion({ regionId: region.id, name })
-      }
-
-      function armOrDelete(region) {
-        if (armedRegionId !== region.id) {
-          setArmedRegionId(region.id)
-          return
+      const onWheel = (event) => {
+        if (typeof event.preventDefault === 'function') event.preventDefault()
+        const point = localPoint(event)
+        const current = viewRef.current
+        const factor = event.deltaY > 0 ? 0.9 : 1.1
+        const nextScale = clamp(current.k * factor, 0.15, 3)
+        const ratio = nextScale / current.k
+        const next = {
+          k: nextScale,
+          x: point.x - (point.x - current.x) * ratio,
+          y: point.y - (point.y - current.y) * ratio
         }
-        setArmedRegionId(null)
-        if (typeof props.onDeleteRegion === 'function') props.onDeleteRegion(region.id)
+        viewRef.current = next
+        setView(next)
       }
 
-      const selectedId = props.selectedId
-      const neighbors = useMemo(() => {
-        const set = new Set()
-        if (!selectedId) return set
-        for (const edge of edges) {
-          if (edge.a === selectedId) set.add(edge.b)
-          if (edge.b === selectedId) set.add(edge.a)
+      const searchMatches = search.trim()
+        ? model.nodes.filter((node) => node.entry && matchesQuery(node.entry, search))
+        : []
+
+      const typeOptions = meta.entryTypes.map((item) => ({
+        id: item.id,
+        label: item.label,
+        count: props.entries.filter((entry) => entry.type === item.id).length,
+        color: typeColor(item.id)
+      }))
+
+      const relationOptions = meta.relationTypes.map((item) => ({
+        id: item.id,
+        label: item.label,
+        count: props.relations.filter((relation) => relation.relationType === item.id).length,
+        color: relationColor(item.id),
+        dash: RELATION_DASH[item.id]
+      }))
+
+      const domainOptions = meta.domains.map((item) => ({
+        id: item.id,
+        label: item.label,
+        count: props.entries.filter((entry) => entry.domains.includes(item.id)).length
+      }))
+
+      const nodeById = new Map(model.nodes.map((node) => [node.id, node]))
+
+      const edgePath = (edge) => {
+        const from = positionOf(edge.source)
+        const to = positionOf(edge.target)
+        const fromNode = nodeById.get(edge.source)
+        const toNode = nodeById.get(edge.target)
+        const fromRadius = fromNode ? fromNode.radius : 12
+        const toRadius = toNode ? toNode.radius : 12
+        const dx = to.x - from.x
+        const dy = to.y - from.y
+        const distance = Math.sqrt(dx * dx + dy * dy) || 1
+        const ux = dx / distance
+        const uy = dy / distance
+        const startX = from.x + ux * fromRadius
+        const startY = from.y + uy * fromRadius
+        const endX = to.x - ux * (toRadius + 7)
+        const endY = to.y - uy * (toRadius + 7)
+        const bend = Math.min(46, distance * 0.17) * (edge.id.charCodeAt(edge.id.length - 1) % 2 ? 1 : -1)
+        const midX = (startX + endX) / 2 - uy * bend
+        const midY = (startY + endY) / 2 + ux * bend
+        return {
+          d: 'M' + startX + ',' + startY + ' Q' + midX + ',' + midY + ' ' + endX + ',' + endY,
+          midX: midX,
+          midY: midY,
+          angle: (Math.atan2(endY - midY, endX - midX) * 180) / Math.PI
         }
-        return set
-      }, [edges, selectedId])
-
-      const isolated = isolate && selectedId ? neighbors : null
-      const focusRegion = regions.some((region) => region.id === focusRegionId) ? focusRegionId : null
-
-      if (!nodes.length) {
-        return h(
-          'section',
-          { className: 'dm-graphArea' },
-          h(
-            'div',
-            { className: 'dm-blank' },
-            h(Icon, { name: 'graph', size: 24 }),
-            h('h2', { className: 'dm-blankTitle' }, t('graph.empty')),
-            h('p', { className: 'dm-blankHint' }, t('graph.emptyHint'))
-          )
-        )
       }
 
-      const view = viewRef.current
-      const positions = positionsRef.current
-      const nodeList = nodes.filter((node) => !isolated || node.id === selectedId || isolated.has(node.id))
-
-      const regionShapes = regions.map((region) => {
-        const points = region.memberIds.map((id) => positions.get(id)).filter(Boolean)
-        if (!points.length) return null
-        const focused = focusRegion === region.id
-        const dimmed = focusRegion !== null && !focused
-        const center = centroidOf(points)
-        const top = points.reduce((best, point) => (point.y < best.y ? point : best), points[0])
-        const color = 'var(--dm-region-' + region.color + ')'
-        return h(
-          'g',
-          { key: region.id, className: 'dm-regionLayer' },
-          h('path', {
-            className:
-              'dm-regionBlob' + (dimmed ? ' dm-regionBlobDim' : '') + (focused ? ' dm-regionBlobFocus' : ''),
-            d: regionBlobPath(points, 34),
-            style: { fill: color, stroke: color }
-          }),
-          h(
-            'text',
-            {
-              className: 'dm-regionLabel' + (focused ? ' dm-regionLabelOn' : ''),
-              x: center.x,
-              y: top.y - 44,
-              style: { fill: color }
-            },
-            truncate(region.name, 16) + ' · ' + region.memberIds.length
+      const clusterShapes = model.clusters
+        .filter((cluster) => !collapsed.includes(cluster.id))
+        .map((cluster) => {
+          const members = model.nodes.filter((node) => node.clusterId === cluster.id)
+          if (members.length < 2) return null
+          const points = members.map((node) => positionOf(node.id))
+          const center = points.reduce(
+            (acc, point) => ({ x: acc.x + point.x / points.length, y: acc.y + point.y / points.length }),
+            { x: 0, y: 0 }
           )
-        )
-      })
-
-      const edgeElements = edges
-        .filter((edge) => !isolated || edge.a === selectedId || edge.b === selectedId)
-        .map((edge) => {
-          const from = positions.get(edge.a)
-          const to = positions.get(edge.b)
-          if (!from || !to) return null
-          const fromNode = nodeById.get(edge.a)
-          const toNode = nodeById.get(edge.b)
-          const radiusA = nodeRadius(fromNode ? fromNode.degree : 0)
-          const radiusB = nodeRadius(toNode ? toNode.degree : 0)
-          const dx = to.x - from.x
-          const dy = to.y - from.y
-          const distance = Math.hypot(dx, dy) || 1
-          const ux = dx / distance
-          const uy = dy / distance
-          const startX = from.x + ux * radiusA
-          const startY = from.y + uy * radiusA
-          const endX = to.x - ux * radiusB
-          const endY = to.y - uy * radiusB
-          const bend = (hashNumber(edge.key) % 2 === 0 ? 1 : -1) * Math.min(44, distance * 0.16)
-          const controlX = (startX + endX) / 2 - uy * bend
-          const controlY = (startY + endY) / 2 + ux * bend
-          const path =
-            'M' + roundCoord(startX) + ',' + roundCoord(startY) +
-            'Q' + roundCoord(controlX) + ',' + roundCoord(controlY) +
-            ' ' + roundCoord(endX) + ',' + roundCoord(endY)
-          const dimmedByRegion =
-            focusRegion !== null && !regionByEntryOf(regionByEntry, edge.a, focusRegion) && !regionByEntryOf(regionByEntry, edge.b, focusRegion)
-          const touchesSelection = Boolean(selectedId) && (edge.a === selectedId || edge.b === selectedId)
-          const dimmed = (selectedId && !touchesSelection) || dimmedByRegion
-          const classes = ['dm-gedge']
-          if (edge.auto) classes.push('dm-gedgeAuto')
-          if (touchesSelection) classes.push('dm-gedgeSel')
-          if (dimmed) classes.push('dm-gedgeDim')
-          const midX = (startX + endX + controlX * 2) / 4
-          const midY = (startY + endY + controlY * 2) / 4
-          const arrow = (x, y, ax, ay, key) => {
-            const size = 7
-            const spread = size * 0.62
-            return h('polygon', {
-              key,
-              className: 'dm-gedgeArrow' + (touchesSelection ? ' dm-gedgeArrowSel' : ''),
-              points:
-                `${x},${y} ` +
-                `${x - ax * size + ay * spread},${y - ay * size - ax * spread} ` +
-                `${x - ax * size - ay * spread},${y - ay * size + ax * spread}`
-            })
-          }
-          const endTangentX = endX - controlX
-          const endTangentY = endY - controlY
-          const endLength = Math.hypot(endTangentX, endTangentY) || 1
-          const startTangentX = startX - controlX
-          const startTangentY = startY - controlY
-          const startLength = Math.hypot(startTangentX, startTangentY) || 1
+          let topY = Infinity
+          points.forEach((point) => {
+            topY = Math.min(topY, point.y)
+          })
           return h(
             'g',
-            { key: edge.key },
-            h('path', { className: classes.join(' '), d: path }),
+            { key: cluster.id, className: 'zw-hull' },
             h('path', {
-              className: 'dm-gedgeSignal' + (edge.auto ? ' dm-gedgeSignalAuto' : ''),
-              d: path
+              className: 'zw-hullOutline',
+              d: hullPath(points, 34),
+              style: {
+                fill: 'color-mix(in srgb, ' + collectionColor(cluster.color) + ' 9%, transparent)',
+                stroke: 'color-mix(in srgb, ' + collectionColor(cluster.color) + ' 42%, transparent)'
+              }
             }),
-            edge.manual && edge.dirAB
-              ? arrow(endX, endY, endTangentX / endLength, endTangentY / endLength, 'ab')
-              : null,
-            edge.manual && edge.dirBA
-              ? arrow(startX, startY, startTangentX / startLength, startTangentY / startLength, 'ba')
-              : null,
-            touchesSelection && edge.labels.length
-              ? h('text', { className: 'dm-gedgeLabel', x: midX, y: midY - 6 }, truncate(edge.labels[0], 18))
-              : null,
-            touchesSelection && edge.auto && edge.tags.length
-              ? h('text', { className: 'dm-gedgeLabel', x: midX, y: midY - 6 }, truncate('# ' + edge.tags.join(' #'), 20))
-              : null
-          )
-        })
-
-      const nodeElements = nodeList.map((node) => {
-        const point = positions.get(node.id)
-        if (!point) return null
-        const radius = nodeRadius(node.degree)
-        const color = 'var(--dm-cat-' + node.entry.category + ')'
-        const region = regionByEntry.get(node.id)
-        const selected = node.id === selectedId
-        const inFocus = focusRegion === null || (region && region.id === focusRegion)
-        const dimmed = (selectedId && !selected && !neighbors.has(node.id)) || !inFocus
-        const hovered = hoverId === node.id
-        const target = Boolean(linkDraft) && hovered && linkDraft.fromId !== node.id
-        const coreClasses = ['dm-gnodeDot']
-        if (selected) coreClasses.push('dm-gnodeDotSel')
-        if (node.entry.status === 'draft') coreClasses.push('dm-gnodeDraft')
-        if (node.entry.status === 'deprecated') coreClasses.push('dm-gnodeDeprecated')
-        return h(
-          'g',
-          {
-            key: node.id,
-            className: 'dm-gnode' + (dimmed ? ' dm-gnodeDim' : '') + (target ? ' dm-gnodeTarget' : ''),
-            transform: `translate(${point.x},${point.y})`,
-            'data-node-id': node.id,
-            onPointerDown: (event) => {
-              if (event.button !== 0) return
-              event.stopPropagation()
-              if (tool === 'link' || (tool === 'select' && event.shiftKey)) {
-                startLink(event, node)
-                return
-              }
-              if (tool === 'region') return
-              startNodeDrag(event, node)
-            },
-            role: 'button',
-            tabIndex: 0,
-            'aria-label': node.entry.title,
-            onKeyDown: (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                props.onSelect(node.id)
-              }
-            }
-          },
-          h('circle', { className: 'dm-gnodeHalo', r: Math.round(radius * 2.05), style: { fill: color } }),
-          h('circle', { className: 'dm-gnodeRing', r: radius + 5, stroke: color }),
-          h('circle', { className: coreClasses.join(' '), r: radius, style: { fill: color } }),
-          h('circle', { r: Math.max(3, Math.round(radius * 0.32)), style: { fill: 'var(--dm-node-ring)', opacity: 0.88 } }),
-          selected ? h('circle', { className: 'dm-gnodeSelRing', r: radius + 10 }) : null,
-          node.entry.pinned ? h('text', { className: 'dm-gnodeStar', x: radius * 0.6, y: -radius * 0.5, fontSize: 12 }, '★') : null,
-          h(
-            'text',
-            { className: 'dm-gnodeLabel' + (selected ? ' dm-gnodeLabelSel' : ''), y: radius + 15 },
-            truncate(node.entry.title, 11)
-          ),
-          h('title', null, node.entry.title)
-        )
-      })
-
-      const draftElements = []
-      if (linkDraft) {
-        const from = positions.get(linkDraft.fromId)
-        if (from) {
-          const node = nodeById.get(linkDraft.fromId)
-          const radius = nodeRadius(node ? node.degree : 0)
-          const dx = linkDraft.x - from.x
-          const dy = linkDraft.y - from.y
-          const length = Math.hypot(dx, dy) || 1
-          const startX = from.x + (dx / length) * radius
-          const startY = from.y + (dy / length) * radius
-          draftElements.push(
             h(
-              'g',
-              { key: 'draft-link' },
-              h('path', {
-                className: 'dm-gedgeDraft',
-                d:
-                  'M' + roundCoord(startX) + ',' + roundCoord(startY) +
-                  'L' + roundCoord(linkDraft.x) + ',' + roundCoord(linkDraft.y)
-              }),
-              h('circle', { className: 'dm-linkDot', cx: linkDraft.x, cy: linkDraft.y, r: 4 })
+              'text',
+              {
+                className: 'zw-hullLabel',
+                x: center.x,
+                y: topY - 44,
+                style: { fill: collectionColor(cluster.color) },
+                onClick: () => toggleCollapse(cluster.id)
+              },
+              cluster.name,
+              h(
+                'tspan',
+                { className: 'zw-hullCount', x: center.x, dy: 14 },
+                members.length + ' ' + t('collections.memberCount') + ' · ' + t('graph.collapse')
+              )
             )
           )
-        }
-      }
-      if (boxDraft) {
-        const area = normalized(boxDraft)
-        draftElements.push(
-          h('rect', {
-            key: 'draft-box',
-            className: 'dm-boxRect',
-            x: area.x0,
-            y: area.y0,
-            width: Math.max(area.x1 - area.x0, 1),
-            height: Math.max(area.y1 - area.y0, 1),
-            rx: 10
-          })
+        })
+        .filter(Boolean)
+
+      const toggleCollapse = (clusterId) => {
+        setCollapsed((prev) =>
+          prev.includes(clusterId) ? prev.filter((item) => item !== clusterId) : prev.concat([clusterId])
         )
       }
 
@@ -2376,918 +6821,1796 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
           'button',
           {
             type: 'button',
-            className: 'dm-graphToggle' + (tool === id ? ' dm-graphToggleOn' : ''),
+            className: 'zw-toolBtn' + (tool === id ? ' zw-toolBtnOn' : ''),
             title: label,
-            'aria-pressed': tool === id,
-            onClick: () => setTool(tool === id ? 'select' : id)
+            onClick: () => {
+              setTool(id)
+              setLinkDraft(null)
+              setBoxDraft(null)
+            }
           },
-          h(Icon, { name: icon, size: 13 }),
-          label
+          h(Icon, { name: icon, size: 14 }),
+          h('span', { className: 'zw-toolLabel' }, label)
         )
 
+      const highlightIds = new Set(selection)
+      searchMatches.forEach((node) => highlightIds.add(node.id))
+
       return h(
-        'section',
-        { className: 'dm-graphArea', ref: wrapRef },
+        'div',
+        { className: 'zw-graphWrap', ref: wrapRef },
         h(
-          'div',
-          { className: 'dm-graphWrap' },
-          h(
-            'svg',
-            {
-              className:
-                'dm-graphSvg' +
-                (tool === 'link' ? ' dm-toolLink' : tool === 'region' ? ' dm-toolRegion' : ''),
-              ref: svgRef,
-              onPointerDown: startPointer,
-              onPointerMove,
-              onPointerUp: endDrag,
-              onPointerCancel: endDrag,
-              onPointerLeave: () => {
-                if (!dragRef.current && hoverId) setHoverId(null)
-              },
-              role: 'application',
-              'aria-label': t('graph.title')
+          'svg',
+          {
+            className: 'zw-graphSvg',
+            ref: svgRef,
+            'data-tool': tool,
+            onPointerDown: (event) => {
+              if (tool === 'box') {
+                startBox(event)
+                return
+              }
+              if (event.target === svgRef.current) startPan(event)
             },
-            h(
-              'defs',
-              null,
+            onPointerMove: onPointerMove,
+            onPointerUp: endDrag,
+            onPointerCancel: endDrag,
+            onWheel: onWheel
+          },
+          h(
+            'defs',
+            null,
+            meta.relationTypes.map((item) =>
               h(
-                'pattern',
-                { id: 'dmGraphDots', width: 28, height: 28, patternUnits: 'userSpaceOnUse' },
-                h('circle', { className: 'dm-graphDot', cx: 1.4, cy: 1.4, r: 1.15 })
-              ),
-              h(
-                'radialGradient',
-                { id: 'dmGraphGlow', cx: '50%', cy: '46%', r: '64%' },
-                h('stop', { offset: '0%', className: 'dm-graphGlowStop' }),
-                h('stop', { offset: '100%', className: 'dm-graphGlowStop', stopOpacity: 0 })
+                'marker',
+                {
+                  key: item.id,
+                  id: 'zwArrow-' + item.id,
+                  viewBox: '0 0 10 10',
+                  refX: 9,
+                  refY: 5,
+                  markerWidth: 6,
+                  markerHeight: 6,
+                  orient: 'auto-start-reverse'
+                },
+                h('path', { d: 'M0,0 L10,5 L0,10 z', fill: relationColor(item.id) })
               )
             ),
             h(
-              'g',
-              { transform: `translate(${view.x},${view.y}) scale(${view.scale})` },
-              h('rect', {
-                x: -6000,
-                y: -6000,
-                width: 12000,
-                height: 12000,
-                fill: 'url(#dmGraphDots)'
-              }),
-              h('ellipse', { cx: 0, cy: 0, rx: 780, ry: 620, fill: 'url(#dmGraphGlow)' }),
-              regionShapes,
-              edgeElements,
-              nodeElements,
-              draftElements
+              'filter',
+              { id: 'zwGlow', x: '-40%', y: '-40%', width: '180%', height: '180%' },
+              h('feGaussianBlur', { stdDeviation: 3.4, result: 'blur' }),
+              h('feMerge', null, h('feMergeNode', { in: 'blur' }), h('feMergeNode', { in: 'SourceGraphic' }))
             )
-          )
+          ),
+          h(
+            'g',
+            { transform: 'translate(' + view.x + ',' + view.y + ') scale(' + view.k + ')' },
+            h('g', { className: 'zw-hullLayer' }, clusterShapes),
+            h(
+              'g',
+              { className: 'zw-edgeLayer' },
+              model.edges.map((edge) => {
+                const path = edgePath(edge)
+                const color = relationColor(edge.relation.relationType)
+                const dim =
+                  selection.length &&
+                  !highlightIds.has(edge.source) &&
+                  !highlightIds.has(edge.target)
+                const active =
+                  selection.includes(edge.source) || selection.includes(edge.target) || hoverEdge === edge.id
+                return h(
+                  'g',
+                  {
+                    key: edge.id,
+                    className:
+                      'zw-gedge' +
+                      (active ? ' zw-gedgeOn' : '') +
+                      (dim ? ' zw-gedgeDim' : '') +
+                      (edge.kind === 'suggested' ? ' zw-gedgeSuggested' : ''),
+                    onPointerEnter: () => setHoverEdge(edge.id),
+                    onPointerLeave: () => setHoverEdge('')
+                  },
+                  h('path', {
+                    className: 'zw-gedgePath',
+                    d: path.d,
+                    style: {
+                      stroke: color,
+                      strokeDasharray: RELATION_DASH[edge.relation.relationType] || '',
+                      markerEnd: 'url(#zwArrow-' + edge.relation.relationType + ')'
+                    }
+                  }),
+                  edge.kind === 'confirmed'
+                    ? h('path', {
+                        className: 'zw-gedgeFlow',
+                        d: path.d,
+                        style: { stroke: color }
+                      })
+                    : null,
+                  active
+                    ? h(
+                        'text',
+                        {
+                          className: 'zw-gedgeLabel zw-gedgeLabelOn',
+                          x: path.midX,
+                          y: path.midY - 8
+                        },
+                        labelOf(t, meta.relationTypes, edge.relation.relationType, 'relation')
+                      )
+                    : null
+                )
+              })
+            ),
+            h(
+              'g',
+              { className: 'zw-nodeLayer' },
+              model.nodes.map((node) => {
+                const point = positionOf(node.id)
+                const selected = selection.includes(node.id)
+                const dim = selection.length && !highlightIds.has(node.id)
+                if (node.clusterCollapsed) {
+                  return h(
+                    'g',
+                    {
+                      key: node.id,
+                      className: 'zw-gnode' + (selected ? ' zw-gnodeOn' : '') + (dim ? ' zw-gnodeDim' : ''),
+                      transform: 'translate(' + point.x + ',' + point.y + ')',
+                      onPointerDown: (event) => startNodeDrag(event, node),
+                      style: { cursor: 'pointer' }
+                    },
+                    h('circle', {
+                      className: 'zw-gnodeCore',
+                      r: node.radius,
+                      style: {
+                        fill: 'color-mix(in srgb, ' + collectionColor(node.cluster.color) + ' 26%, transparent)',
+                        stroke: collectionColor(node.cluster.color)
+                      },
+                      onDoubleClick: () => toggleCollapse(node.id)
+                    }),
+                    h(
+                      'text',
+                      { className: 'zw-gnodeLabel', y: 4, textAnchor: 'middle' },
+                      node.count
+                    ),
+                    h(
+                      'text',
+                      { className: 'zw-gnodeBadge', y: node.radius + 16, textAnchor: 'middle' },
+                      node.cluster.name
+                    )
+                  )
+                }
+                const entry = node.entry
+                return h(
+                  'g',
+                  {
+                    key: node.id,
+                    className: 'zw-gnode' + (selected ? ' zw-gnodeOn' : '') + (dim ? ' zw-gnodeDim' : ''),
+                    transform: 'translate(' + point.x + ',' + point.y + ')',
+                    onPointerDown: (event) => startNodeDrag(event, node),
+                    style: { cursor: tool === 'link' ? 'crosshair' : 'pointer' }
+                  },
+                  h('circle', {
+                    className: 'zw-gnodeHalo' + (selected ? ' zw-gnodeHaloOn' : ''),
+                    r: node.radius + 9,
+                    style: { fill: typeColor(entry.type) }
+                  }),
+                  h('circle', {
+                    className: 'zw-gnodeCore',
+                    r: node.radius,
+                    style: {
+                      fill: typeColor(entry.type),
+                      stroke:
+                        entry.status === 'active'
+                          ? 'var(--zw-graph-node-ring)'
+                          : entry.status === 'draft' || entry.status === 'pending'
+                            ? 'var(--zw-warn)'
+                            : 'var(--zw-text-3)',
+                      strokeDasharray: entry.status === 'draft' || entry.status === 'pending' ? '3 3' : '',
+                      opacity: entry.status === 'deprecated' || entry.status === 'archived' ? 0.55 : 1
+                    }
+                  }),
+                  entry.favorite
+                    ? h('circle', {
+                        className: 'zw-gnodeBadge',
+                        cx: node.radius - 3,
+                        cy: -node.radius + 3,
+                        r: 3.4,
+                        style: { fill: 'var(--zw-warn)' }
+                      })
+                    : null,
+                  h(
+                    'text',
+                    {
+                      className: 'zw-gnodeLabel' + (selected ? ' zw-gnodeLabelOn' : ''),
+                      y: node.radius + 14,
+                      textAnchor: 'middle'
+                    },
+                    truncate(entry.title, 12)
+                  ),
+                  h('title', null, entry.title + ' · ' + labelOf(t, meta.entryTypes, entry.type, 'type'))
+                )
+              })
+            ),
+            linkDraft
+              ? h(
+                  'g',
+                  { className: 'zw-linkDraft' },
+                  h('line', {
+                    className: 'zw-gedgeDraft',
+                    x1: toGraph(linkDraft.from.x, linkDraft.from.y).x,
+                    y1: toGraph(linkDraft.from.x, linkDraft.from.y).y,
+                    x2: toGraph(linkDraft.to.x, linkDraft.to.y).x,
+                    y2: toGraph(linkDraft.to.x, linkDraft.to.y).y
+                  }),
+                  h('circle', {
+                    className: 'zw-linkDot',
+                    cx: toGraph(linkDraft.to.x, linkDraft.to.y).x,
+                    cy: toGraph(linkDraft.to.x, linkDraft.to.y).y,
+                    r: 5
+                  })
+                )
+              : null
+          ),
+          boxDraft
+            ? h('rect', {
+                className: 'zw-boxRect',
+                x: Math.min(boxDraft.from.x, boxDraft.to.x),
+                y: Math.min(boxDraft.from.y, boxDraft.to.y),
+                width: Math.abs(boxDraft.to.x - boxDraft.from.x),
+                height: Math.abs(boxDraft.to.y - boxDraft.from.y)
+              })
+            : null
         ),
         h(
           'div',
-          { className: 'dm-graphToolbar' },
+          { className: 'zw-graphToolbar' },
           h(
-            'span',
-            { className: 'dm-graphCount' },
-            nodes.length + ' ' + t('graph.nodes') + ' · ' + edges.length + ' ' + t('graph.links') + ' · ' + regions.length + ' ' + t('graph.regionsUnit')
+            'button',
+            { type: 'button', className: 'zw-toolBtn', title: t('graph.zoomIn'), onClick: () => zoomBy(1.2) },
+            h(Icon, { name: 'zoomIn', size: 14 })
           ),
           h(
             'button',
-            { type: 'button', className: 'dm-iconBtn', title: t('graph.zoomIn'), 'aria-label': t('graph.zoomIn'), onClick: () => zoomBy(1.25) },
-            h(Icon, { name: 'zoomIn', size: 15 })
+            { type: 'button', className: 'zw-toolBtn', title: t('graph.zoomOut'), onClick: () => zoomBy(1 / 1.2) },
+            h(Icon, { name: 'zoomOut', size: 14 })
           ),
           h(
             'button',
-            { type: 'button', className: 'dm-iconBtn', title: t('graph.zoomOut'), 'aria-label': t('graph.zoomOut'), onClick: () => zoomBy(0.8) },
-            h(Icon, { name: 'zoomOut', size: 15 })
+            { type: 'button', className: 'zw-toolBtn', title: t('graph.fit'), onClick: fitToWindow },
+            h(Icon, { name: 'frame', size: 14 })
           ),
           h(
             'button',
-            { type: 'button', className: 'dm-iconBtn', title: t('graph.fit'), 'aria-label': t('graph.fit'), onClick: fitToWindow },
-            h(Icon, { name: 'frame', size: 15 })
+            { type: 'button', className: 'zw-toolBtn', title: t('graph.relayout'), onClick: relayout },
+            h(Icon, { name: 'shuffle', size: 14 })
           ),
-          h(
-            'button',
-            { type: 'button', className: 'dm-iconBtn', title: t('graph.relayout'), 'aria-label': t('graph.relayout'), onClick: relayout },
-            h(Icon, { name: 'shuffle', size: 15 })
-          ),
+          h('span', { className: 'zw-toolSep' }),
           toolButton('select', 'select', t('graph.toolSelect')),
           toolButton('link', 'link', t('graph.toolLink')),
-          toolButton('region', 'box', t('graph.toolRegion')),
+          toolButton('box', 'box', t('graph.toolBox')),
+          h('span', { className: 'zw-toolSep' }),
           h(
             'button',
             {
               type: 'button',
-              className: 'dm-graphToggle' + (showAuto ? ' dm-graphToggleOn' : ''),
-              title: t('graph.autoHint'),
-              'aria-pressed': showAuto,
-              onClick: () => setShowAuto((value) => !value)
+              className: 'zw-toolBtn' + (panelOpen ? ' zw-toolBtnOn' : ''),
+              title: t('graph.filters'),
+              onClick: () => setPanelOpen(!panelOpen)
             },
-            h(Icon, { name: 'link', size: 13 }),
-            t('graph.auto')
+            h(Icon, { name: 'filter', size: 14 })
           ),
           h(
             'button',
             {
               type: 'button',
-              className: 'dm-graphToggle' + (isolate ? ' dm-graphToggleOn' : ''),
-              title: t('graph.isolate'),
-              'aria-pressed': isolate,
-              disabled: !selectedId,
-              onClick: () => setIsolate((value) => !value)
+              className: 'zw-toolBtn',
+              title: t('graph.saveView'),
+              onClick: props.onSaveView
             },
-            h(Icon, { name: 'graph', size: 13 }),
-            isolate ? t('graph.isolateOn') : t('graph.isolate')
-          )
+            h(Icon, { name: 'bookmark', size: 14 })
+          ),
+          h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edges.length),
+          flash ? h('span', { className: 'zw-graphHint' }, flash) : null
         ),
-        regions.length
+        panelOpen
           ? h(
               'div',
-              { className: 'dm-regionPanel' },
+              { className: 'zw-graphPanel' },
               h(
                 'div',
-                { className: 'dm-regionPanelHead' },
-                h(Icon, { name: 'box', size: 12 }),
-                t('graph.regions') + ' · ' + regions.length
+                { className: 'zw-graphPanelHead' },
+                h('span', { className: 'zw-blockTitle' }, t('graph.filters')),
+                h(
+                  'button',
+                  { type: 'button', className: 'zw-iconBtn', onClick: () => setPanelOpen(false) },
+                  h(Icon, { name: 'close', size: 13 })
+                )
               ),
-              regions.map((region) => {
-                const editing = editingRegionId === region.id
-                const armed = armedRegionId === region.id
-                return h(
-                  'div',
-                  {
-                    key: region.id,
-                    className: 'dm-regionRow' + (focusRegion === region.id ? ' dm-regionRowOn' : ''),
-                    role: 'button',
-                    tabIndex: 0,
-                    onClick: () => setFocusRegionId(focusRegion === region.id ? null : region.id)
-                  },
-                  h('button', {
-                    type: 'button',
-                    className: 'dm-regionSwatch',
-                    title: t('graph.regionColor'),
-                    style: { background: 'var(--dm-region-' + region.color + ')' },
-                    onClick: (event) => {
-                      event.stopPropagation()
-                      cycleColor(region)
-                    }
-                  }),
-                  editing
-                    ? h('input', {
-                        className: 'dm-regionEditInput',
-                        value: nameDraft,
-                        autoFocus: true,
-                        onClick: (event) => event.stopPropagation(),
-                        onChange: (event) => setNameDraft(event.target.value),
-                        onKeyDown: (event) => {
-                          if (event.key === 'Enter') commitRename(region)
-                          if (event.key === 'Escape') setEditingRegionId(null)
-                        }
-                      })
-                    : h(
-                        'span',
-                        {
-                          className: 'dm-regionName',
-                          title: t('graph.regionRename'),
-                          onClick: (event) => {
-                            event.stopPropagation()
-                            setEditingRegionId(region.id)
-                            setNameDraft(region.name)
-                          }
-                        },
-                        region.name
-                      ),
-                  h('span', { className: 'dm-regionCount' }, region.memberIds.length + ' ' + t('graph.regionUnit')),
+              h(
+                'div',
+                { className: 'zw-graphSection' },
+                h('input', {
+                  className: 'zw-input zw-graphSearch',
+                  placeholder: t('graph.searchPlaceholder'),
+                  value: search,
+                  onChange: (event) => setSearch(event.target.value)
+                }),
+                search.trim() && searchMatches.length
+                  ? h(
+                      'div',
+                      { className: 'zw-miniList' },
+                      searchMatches.slice(0, 6).map((node) =>
+                        h(
+                          'button',
+                          {
+                            key: node.id,
+                            type: 'button',
+                            className: 'zw-mini',
+                            onClick: () => props.onSelect(node.id, false)
+                          },
+                          h(StatusDot, { type: node.entry.type }),
+                          h(
+                            'div',
+                            { className: 'zw-miniBody' },
+                            h('span', { className: 'zw-miniTitle' }, node.entry.title)
+                          ),
+                          h(Icon, { name: 'target', size: 12 })
+                        )
+                      )
+                    )
+                  : null
+              ),
+              h(
+                'div',
+                { className: 'zw-graphSection' },
+                h('div', { className: 'zw-blockHint' }, t('graph.byType')),
+                typeOptions.map((option) =>
                   h(
                     'button',
                     {
+                      key: option.id,
                       type: 'button',
-                      className: 'dm-regionDel' + (armed ? ' dm-regionDelArmed' : ''),
-                      title: armed ? t('graph.regionDeleteConfirm') : t('graph.regionDelete'),
-                      onClick: (event) => {
-                        event.stopPropagation()
-                        armOrDelete(region)
-                      }
+                      className: 'zw-legendRow' + (hiddenTypes.includes(option.id) ? ' zw-legendRowOff' : ''),
+                      onClick: () =>
+                        setHiddenTypes((prev) =>
+                          prev.includes(option.id)
+                            ? prev.filter((item) => item !== option.id)
+                            : prev.concat([option.id])
+                        )
                     },
-                    h(Icon, { name: 'trash', size: 12 })
+                    h('span', {
+                      className: 'zw-legendDot',
+                      style: { background: option.color, opacity: hiddenTypes.includes(option.id) ? 0.35 : 1 }
+                    }),
+                    h('span', { className: 'zw-legendName' }, option.label),
+                    h('span', { className: 'zw-legendCount' }, option.count)
                   )
                 )
-              })
-            )
-          : null,
-        h('div', { className: 'dm-graphHint' }, tool === 'link' ? t('graph.hintLink') : tool === 'region' ? t('graph.hintRegion') : t('graph.hint')),
-        flash ? h('div', { className: 'dm-graphFlash' }, flash) : null,
-        showAuto
-          ? h(
-              'div',
-              { className: 'dm-graphLegend' },
+              ),
               h(
-                'span',
-                { className: 'dm-legendItem' },
-                h('span', { className: 'dm-legendSample dm-legendDashed' }),
-                t('graph.sharedTags')
+                'div',
+                { className: 'zw-graphSection' },
+                h('div', { className: 'zw-blockHint' }, t('graph.byRelation')),
+                relationOptions.map((option) =>
+                  h(
+                    'button',
+                    {
+                      key: option.id,
+                      type: 'button',
+                      className:
+                        'zw-legendRow' + (hiddenRelations.includes(option.id) ? ' zw-legendRowOff' : ''),
+                      onClick: () =>
+                        setHiddenRelations((prev) =>
+                          prev.includes(option.id)
+                            ? prev.filter((item) => item !== option.id)
+                            : prev.concat([option.id])
+                        )
+                    },
+                    h('svg', { className: 'zw-legendSample', width: 22, height: 8 },
+                      h('line', {
+                        x1: 0,
+                        y1: 4,
+                        x2: 22,
+                        y2: 4,
+                        style: {
+                          stroke: option.color,
+                          strokeDasharray: option.dash || ''
+                        }
+                      })
+                    ),
+                    h('span', { className: 'zw-legendName' }, option.label),
+                    h('span', { className: 'zw-legendCount' }, option.count)
+                  )
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-legendRow',
+                    onClick: () => setShowSuggested(!showSuggested)
+                  },
+                  h('span', {
+                    className: 'zw-legendDot',
+                    style: {
+                      background: 'transparent',
+                      border: '1px dashed var(--zw-accent)',
+                      opacity: showSuggested ? 1 : 0.35
+                    }
+                  }),
+                  h('span', { className: 'zw-legendName' }, t('graph.suggestedOnly')),
+                  h('span', { className: 'zw-legendCount' }, props.stats ? props.stats.suggestedRelations : '')
+                )
+              ),
+              h(
+                'div',
+                { className: 'zw-graphSection' },
+                h('div', { className: 'zw-blockHint' }, t('graph.byDomain')),
+                domainOptions.map((option) =>
+                  h(
+                    'button',
+                    {
+                      key: option.id,
+                      type: 'button',
+                      className:
+                        'zw-legendRow' + (hiddenDomains.includes(option.id) ? ' zw-legendRowOff' : ''),
+                      onClick: () =>
+                        setHiddenDomains((prev) =>
+                          prev.includes(option.id)
+                            ? prev.filter((item) => item !== option.id)
+                            : prev.concat([option.id])
+                        )
+                    },
+                    h('span', { className: 'zw-legendName' }, option.label),
+                    h('span', { className: 'zw-legendCount' }, option.count)
+                  )
+                )
+              ),
+              h(
+                'div',
+                { className: 'zw-graphSection' },
+                h('div', { className: 'zw-blockHint' }, t('graph.byCollection')),
+                model.clusters.length
+                  ? model.clusters.map((cluster) =>
+                      h(
+                        'button',
+                        {
+                          key: cluster.id,
+                          type: 'button',
+                          className:
+                            'zw-legendRow' + (hiddenCollections.includes(cluster.id) ? ' zw-legendRowOff' : ''),
+                          onClick: () =>
+                            setHiddenCollections((prev) =>
+                              prev.includes(cluster.id)
+                                ? prev.filter((item) => item !== cluster.id)
+                                : prev.concat([cluster.id])
+                            )
+                        },
+                        h('span', {
+                          className: 'zw-legendDot',
+                          style: { background: collectionColor(cluster.color) }
+                        }),
+                        h('span', { className: 'zw-legendName' }, cluster.name),
+                        h('span', { className: 'zw-legendCount' }, cluster.memberIds.length),
+                        collapsed.includes(cluster.id)
+                          ? h('span', { className: 'zw-count' }, t('graph.collapsed'))
+                          : null
+                      )
+                    )
+                  : h('div', { className: 'zw-savedEmpty' }, t('graph.noCollections'))
               )
             )
           : null,
-        props.selectedEntry
+        selection.length > 1
           ? h(
-              'aside',
-              { className: 'dm-drawer', 'aria-label': t('graph.title') },
+              'div',
+              { className: 'zw-batchWrap' },
               h(
                 'div',
-                { className: 'dm-drawerHead' },
-                h(Icon, { name: 'book', size: 13 }),
-                props.selectedEntry.title,
+                { className: 'zw-batchbar' },
+                h('span', { className: 'zw-batchCount' }, selection.length + ' ' + t('batch.selected')),
                 h(
                   'button',
-                  { type: 'button', className: 'dm-iconBtn', title: t('action.close'), 'aria-label': t('action.close'), onClick: props.onClose },
-                  h(Icon, { name: 'close', size: 14 })
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm zw-btnPrimary',
+                    onClick: () => props.onBatchAction('collection')
+                  },
+                  h(Icon, { name: 'folder', size: 12 }),
+                  t('batch.addToCollection')
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm',
+                    onClick: () => props.onBatchAction('status')
+                  },
+                  h(Icon, { name: 'check', size: 12 }),
+                  t('batch.setStatus')
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm zw-btnGhost',
+                    onClick: () => props.onMultiSelect([])
+                  },
+                  t('batch.clear')
                 )
-              ),
-              h('div', { className: 'dm-drawerScroll' }, props.drawer)
+              )
             )
           : null
       )
     }
 
-    function regionByEntryOf(map, entryId, focusId) {
-      const region = map.get(entryId)
-      return Boolean(region && region.id === focusId)
+
+    function NameDialog(props) {
+      const t = props.t
+      const [value, setValue] = useState(props.value || '')
+      return h(
+        Modal,
+        {
+          title: props.title,
+          icon: props.icon || 'bookmark',
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h('span', { className: 'zw-modalFootSpacer' }),
+            h(
+              'button',
+              { type: 'button', className: 'zw-btn zw-btnSm zw-btnGhost', onClick: props.onClose },
+              t('action.cancel')
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnSm zw-btnPrimary',
+                onClick: () => value.trim() && props.onSave(value.trim())
+              },
+              t('action.save')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h(
+            Field,
+            { label: props.label || t('common.name') },
+            h('input', {
+              className: 'zw-input',
+              value: value,
+              autoFocus: true,
+              placeholder: props.placeholder || '',
+              onChange: (event) => setValue(event.target.value),
+              onKeyDown: (event) => {
+                if (event.key === 'Enter' && value.trim()) props.onSave(value.trim())
+              }
+            })
+          )
+        )
+      )
     }
 
     function DesignMemoryPanel(props) {
-      const t = useCallback(
-        (key) => {
-          if (typeof props.t === 'function') {
-            const value = props.t(key)
-            if (value && value !== key) return value
-          }
-          return ZH[key] || key
-        },
-        [props.t]
-      )
-      const themeMode = useThemeMode()
-      const [data, setData] = useState({ status: 'loading', entries: [], regions: [], error: null, storagePath: '' })
-      const [category, setCategory] = useState('all')
-      const [statusFilter, setStatusFilter] = useState('all')
-      const [query, setQuery] = useState('')
-      const [selectedId, setSelectedId] = useState(null)
-      const [composer, setComposer] = useState(null)
-      const [confirmDelete, setConfirmDelete] = useState(false)
-      const [busy, setBusy] = useState(false)
-      const [formError, setFormError] = useState(null)
-      const [notice, setNotice] = useState(null)
-      const [view, setView] = useState('list')
-      const mounted = useRef(true)
+      const t = props.t && typeof props.t.has === 'function' ? props.t : createTranslator(ZH)
+      const theme = useThemeMode()
+      const [data, setData] = useState({
+        status: 'loading',
+        meta: DEFAULT_META,
+        entries: [],
+        relations: [],
+        collections: [],
+        projects: [],
+        views: [],
+        stats: {},
+        storagePath: '',
+        error: null
+      })
+      const [nav, setNav] = useState({ kind: 'overview', id: '' })
+      const [filters, setFilters] = useState({ projectId: '', types: [], statuses: [], domains: [], tags: [] })
+      const [search, setSearch] = useState('')
+      const [sort, setSort] = useState('updated')
+      const [layout, setLayout] = useState('list')
+      const [selectedId, setSelectedId] = useState('')
+      const [checked, setChecked] = useState([])
+      const [graphSelection, setGraphSelection] = useState([])
+      const [railCollapsed, setRailCollapsed] = useState(false)
+      const [detailCollapsed, setDetailCollapsed] = useState(false)
+      const [toasts, setToasts] = useState([])
+      const [busy, setBusy] = useState('')
+      const [modal, setModal] = useState(null)
+      const [graphView, setGraphView] = useState(null)
+      const [assist, setAssist] = useState({ entryId: '', action: '', result: null, error: '', busy: false })
 
-      useEffect(
-        () => () => {
-          mounted.current = false
-        },
-        []
-      )
+      const notify = useCallback((text, tone, action) => {
+        const id = 'toast_' + Date.now() + '_' + Math.round(Math.random() * 999)
+        setToasts((prev) => prev.concat([{ id: id, text: text, tone: tone || 'ok', action: action || null }]))
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((item) => item.id !== id))
+        }, action ? 9000 : 2600)
+      }, [])
+
+      const applyState = useCallback((payload) => {
+        setData((prev) => ({
+          status: 'ready',
+          meta: payload.meta || prev.meta || DEFAULT_META,
+          entries: payload.entries || [],
+          relations: payload.relations || [],
+          collections: payload.collections || [],
+          projects: payload.projects || [],
+          views: payload.views || [],
+          stats: payload.stats || {},
+          storagePath: payload.storagePath || '',
+          error: null
+        }))
+      }, [])
 
       const load = useCallback(async () => {
+        setData((prev) => Object.assign({}, prev, { status: 'loading' }))
         try {
-          const payload = await loadEntries()
-          if (!mounted.current) return
-          setData({
-            status: 'ready',
-            entries: payload.entries || [],
-            regions: payload.regions || [],
-            error: null,
-            storagePath: payload.storagePath || ''
-          })
-        } catch (error) {
-          if (!mounted.current) return
-          setData((previous) =>
-            Object.assign({}, previous, {
-              status: previous.entries.length ? 'stale' : 'error',
-              offline: isOfflineError(error),
-              error: errorText(error, t)
+          const payload = await loadState()
+          applyState(payload)
+        } catch (err) {
+          setData((prev) =>
+            Object.assign({}, prev, {
+              status: 'error',
+              error: isOfflineError(err) ? t('error.offline') : errorText(err, t('error.load'))
             })
           )
         }
-      }, [t])
+      }, [applyState, t])
 
       useEffect(() => {
         load()
-      }, [load])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [])
 
-      useEffect(() => {
-        const onFocus = () => {
-          if (!composer) load()
-        }
-        window.addEventListener('focus', onFocus)
-        return () => window.removeEventListener('focus', onFocus)
-      }, [load, composer])
+      const mutate = useCallback(
+        async (payload, message) => {
+          setBusy(payload.action)
+          try {
+            const result = await mutateState(payload)
+            applyState(result)
+            if (message) notify(message, 'ok')
+            return result
+          } catch (err) {
+            notify(isOfflineError(err) ? t('error.offline') : errorText(err, t('error.write')), 'error')
+            return null
+          } finally {
+            setBusy('')
+          }
+        },
+        [applyState, notify, t]
+      )
 
-      useEffect(() => {
-        if (!notice) return undefined
-        const timer = setTimeout(() => setNotice(null), 3600)
-        return () => clearTimeout(timer)
-      }, [notice])
-
+      const meta = data.meta || DEFAULT_META
       const entries = data.entries || []
-      const regions = data.regions || []
-      const editing = composer !== null
+      const relations = data.relations || []
+      const collections = data.collections || []
+      const projects = data.projects || []
+      const stats = data.stats || {}
+      const defaultProjectId = projects.length ? projects[0].id : 'prj_default'
 
-      const counts = useMemo(() => {
-        const next = { all: entries.length, system: 0, numbers: 0, workflow: 0, other: 0 }
-        for (const entry of entries) next[entry.category] = (next[entry.category] || 0) + 1
-        return next
+      const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries])
+      const collectionById = useMemo(
+        () => new Map(collections.map((collection) => [collection.id, collection])),
+        [collections]
+      )
+
+      const collectionsOf = useCallback(
+        (entryId) => collections.filter((collection) => collection.memberIds.includes(entryId)),
+        [collections]
+      )
+
+      const relationsOf = useCallback(
+        (entryId) =>
+          relations
+            .filter((relation) => relation.sourceMemoryId === entryId || relation.targetMemoryId === entryId)
+            .map((relation) => {
+              const outgoing = relation.sourceMemoryId === entryId
+              const otherId = outgoing ? relation.targetMemoryId : relation.sourceMemoryId
+              return {
+                relation: relation,
+                other: entryById.get(otherId) || { id: otherId, title: otherId },
+                direction: outgoing ? 'out' : 'in'
+              }
+            }),
+        [relations, entryById]
+      )
+
+      const groupedRelations = useCallback(
+        (entryId) => {
+          const items = relationsOf(entryId)
+          const order = meta.relationTypes.map((item) => item.id)
+          const groups = []
+          order.forEach((type) => {
+            const group = items.filter((item) => item.relation.relationType === type)
+            if (group.length) groups.push({ type: type, items: group })
+          })
+          return groups
+        },
+        [relationsOf, meta]
+      )
+
+      const relationCount = useCallback(
+        (entryId) =>
+          relations.filter(
+            (relation) => relation.sourceMemoryId === entryId || relation.targetMemoryId === entryId
+          ).length,
+        [relations]
+      )
+
+      const snapshotEntry = useCallback(
+        (id) => {
+          const entry = entryById.get(id)
+          if (!entry) return null
+          return {
+            entry: entry,
+            relations: relations.filter(
+              (relation) => relation.sourceMemoryId === id || relation.targetMemoryId === id
+            ),
+            collectionIds: collections
+              .filter((collection) => collection.memberIds.includes(id))
+              .map((collection) => collection.id)
+          }
+        },
+        [entryById, relations, collections]
+      )
+      const projectCounts = useMemo(() => {
+        const counts = {}
+        projects.forEach((project) => {
+          counts[project.id] = entries.filter((entry) => entry.projectId === project.id).length
+        })
+        return counts
+      }, [projects, entries])
+
+      const navEntries = useMemo(() => {
+        let list = entries.slice()
+        if (nav.kind === 'inbox') {
+          list = list.filter((entry) => entry.status === 'draft' || entry.status === 'pending')
+        } else if (nav.kind === 'favorites') {
+          list = list.filter((entry) => entry.favorite)
+        } else if (nav.kind === 'project') {
+          list = list.filter((entry) => entry.projectId === nav.id)
+        } else if (nav.kind === 'collection') {
+          const collection = collectionById.get(nav.id)
+          list = collection ? list.filter((entry) => collection.memberIds.includes(entry.id)) : []
+        } else if (nav.kind === 'recent') {
+          list = sortEntries(list, 'updated').slice(0, 20)
+        }
+        if (filters.projectId) list = list.filter((entry) => entry.projectId === filters.projectId)
+        list = list.filter((entry) => matchesFilters(entry, filters))
+        list = list.filter((entry) => matchesQuery(entry, search))
+        return sortEntries(list, nav.kind === 'recent' ? 'updated' : sort)
+      }, [entries, nav, filters, search, sort, collectionById])
+
+      const suggestedRelations = useMemo(
+        () =>
+          relations
+            .filter((relation) => relation.status === 'suggested')
+            .map((relation) => ({
+              relation: relation,
+              from: entryById.get(relation.sourceMemoryId)
+                ? entryById.get(relation.sourceMemoryId).title
+                : relation.sourceMemoryId,
+              to: entryById.get(relation.targetMemoryId)
+                ? entryById.get(relation.targetMemoryId).title
+                : relation.targetMemoryId
+            })),
+        [relations, entryById]
+      )
+
+      const selectedEntry = selectedId ? entryById.get(selectedId) || null : null
+
+      useEffect(() => {
+        if (selectedId && !entryById.has(selectedId)) setSelectedId('')
+      }, [entryById, selectedId])
+
+      const viewTitle = useMemo(() => {
+        if (nav.kind === 'overview') return t('view.overview')
+        if (nav.kind === 'all') return t('view.all')
+        if (nav.kind === 'inbox') return t('view.inbox')
+        if (nav.kind === 'collections') return t('view.collections')
+        if (nav.kind === 'favorites') return t('view.favorites')
+        if (nav.kind === 'recent') return t('view.recent')
+        if (nav.kind === 'graph') return t('view.graph')
+        if (nav.kind === 'project') {
+          const project = projects.find((item) => item.id === nav.id)
+          return project ? project.name : t('view.all')
+        }
+        if (nav.kind === 'collection') {
+          const collection = collectionById.get(nav.id)
+          return collection ? collection.name : t('view.collections')
+        }
+        return t('app.title')
+      }, [nav, t, projects, collectionById])
+
+      const openEntry = useCallback((id) => {
+        setSelectedId(id)
+        setDetailCollapsed(false)
+      }, [])
+
+      const onSelectGraphNode = useCallback(
+        (id, additive) => {
+          const graphNode = graphView && graphView.collapsedNodes && graphView.collapsedNodes.has(id)
+          if (additive) {
+            setGraphSelection((prev) =>
+              prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat([id])
+            )
+            return
+          }
+          if (collectionById.has(id)) {
+            setNav({ kind: 'collection', id: id })
+            return
+          }
+          setGraphSelection([id])
+          openEntry(id)
+        },
+        [collectionById, openEntry, graphView]
+      )
+
+      const toggleChecked = useCallback((id) => {
+        setChecked((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : prev.concat([id])))
+      }, [])
+
+      const saveEntry = useCallback(
+        async (payload) => {
+          const body = Object.assign({}, payload)
+          const collectionIds = body.collectionIds ? body.collectionIds.slice() : null
+          delete body.collectionIds
+          const result = await mutate(
+            Object.assign({ action: 'entry-save' }, body),
+            body.id ? t('toast.saved') : t('toast.created')
+          )
+          if (!result) return
+          const targetId = body.id || (result.entry && result.entry.id)
+          if (targetId && collectionIds) {
+            const current = collectionsOf(targetId).map((collection) => collection.id)
+            const add = collectionIds.filter((id) => !current.includes(id))
+            const remove = current.filter((id) => !collectionIds.includes(id))
+            if (add.length || remove.length) {
+              await mutate({ action: 'entry-collections', id: targetId, add: add, remove: remove })
+            }
+          }
+          setModal(null)
+          if (targetId) openEntry(targetId)
+        },
+        [mutate, t, collectionsOf, openEntry]
+      )
+
+      const deleteEntry = useCallback(
+        async (id) => {
+          const snapshot = snapshotEntry(id)
+          const result = await mutate({ action: 'entry-delete', id: id })
+          if (!result) return
+          setSelectedId('')
+          setModal(null)
+          notify(
+            t('toast.deleted'),
+            'ok',
+            snapshot
+              ? {
+                  label: t('action.undo'),
+                  onClick: async () => {
+                    const restored = await mutate({
+                      action: 'entry-restore',
+                      entry: snapshot.entry,
+                      relations: snapshot.relations,
+                      collectionIds: snapshot.collectionIds
+                    })
+                    if (restored) {
+                      notify(t('toast.restored'), 'ok')
+                      openEntry(restored.entry.id)
+                    }
+                  }
+                }
+              : null
+          )
+        },
+        [mutate, t, notify, snapshotEntry, openEntry]
+      )
+
+      const starEntry = useCallback(
+        async (id, next) => {
+          await mutate({ action: 'entry-flag', id: id, favorite: Boolean(next) })
+        },
+        [mutate]
+      )
+
+      const setStatus = useCallback(
+        async (id, status) => {
+          await mutate({ action: 'entry-status', id: id, status: status }, t('toast.status'))
+        },
+        [mutate, t]
+      )
+
+      const createRelation = useCallback(
+        async (payload) => {
+          const result = await mutate(
+            Object.assign({ action: 'relation-create' }, payload),
+            t('toast.relationCreated')
+          )
+          if (result) setModal(null)
+        },
+        [mutate, t]
+      )
+
+      const decideRelation = useCallback(
+        async (id, verdict) => {
+          await mutate({ action: 'relation-decide', id: id, verdict: verdict })
+        },
+        [mutate]
+      )
+
+      const deleteRelation = useCallback(
+        async (id) => {
+          await mutate({ action: 'relation-delete', id: id }, t('toast.relationDeleted'))
+        },
+        [mutate, t]
+      )
+
+      const quickSave = useCallback(
+        async (payload) => {
+          setBusy('quick')
+          try {
+            const result = await mutateState(
+              Object.assign({ action: 'entry-save', status: 'pending' }, payload)
+            )
+            applyState(result)
+            const created = result.entry
+            notify(t('toast.created'), 'ok')
+            setModal(null)
+            if (!created) return
+            openEntry(created.id)
+            if (payload.suggestRelations) {
+              const suggest = await request(API, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'suggest.relations', id: created.id })
+              })
+              const suggestions = (suggest && suggest.suggestions) || []
+              for (let index = 0; index < Math.min(3, suggestions.length); index += 1) {
+                const item = suggestions[index]
+                const applied = await mutateState({
+                  action: 'relation-create',
+                  sourceMemoryId: created.id,
+                  targetMemoryId: item.targetMemoryId,
+                  relationType: item.relationType,
+                  description: item.description || '',
+                  status: 'suggested'
+                })
+                applyState(applied)
+              }
+            }
+          } catch (err) {
+            notify(isOfflineError(err) ? t('error.offline') : errorText(err, t('error.write')), 'error')
+          } finally {
+            setBusy('')
+          }
+        },
+        [applyState, notify, openEntry, t]
+      )
+
+      const askSuggestRelations = useCallback(async (text) => {
+        const result = await request(API, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'suggest.entry', text: text })
+        })
+        const suggestion = (result && result.suggestion) || {}
+        const relationResult = await request(API, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'suggest.relations', text: text })
+        })
+        suggestion.relations = (relationResult && relationResult.suggestions) || []
+        return suggestion
+      }, [])
+
+      const runAssist = useCallback(
+        async (kind) => {
+          const entry = selectedId ? entryById.get(selectedId) : null
+          if (!entry) {
+            notify(t('assist.needSelection'), 'error')
+            return
+          }
+          setAssist({ entryId: entry.id, action: kind, result: null, error: '', busy: true })
+          try {
+            const payload = await request(API, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'ai.analyze', analysis: kind, id: entry.id })
+            })
+            if (!payload || payload.ok === false) {
+              throw new Error((payload && payload.error && payload.error.message) || 'analyze failed')
+            }
+            setAssist({ entryId: entry.id, action: kind, result: payload.result || null, error: '', busy: false })
+          } catch (err) {
+            setAssist({
+              entryId: entry.id,
+              action: kind,
+              result: null,
+              error: isOfflineError(err) ? t('error.offline') : errorText(err, t('error.load')),
+              busy: false
+            })
+          }
+        },
+        [entryById, selectedId, notify, t]
+      )
+
+      const closeAssist = useCallback(() => {
+        setAssist({ entryId: '', action: '', result: null, error: '', busy: false })
+      }, [])
+
+      const applyOrganize = useCallback(
+        async (result) => {
+          if (!result || !result.entryId) return
+          const body = { action: 'entry-save', id: result.entryId }
+          if (result.title) body.title = result.title
+          if (result.summary) body.summary = result.summary
+          if (result.type) body.type = result.type
+          if (result.domains && result.domains.length) body.domains = result.domains
+          if (result.tags && result.tags.length) body.tags = result.tags
+          const saved = await mutate(body, t('assist.applied'))
+          if (saved) closeAssist()
+        },
+        [mutate, t, closeAssist]
+      )
+
+      const splitSegment = useCallback(
+        async (segment) => {
+          if (!segment) return
+          const owner = assist.entryId ? entryById.get(assist.entryId) : selectedEntry
+          const result = await mutate(
+            {
+              action: 'entry-save',
+              title: segment.title,
+              content: segment.content,
+              type: segment.type || 'reference',
+              domains: segment.domains || [],
+              tags: segment.tags || [],
+              projectId: owner ? owner.projectId : defaultProjectId,
+              status: 'pending',
+              source: { kind: 'ai', label: t('assist.segments') }
+            },
+            t('toast.segmentAdded')
+          )
+          if (result && result.entry) openEntry(result.entry.id)
+        },
+        [mutate, t, assist.entryId, entryById, selectedEntry, defaultProjectId, openEntry]
+      )
+
+      const relateSuggestion = useCallback(
+        async (item) => {
+          const sourceId = assist.entryId || selectedId
+          if (!sourceId || !item || !item.targetMemoryId) return
+          await createRelation({
+            sourceMemoryId: sourceId,
+            targetMemoryId: item.targetMemoryId,
+            relationType: item.relationType || 'references',
+            description: item.description || '',
+            status: 'confirmed'
+          })
+        },
+        [createRelation, assist.entryId, selectedId]
+      )
+
+      const resolveConflict = useCallback(
+        async (item, choice) => {
+          const sourceId = assist.entryId || selectedId
+          if (!sourceId || !item) return
+          if (choice === 'no-conflict') {
+            notify(t('assist.confirmed'), 'ok')
+            return
+          }
+          if (choice === 'supersede') {
+            await createRelation({
+              sourceMemoryId: sourceId,
+              targetMemoryId: item.entryId,
+              relationType: 'supersedes',
+              description: t('assist.supersede'),
+              status: 'confirmed'
+            })
+            await mutate({ action: 'entry-status', id: item.entryId, status: 'deprecated' }, t('assist.confirmed'))
+            return
+          }
+          if (choice === 'both-apply') {
+            await createRelation({
+              sourceMemoryId: sourceId,
+              targetMemoryId: item.entryId,
+              relationType: 'references',
+              description: t('assist.bothApply'),
+              status: 'confirmed'
+            })
+            return
+          }
+          await createRelation({
+            sourceMemoryId: sourceId,
+            targetMemoryId: item.entryId,
+            relationType: 'conflicts_with',
+            description: t('assist.keepBoth'),
+            status: 'confirmed'
+          })
+        },
+        [createRelation, mutate, notify, t, assist.entryId, selectedId]
+      )
+
+      const summarizeCollection = useCallback(
+        async (collectionId) => {
+          try {
+            const payload = await request(API, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'ai.analyze', analysis: 'summary', collectionId: collectionId })
+            })
+            if (!payload || !payload.result) throw new Error('summary failed')
+            setModal({ type: 'summary', result: payload.result })
+          } catch (err) {
+            notify(isOfflineError(err) ? t('error.offline') : errorText(err, t('error.load')), 'error')
+          }
+        },
+        [notify, t]
+      )
+      const saveCollection = useCallback(
+        async (payload) => {
+          const result = await mutate(
+            Object.assign({ action: 'collection-save' }, payload),
+            t('toast.collectionSaved')
+          )
+          if (result) {
+            setModal(null)
+            if (result.collection) setNav({ kind: 'collection', id: result.collection.id })
+          }
+        },
+        [mutate, t]
+      )
+
+      const updateCollection = useCallback(
+        async (payload) => {
+          await mutate(Object.assign({ action: 'collection-save' }, payload), t('toast.saved'))
+        },
+        [mutate, t]
+      )
+
+      const deleteCollection = useCallback(
+        async (id) => {
+          const snapshot = collectionById.get(id) || null
+          const result = await mutate({ action: 'collection-delete', id: id })
+          if (!result) return
+          setNav({ kind: 'collections', id: '' })
+          notify(
+            t('toast.deleted'),
+            'ok',
+            snapshot
+              ? {
+                  label: t('action.undo'),
+                  onClick: async () => {
+                    const restored = await mutate({ action: 'collection-restore', collection: snapshot })
+                    if (restored) notify(t('toast.restored'), 'ok')
+                  }
+                }
+              : null
+          )
+        },
+        [mutate, t, notify, collectionById]
+      )
+
+      const addMembers = useCallback(
+        async (collectionId, ids) => {
+          const result = await mutate(
+            { action: 'collection-members', id: collectionId, add: ids },
+            t('toast.membersAdded')
+          )
+          if (result) setModal(null)
+        },
+        [mutate, t]
+      )
+
+      const removeMember = useCallback(
+        async (collectionId, entryId) => {
+          await mutate({ action: 'collection-members', id: collectionId, remove: [entryId] })
+        },
+        [mutate]
+      )
+
+      const mergeCollections = useCallback(
+        async (sourceId, targetId) => {
+          const result = await mutate(
+            { action: 'collection-merge', sourceId: sourceId, targetId: targetId },
+            t('toast.merged')
+          )
+          if (result) setNav({ kind: 'collection', id: targetId })
+        },
+        [mutate, t]
+      )
+
+      const acceptSuggestion = useCallback(
+        async (suggestion) => {
+          const result = await mutate(
+            {
+              action: 'collection-save',
+              name: suggestion.name,
+              description: suggestion.description || '',
+              color: suggestion.color || 'violet',
+              projectId: suggestion.projectId || defaultProjectId,
+              memberIds: suggestion.memberIds || [],
+              source: 'ai',
+              status: 'confirmed'
+            },
+            t('toast.collectionSaved')
+          )
+          if (result) setModal(null)
+        },
+        [mutate, t, defaultProjectId]
+      )
+
+      const batchAction = useCallback(
+        async (kind) => {
+          if (!checked.length) return
+          if (kind === 'collection') {
+            setModal({ type: 'batchCollection', ids: checked.slice() })
+            return
+          }
+          await mutate({ action: 'entry-bulk', ids: checked.slice(), op: 'status', status: 'active' }, t('toast.saved'))
+          setChecked([])
+        },
+        [checked, mutate, t]
+      )
+
+      const setNavKind = useCallback((kind, id) => {
+        setNav({ kind: kind, id: id || '' })
+        setChecked([])
+        setSearch('')
+        if (kind !== 'graph') setGraphSelection([])
+      }, [])
+
+      const restoreView = useCallback((view) => {
+        const config = view.config || {}
+        setGraphView(config)
+        setNav({ kind: 'graph', id: view.id })
+      }, [])
+
+      const saveView = useCallback(
+        (name) => {
+          setModal(null)
+          mutate(
+            { action: 'view-save', name: name, kind: 'graph', config: graphView || {} },
+            t('toast.viewSaved')
+          )
+        },
+        [mutate, t, graphView]
+      )
+
+      const graphStateRef = useRef({})
+      const onGraphState = useCallback((state) => {
+        graphStateRef.current = state
+        setGraphView(state)
+      }, [])
+
+      const counts = useMemo(
+        () => ({
+          type: entries.reduce((acc, entry) => {
+            acc[entry.type] = (acc[entry.type] || 0) + 1
+            return acc
+          }, {}),
+          domain: entries.reduce((acc, entry) => {
+            entry.domains.forEach((domain) => {
+              acc[domain] = (acc[domain] || 0) + 1
+            })
+            return acc
+          }, {}),
+          status: entries.reduce((acc, entry) => {
+            acc[entry.status] = (acc[entry.status] || 0) + 1
+            return acc
+          }, {})
+        }),
+        [entries]
+      )
+
+      const tagOptions = useMemo(() => {
+        const countsByTag = {}
+        entries.forEach((entry) => {
+          entry.tags.forEach((tag) => {
+            countsByTag[tag] = (countsByTag[tag] || 0) + 1
+          })
+        })
+        return Object.keys(countsByTag)
+          .sort((left, right) => countsByTag[right] - countsByTag[left])
+          .slice(0, 24)
+          .map((tag) => ({ id: tag, label: '#' + tag, count: countsByTag[tag] }))
       }, [entries])
 
-      const visible = useMemo(() => {
-        const needle = query.trim().toLowerCase()
-        return entries
-          .filter((entry) => {
-            if (category !== 'all' && entry.category !== category) return false
-            if (statusFilter !== 'all' && entry.status !== statusFilter) return false
-            if (!needle) return true
-            return entryHaystack(entry).includes(needle)
-          })
-          .sort(compareEntries)
-      }, [entries, category, statusFilter, query])
-
-      const selected = entries.find((entry) => entry.id === selectedId) || null
-
-      const regionOfEntry = (entry) =>
-        entry ? regions.find((region) => region.memberIds.includes(entry.id)) || null : null
-
-      const notify = (tone, text) => setNotice({ tone, text })
-
-      const applyResult = (result) => {
-        setData({
-          status: 'ready',
-          entries: result.entries || [],
-          regions: result.regions || [],
-          error: null,
-          storagePath: result.storagePath || data.storagePath
-        })
-      }
-
-      const selectEntry = (id) => {
-        if (editing) return
-        setSelectedId(id)
-        setConfirmDelete(false)
-      }
-
-      const startCreate = () => {
-        if (editing) return
-        setComposer({ mode: 'create', id: null, draft: emptyDraft(category) })
-        setFormError(null)
-        setConfirmDelete(false)
-      }
-
-      const startEdit = (entry) => {
-        if (editing) return
-        setComposer({ mode: 'edit', id: entry.id, draft: draftFrom(entry) })
-        setFormError(null)
-        setConfirmDelete(false)
-      }
-
-      const cancelComposer = () => {
-        setComposer(null)
-        setFormError(null)
-      }
-
-      const saveDraft = async () => {
-        if (!composer || busy) return
-        const draft = composer.draft
-        const title = String(draft.title || '').trim()
-        if (!title) {
-          setFormError('标题不能为空')
-          return
-        }
-        setBusy(true)
-        setFormError(null)
-        try {
-          const payload = {
-            action: composer.mode === 'create' ? 'save' : 'update',
-            id: composer.id,
-            category: draft.category,
-            title,
-            summary: draft.summary,
-            body: draft.body,
-            tags: splitTags(draft.tags),
-            facts: (draft.facts || [])
-              .filter((fact) => String(fact.label || '').trim() || String(fact.value || '').trim())
-              .map((fact) => ({ label: String(fact.label || '').trim(), value: String(fact.value || '').trim() })),
-            status: draft.status,
-            pinned: draft.pinned === true,
-            source: draft.source,
-            note: draft.note
-          }
-          const result = await mutateEntries(payload)
-          applyResult(result)
-          if (result.entry) setSelectedId(result.entry.id)
-          setComposer(null)
-          setConfirmDelete(false)
-          notify('success', composer.mode === 'create' ? t('notice.created') : t('notice.saved'))
-        } catch (error) {
-          setFormError(errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const deleteSelected = async () => {
-        if (!selected || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({ action: 'delete', id: selected.id })
-          applyResult(result)
-          setSelectedId(null)
-          setConfirmDelete(false)
-          notify('success', t('notice.deleted'))
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const togglePin = async () => {
-        if (!selected || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({
-            action: 'update',
-            id: selected.id,
-            pinned: !selected.pinned,
-            note: selected.pinned ? t('detail.unpin') : t('detail.pin')
-          })
-          applyResult(result)
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const setStatus = async (entry, status) => {
-        if (!entry || busy || entry.status === status) return
-        setBusy(true)
-        try {
-          const note =
-            status === 'confirmed' ? t('notice.confirmed') : status === 'deprecated' ? t('notice.deprecated') : t('notice.reopened')
-          const result = await mutateEntries({ action: 'status', id: entry.id, status, note })
-          applyResult(result)
-          notify(
-            'success',
-            status === 'confirmed' ? t('notice.confirmed') : status === 'deprecated' ? t('notice.deprecated') : t('notice.reopened')
-          )
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const addLink = async (entry, targetId, label) => {
-        if (!entry || !targetId || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({ action: 'link', id: entry.id, targetId, label, note: t('notice.linked') })
-          applyResult(result)
-          notify('success', t('notice.linked'))
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const removeLink = async (entry, targetId) => {
-        if (!entry || !targetId || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({ action: 'unlink', id: entry.id, targetId, note: t('notice.unlinked') })
-          applyResult(result)
-          notify('success', t('notice.unlinked'))
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const createLink = async (fromId, toId) => {
-        if (!fromId || !toId || fromId === toId || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({ action: 'link', id: fromId, targetId: toId, note: t('graph.linkDone') })
-          applyResult(result)
-          notify('success', t('graph.linkDone'))
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const saveRegion = async (payload) => {
-        if (!payload || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({
-            action: 'region-save',
-            name: payload.name,
-            color: payload.color,
-            memberIds: payload.memberIds || [],
-            note: t('graph.boxDone')
-          })
-          applyResult(result)
-          notify('success', t('graph.regionSaved'))
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const updateRegion = async (payload) => {
-        if (!payload || !payload.regionId || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({
-            action: 'region-save',
-            regionId: payload.regionId,
-            name: payload.name,
-            color: payload.color
-          })
-          applyResult(result)
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const deleteRegion = async (regionId) => {
-        if (!regionId || busy) return
-        setBusy(true)
-        try {
-          const result = await mutateEntries({ action: 'region-delete', regionId })
-          applyResult(result)
-          notify('success', t('graph.regionRemoved'))
-        } catch (error) {
-          notify('error', errorText(error, t))
-        } finally {
-          setBusy(false)
-        }
-      }
-
-      const handleKeyDown = (event) => {
-        if (event.key !== 'Escape') return
-        if (composer) {
-          event.stopPropagation()
-          cancelComposer()
-        } else if (confirmDelete) {
-          event.stopPropagation()
-          setConfirmDelete(false)
-        }
-      }
-
-      const rail = h(
-        'nav',
-        { className: 'dm-rail', 'aria-label': t('rail.label') },
-        h(CategoryRow, {
-          id: 'all',
-          label: t('rail.all'),
-          count: counts.all,
-          active: category === 'all',
-          onSelect: setCategory
-        }),
-        CATEGORIES.map((item) =>
-          h(CategoryRow, {
-            key: item.id,
-            id: item.id,
-            label: t(item.labelKey),
-            count: counts[item.id],
-            active: category === item.id,
-            onSelect: setCategory
-          })
-        ),
-        h('div', { className: 'dm-railDivider' }),
-        h('div', { className: 'dm-railSection' }, t('rail.status')),
-        h(
+      if (data.status === 'loading' && !entries.length) {
+        return h(
           'div',
-          { className: 'dm-statusFilter' },
+          { className: 'zw-root', 'data-zw-theme': theme },
+          h('style', null, CSS),
           h(
-            'button',
-            {
-              type: 'button',
-              className: 'dm-chip' + (statusFilter === 'all' ? ' dm-chipOn' : ''),
-              'aria-pressed': statusFilter === 'all',
-              onClick: () => setStatusFilter('all')
-            },
-            t('status.all')
-          ),
-          STATUSES.map((item) =>
+            'div',
+            { className: 'zw-app' },
             h(
-              'button',
-              {
-                key: item.id,
-                type: 'button',
-                className: 'dm-chip' + (statusFilter === item.id ? ' dm-chipOn' : ''),
-                'aria-pressed': statusFilter === item.id,
-                onClick: () => setStatusFilter(item.id)
-              },
-              t(item.labelKey)
-            )
-          )
-        ),
-        h(
-          'div',
-          { className: 'dm-railFoot' },
-          h('span', null, t('ai.hint')),
-          data.storagePath ? h('span', { className: 'dm-storage', title: data.storagePath }, t('storage.label') + ' · ' + shortenPath(data.storagePath)) : null
-        )
-      )
-
-      const listTitle =
-        category === 'all'
-          ? t('rail.all')
-          : t((CATEGORIES.find((item) => item.id === category) || CATEGORIES[CATEGORIES.length - 1]).labelKey)
-
-      const list = h(
-        'section',
-        { className: 'dm-list', 'aria-label': t('list.label') },
-        h(
-          'div',
-          { className: 'dm-listHead' },
-          h('span', { className: 'dm-listTitle' }, listTitle),
-          h('span', { className: 'dm-listCount' }, visible.length + ' ' + t('list.count')),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'dm-iconBtn',
-              title: t('action.refresh'),
-              'aria-label': t('action.refresh'),
-              onClick: () => load()
-            },
-            h(Icon, { name: 'refresh', size: 15 })
-          )
-        ),
-        data.status === 'loading'
-          ? h(
               'div',
-              { className: 'dm-rows' },
-              h('div', { className: 'dm-skeleton' }),
-              h('div', { className: 'dm-skeleton' }),
-              h('div', { className: 'dm-skeleton' })
+              { className: 'zw-empty', style: { margin: 'auto' } },
+              h('div', { className: 'zw-emptyIcon' }, h(Icon, { name: 'sparkle', size: 22, className: 'zw-spin' })),
+              h('div', { className: 'zw-emptyTitle' }, t('app.loading'))
             )
-          : visible.length
-            ? h(
-                'div',
-                { className: 'dm-rows' },
-                visible.map((entry) =>
-                  h(MemoryRow, {
-                    key: entry.id,
-                    entry,
-                    active: entry.id === selectedId,
-                    disabled: editing,
-                    t,
-                    onSelect: () => selectEntry(entry.id)
-                  })
-                )
-              )
-            : h(
-                'div',
-                { className: 'dm-blank' },
-                h(Icon, { name: 'book', size: 22 }),
-                h('h2', { className: 'dm-blankTitle' }, entries.length ? t('list.noMatch') : t('empty.title')),
-                h('p', { className: 'dm-blankHint' }, entries.length ? t('list.noMatchHint') : t('empty.hint'))
-              )
-      )
-
-      let detail
-      if (composer) {
-        detail = h(MemoryEditor, {
-          mode: composer.mode,
-          draft: composer.draft,
-          t,
-          busy,
-          error: formError,
-          onChange: (draft) => setComposer(Object.assign({}, composer, { draft })),
-          onCancel: cancelComposer,
-          onSave: saveDraft
-        })
-      } else if (selected) {
-        detail = h(MemoryDetail, {
-          entry: selected,
-          entries,
-          region: regionOfEntry(selected),
-          t,
-          busy,
-          confirmDelete,
-          onEdit: () => startEdit(selected),
-          onRequestDelete: () => setConfirmDelete(true),
-          onCancelDelete: () => setConfirmDelete(false),
-          onConfirmDelete: deleteSelected,
-          onTogglePin: togglePin,
-          onSetStatus: (status) => setStatus(selected, status),
-          onAddLink: (targetId, label) => addLink(selected, targetId, label),
-          onRemoveLink: (targetId) => removeLink(selected, targetId),
-          onSelectEntry: selectEntry
-        })
-      } else if (data.status === 'error') {
-        detail = h(
-          'div',
-          { className: 'dm-blank' },
-          h(Icon, { name: 'book', size: 22 }),
-          h('h2', { className: 'dm-blankTitle' }, data.offline ? t('error.offline') : t('error.load')),
-          h('p', { className: 'dm-blankHint' }, data.error || ''),
-          h(
-            'button',
-            { type: 'button', className: 'dm-btn', onClick: () => load() },
-            t('action.retry')
           )
-        )
-      } else if (data.status === 'loading') {
-        detail = h(
-          'div',
-          { className: 'dm-blank' },
-          h('p', { className: 'dm-blankHint' }, t('list.loading'))
-        )
-      } else if (!entries.length) {
-        detail = h(
-          'div',
-          { className: 'dm-onboard' },
-          h(
-            'div',
-            { className: 'dm-onboardHead' },
-            h('span', { className: 'dm-onboardIcon' }, h(Icon, { name: 'book', size: 24 })),
-            h('h2', { className: 'dm-onboardTitle' }, t('empty.title')),
-            h('p', { className: 'dm-onboardHint' }, t('empty.hint'))
-          ),
-          h(
-            'div',
-            { className: 'dm-onboardCards' },
-            CATEGORIES.map((item) =>
-              h(
-                'div',
-                { className: 'dm-onboardCard', key: item.id },
-                h(
-                  'div',
-                  { className: 'dm-onboardCardTitle' },
-                  h('span', { className: 'dm-dot dm-dot-' + item.id }),
-                  t(item.labelKey)
-                ),
-                h('div', { className: 'dm-onboardCardHint' }, t(item.hintKey))
-              )
-            )
-          ),
-          h(
-            'button',
-            { type: 'button', className: 'dm-btn dm-btnPrimary', onClick: startCreate },
-            h(Icon, { name: 'plus', size: 15 }),
-            t('empty.cta')
-          )
-        )
-      } else {
-        detail = h(
-          'div',
-          { className: 'dm-blank' },
-          h(Icon, { name: 'book', size: 22 }),
-          h('h2', { className: 'dm-blankTitle' }, t('detail.selectTitle')),
-          h('p', { className: 'dm-blankHint' }, t('detail.selectHint'))
         )
       }
+      const batchIds = nav.kind === 'graph' ? graphSelection : checked
+      const clearBatch = () => {
+        if (nav.kind === 'graph') setGraphSelection([])
+        else setChecked([])
+      }
 
-      const graphMode = view === 'graph'
-
-      const graph = graphMode
-        ? h(GraphView, {
-            entries: visible,
-            regions,
-            t,
-            selectedId,
-            selectedEntry: selected,
-            onSelect: selectEntry,
-            onClose: () => setSelectedId(null),
-            onIsolate: (id) => selectEntry(id),
-            onCreateLink: createLink,
-            onSaveRegion: saveRegion,
-            onUpdateRegion: updateRegion,
-            onDeleteRegion: deleteRegion,
-            drawer: selected
-              ? h(MemoryDetail, {
-                  entry: selected,
-                  entries,
-                  region: regionOfEntry(selected),
-                  t,
-                  busy,
-                  confirmDelete,
-                  onEdit: () => startEdit(selected),
-                  onRequestDelete: () => setConfirmDelete(true),
-                  onCancelDelete: () => setConfirmDelete(false),
-                  onConfirmDelete: deleteSelected,
-                  onTogglePin: togglePin,
-                  onSetStatus: (status) => setStatus(selected, status),
-                  onAddLink: (targetId, label) => addLink(selected, targetId, label),
-                  onRemoveLink: (targetId) => removeLink(selected, targetId),
-                  onSelectEntry: selectEntry
-                })
-              : null
+      const centerBody = (() => {        if (nav.kind === 'overview') {
+          return h(OverviewView, {
+            t: t,
+            meta: meta,
+            stats: stats,
+            entries: entries,
+            suggestedRelations: suggestedRelations,
+            onNav: setNavKind,
+            onFilterNav: (kind, next) => {
+              setFilters(Object.assign({ projectId: '', types: [], statuses: [], domains: [], tags: [] }, next || {}))
+              setNavKind(kind)
+            },
+            onOpen: openEntry,
+            onNew: () => setModal({ type: 'quick' }),
+            onDecide: decideRelation
           })
-        : null
+        }
+        if (nav.kind === 'collections') {
+          return h(CollectionsView, {
+            t: t,
+            collections: collections,
+            suggestions: (graphView && graphView.collectionSuggestions) || [],
+            suggesting: busy === 'suggest.collections',
+            onSuggest: async () => {
+              setBusy('suggest.collections')
+              try {
+                const result = await request(API, {
+                  method: 'POST',
+                  body: JSON.stringify({ action: 'suggest.collections', projectId: filters.projectId || '' })
+                })
+                setGraphView(Object.assign({}, graphView, {
+                  collectionSuggestions: (result && result.suggestions) || []
+                }))
+                notify(t('toast.suggested'), 'ok')
+              } catch (err) {
+                notify(errorText(err, t('error.write')), 'error')
+              } finally {
+                setBusy('')
+              }
+            },
+            onCreate: () => setModal({ type: 'collection' }),
+            onAccept: acceptSuggestion,
+            onOpen: (id) => setNav({ kind: 'collection', id: id })
+          })
+        }
+        if (nav.kind === 'collection') {
+          const collection = collectionById.get(nav.id)
+          if (!collection) {
+            return h(EmptyState, { icon: 'folder', title: t('collections.empty'), text: t('collections.deleted') })
+          }
+          const members = collection.memberIds
+            .map((id) => entryById.get(id))
+            .filter(Boolean)
+          return h(CollectionDetail, {
+            t: t,
+            meta: meta,
+            collection: collection,
+            members: members,
+            collections: collections,
+            onUpdate: (patch) => updateCollection(Object.assign({ id: collection.id }, patch)),
+            onSummarize: () => summarizeCollection(collection.id),
+            onRemoveMember: (id) => removeMember(collection.id, id),
+            onAddMembers: () => setModal({ type: 'members', collectionId: collection.id }),
+            onDelete: deleteCollection,
+            onMerge: mergeCollections,
+            onOpen: openEntry
+          })
+        }
+        if (nav.kind === 'graph') {
+          return h(GraphView, {
+            key: nav.id || 'graph',
+            t: t,
+            meta: meta,
+            entries: navEntries,
+            relations: relations,
+            collections: collections,
+            stats: stats,
+            selection: graphSelection,
+            initialConfig: graphView,
+            onSelect: onSelectGraphNode,
+            onMultiSelect: setGraphSelection,
+            onCreateRelation: (sourceId, targetId) =>
+              setModal({ type: 'relation', sourceId: sourceId, targetId: targetId }),
+            onDecideRelation: decideRelation,
+            onSaveView: () => setModal({ type: 'saveView' }),
+            onBatchAction: batchAction,
+            onState: onGraphState
+          })
+        }
+        return h(
+          React.Fragment,
+          null,
+          h(FilterBar, {
+            t: t,
+            meta: meta,
+            filters: filters,
+            counts: counts,
+            tagOptions: tagOptions,
+            layout: layout,
+            onLayout: setLayout,
+            sort: sort,
+            onSort: setSort,
+            onChange: setFilters
+          }),
+          h(MemoryList, {
+            t: t,
+            meta: meta,
+            entries: navEntries,
+            layout: layout,
+            selectedId: selectedId,
+            selection: checked,
+            onOpen: openEntry,
+            onCheck: toggleChecked,
+            onStar: starEntry,
+            collectionsFor: collectionsOf,
+            relationCount: relationCount,
+            onNew: () => setModal({ type: 'quick' })
+          })
+        )
+      })()
 
       return h(
         'div',
-        { className: 'dm-root', 'data-dm-theme': themeMode, onKeyDown: handleKeyDown },
+        { className: 'zw-root', 'data-zw-theme': theme },
         h('style', null, CSS),
         h(
-          'header',
-          { className: 'dm-head' },
+          'div',
+          { className: 'zw-app' + (detailCollapsed ? ' zw-appDetailCollapsed' : '') },
+          h(LeftRail, {
+            t: t,
+            nav: nav,
+            collapsed: railCollapsed,
+            stats: stats,
+            projects: projects,
+            projectCounts: projectCounts,
+            views: data.views || [],
+            onNav: setNavKind,
+            onNew: () => setModal({ type: 'quick' }),
+            onToggleCollapsed: () => setRailCollapsed(!railCollapsed),
+            onOpenView: restoreView,
+            onCreateProject: () => setModal({ type: 'project' }),
+            onRefresh: load
+          }),
           h(
-            'div',
-            { className: 'dm-headText' },
-            h('h1', { className: 'dm-title' }, t('head.title')),
-            h('p', { className: 'dm-sub' }, t('head.subtitle'))
-          ),
-          h(
-            'div',
-            { className: 'dm-headActions' },
+            'section',
+            { className: 'zw-center' },
             h(
               'div',
-              { className: 'dm-segment', role: 'group', 'aria-label': t('head.title') },
+              { className: 'zw-topbar' },
               h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'dm-segmentBtn' + (graphMode ? '' : ' dm-segmentBtnOn'),
-                  'aria-pressed': !graphMode,
-                  onClick: () => setView('list')
-                },
-                h(Icon, { name: 'book', size: 13 }),
-                t('view.list')
-              ),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  className: 'dm-segmentBtn' + (graphMode ? ' dm-segmentBtnOn' : ''),
-                  'aria-pressed': graphMode,
-                  onClick: () => setView('graph')
-                },
-                h(Icon, { name: 'graph', size: 13 }),
-                t('view.graph')
+                'div',
+                { className: 'zw-titleRow' },
+                h(
+                  'div',
+                  { className: 'zw-titleMain' },
+                  h('h1', { className: 'zw-viewTitle' }, viewTitle),
+                  h(
+                    'span',
+                    { className: 'zw-viewSub' },
+                    nav.kind === 'graph'
+                      ? t('graph.subtitle')
+                      : navEntries.length + ' ' + t('common.items')
+                  )
+                ),
+                h(
+                  'div',
+                  { className: 'zw-search' },
+                  h(Icon, { name: 'search', size: 14 }),
+                  h('input', {
+                    className: 'zw-searchInput',
+                    value: search,
+                    placeholder: t('list.searchPlaceholder'),
+                    onChange: (event) => setSearch(event.target.value)
+                  }),
+                  search
+                    ? h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-searchX',
+                          onClick: () => setSearch('')
+                        },
+                        h(Icon, { name: 'close', size: 11 })
+                      )
+                    : null
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-btn zw-btnSm zw-btnPrimary',
+                    onClick: () => setModal({ type: 'quick' })
+                  },
+                  h(Icon, { name: 'plus', size: 13 }),
+                  t('action.new')
+                )
               )
             ),
             h(
               'div',
-              { className: 'dm-search' },
-              h(Icon, { name: 'search', size: 15 }),
-              h('input', {
-                type: 'text',
-                value: query,
-                placeholder: t('search.placeholder'),
-                'aria-label': t('search.placeholder'),
-                onChange: (event) => setQuery(event.target.value)
-              }),
-              query
+              { className: 'zw-bodyArea' },
+              data.status === 'error'
                 ? h(
-                    'button',
-                    {
-                      type: 'button',
-                      className: 'dm-searchClear',
-                      title: t('search.clear'),
-                      'aria-label': t('search.clear'),
-                      onClick: () => setQuery('')
-                    },
-                    h(Icon, { name: 'close', size: 12 })
+                    'div',
+                    { className: 'zw-empty' },
+                    h('div', { className: 'zw-emptyIcon' }, h(Icon, { name: 'warning', size: 22 })),
+                    h('div', { className: 'zw-emptyTitle' }, data.error || t('error.load')),
+                    h(
+                      'button',
+                      { type: 'button', className: 'zw-btn zw-btnSm', onClick: load },
+                      t('action.retry')
+                    )
                   )
-                : null
+                : centerBody
             ),
-            h(
-              'button',
-              {
-                type: 'button',
-                className: 'dm-btn dm-btnPrimary',
-                disabled: editing,
-                onClick: startCreate
-              },
-              h(Icon, { name: 'plus', size: 15 }),
-              t('action.new')
-            )
-          )
+            batchIds.length > 1
+              ? h(
+                  'div',
+                  { className: 'zw-batchWrap' },
+                  h(
+                    'div',
+                    { className: 'zw-batchbar' },
+                    h('span', { className: 'zw-batchCount' }, batchIds.length + ' ' + t('batch.selected')),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm',
+                        onClick: () => setModal({ type: 'batchCollection', ids: batchIds.slice() })
+                      },
+                      h(Icon, { name: 'folder', size: 12 }),
+                      t('batch.addToCollection')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm',
+                        onClick: async () => {
+                          await mutate(
+                            { action: 'entry-bulk', ids: batchIds.slice(), op: 'status', status: 'active' },
+                            t('toast.saved')
+                          )
+                          clearBatch()
+                        }
+                      },
+                      h(Icon, { name: 'check', size: 12 }),
+                      t('batch.setStatus')
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-btn zw-btnSm zw-btnGhost',
+                        onClick: clearBatch
+                      },
+                      t('batch.clear')
+                    )
+                  )
+                )
+              : null,
+            busy
+              ? h('div', { className: 'zw-loadingBar' }, h('div', { className: 'zw-loadingFill' }))
+              : null
+          ),
+          h(DetailRail, {
+            t: t,
+            meta: meta,
+            entry: selectedEntry,
+            collections: selectedEntry ? collectionsOf(selectedEntry.id) : [],
+            relationGroups: selectedEntry ? groupedRelations(selectedEntry.id) : [],
+            relationCount: selectedEntry ? relationCount(selectedEntry.id) : 0,
+            collapsed: detailCollapsed,
+            onExpand: () => setDetailCollapsed(false),
+            onCollapse: () => setDetailCollapsed(true),
+            onStar: starEntry,
+            onEdit: (id) => setModal({ type: 'editor', id: id }),
+            onSetStatus: setStatus,
+            onCreateLink: (sourceId) => setModal({ type: 'relation', sourceId: sourceId, targetId: '' }),
+            onEditCollections: (id) => setModal({ type: 'entryCollections', id: id }),
+            onDecideRelation: decideRelation,
+            onDeleteRelation: deleteRelation,
+            onOpen: openEntry,
+            onOpenCollection: (id) => setNav({ kind: 'collection', id: id }),
+            onDelete: deleteEntry,
+            assist: {
+              busy: assist.busy && assist.entryId === selectedId,
+              action: assist.entryId === selectedId ? assist.action : '',
+              result: assist.entryId === selectedId ? assist.result : null,
+              error: assist.entryId === selectedId ? assist.error : '',
+              onClose: closeAssist
+            },
+            onAssist: runAssist,
+            onApplyOrganize: applyOrganize,
+            onSplitSegment: splitSegment,
+            onRelateSuggestion: relateSuggestion,
+            onResolveConflict: resolveConflict,
+            onShowMembers: (ids) => {
+              setChecked(ids.slice())
+              setNav({ kind: 'all', id: '' })
+            }
+          })
         ),
-        notice ? h('div', { className: 'dm-notice dm-notice-' + notice.tone, role: 'status' }, notice.text) : null,
-        data.error && data.status !== 'error'
-          ? h('div', { className: 'dm-notice dm-notice-error', role: 'status' }, data.error)
+        h(ToastHost, { toasts: toasts }),
+        modal && modal.type === 'summary'
+          ? h(
+              Modal,
+              {
+                title: t('assist.summary'),
+                icon: 'sparkle',
+                wide: true,
+                onClose: () => setModal(null),
+                closeLabel: t('action.close')
+              },
+              h(AssistResult, {
+                t: t,
+                meta: meta,
+                result: modal.result,
+                onOpenEntry: openEntry,
+                onShowMembers: (ids) => {
+                  setModal(null)
+                  setChecked(ids.slice())
+                  setNav({ kind: 'all', id: '' })
+                }
+              })
+            )
           : null,
-        graphMode
-          ? h('div', { className: 'dm-body dm-body-graph' }, rail, graph)
-          : h('div', { className: 'dm-body' }, rail, list, h('section', { className: 'dm-detail' }, detail))
+        modal && modal.type === 'quick'
+          ? h(QuickAdd, {
+              t: t,
+              meta: meta,
+              projects: projects,
+              defaultProjectId: defaultProjectId,
+              saving: busy === 'quick',
+              onSuggest: askSuggestRelations,
+              onSave: quickSave,
+              onSaveSegment: async (segment) => {
+                await mutate(
+                  Object.assign({ action: 'entry-save', status: 'pending', source: { kind: 'ai', label: t('assist.segments') } }, segment),
+                  t('toast.segmentAdded')
+                )
+              },
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'editor'
+          ? h(EntryEditor, {
+              t: t,
+              meta: meta,
+              entry: entryById.get(modal.id) || null,
+              projects: projects,
+              allCollections: collections,
+              defaultProjectId: defaultProjectId,
+              collectionsOf: collectionsOf,
+              saving: busy === 'entry-save',
+              onSave: saveEntry,
+              onDelete: deleteEntry,
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'relation'
+          ? h(RelationDialog, {
+              t: t,
+              meta: meta,
+              entries: entries,
+              sourceId: modal.sourceId,
+              initialTargetId: modal.targetId,
+              saving: busy === 'relation-create',
+              onSave: createRelation,
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'collection'
+          ? h(CollectionCreate, {
+              t: t,
+              projects: projects,
+              defaultProjectId: defaultProjectId,
+              saving: busy === 'collection-save',
+              onCreate: saveCollection,
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'members'
+          ? h(MembersPicker, {
+              t: t,
+              meta: meta,
+              entries: entries,
+              memberIds: collectionById.has(modal.collectionId)
+                ? collectionById.get(modal.collectionId).memberIds
+                : [],
+              saving: busy === 'collection-members',
+              onApply: (ids) => addMembers(modal.collectionId, ids),
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'batchCollection'
+          ? h(CollectionPicker, {
+              t: t,
+              collections: collections.filter((collection) => collection.status !== 'suggested'),
+              title: t('batch.pickCollection'),
+              saving: busy === 'entry-bulk',
+              onApply: async (ids) => {
+                for (let index = 0; index < ids.length; index += 1) {
+                  await mutate({
+                    action: 'entry-bulk',
+                    ids: modal.ids,
+                    op: 'addCollection',
+                    collectionId: ids[index]
+                  })
+                }
+                setChecked([])
+                setModal(null)
+                if (ids.length) notify(t('toast.membersAdded'), 'ok')
+              },
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'entryCollections'
+          ? h(CollectionPicker, {
+              t: t,
+              collections: collections.filter((collection) => collection.status !== 'suggested'),
+              title: t('detail.collections'),
+              value: collectionsOf(modal.id).map((collection) => collection.id),
+              saving: busy === 'entry-collections',
+              onApply: async (ids) => {
+                const current = collectionsOf(modal.id).map((collection) => collection.id)
+                await mutate({
+                  action: 'entry-collections',
+                  id: modal.id,
+                  add: ids.filter((id) => !current.includes(id)),
+                  remove: current.filter((id) => !ids.includes(id))
+                })
+                setModal(null)
+              },
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'saveView'
+          ? h(NameDialog, {
+              t: t,
+              title: t('graph.saveView'),
+              label: t('graph.viewName'),
+              placeholder: t('graph.viewNamePlaceholder'),
+              icon: 'bookmark',
+              onSave: saveView,
+              onClose: () => setModal(null)
+            })
+          : null,
+        modal && modal.type === 'project'
+          ? h(NameDialog, {
+              t: t,
+              title: t('nav.newProject'),
+              label: t('common.name'),
+              icon: 'folder',
+              onSave: async (name) => {
+                setModal(null)
+                await mutate({ action: 'project-save', name: name }, t('toast.saved'))
+              },
+              onClose: () => setModal(null)
+            })
+          : null
       )
     }
 
+
     function apply(ctx) {
       const t = ctx.locale.bind(NS)
-      ctx.effect(() => ctx.locale.register(NS, 'zh', ZH), 'design-memory: zh dictionary')
-      ctx.effect(() => ctx.locale.register(NS, 'en', EN), 'design-memory: en dictionary')
+      ctx.effect(() => ctx.locale.register(NS, 'zh', ZH), 'zhiwei: zh dictionary')
+      ctx.effect(() => ctx.locale.register(NS, 'en', EN), 'zhiwei: en dictionary')
       ctx.slots.inject('sidebar.panellist', () =>
         ctx.slots.register(
           {
@@ -3315,3 +8638,4 @@ html[data-platform='darwin'] .dm-head { padding-top:calc(22px + var(--dsh-frame-
     return { inject: ['slots', 'locale'], apply }
   }
 })
+

@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Design memory",
-    "description": "A planner's long-term memory: system rules, numeric decisions, workflows, and design conventions organized as Systems, Numbers, Workflows, and Other — confirm or deprecate entries by hand, draw links directly on a neural-network style memory map, box a cluster of entries into a region, and let the agent read and write through tools.",
+    "title": "知微",
+    "description": "An AI-assisted knowledge workbench for game designers: design decisions, rules, assumptions, questions, proposals, references, metrics and retrospectives — each with a type, a status, a source and typed relations, organised into topic collections and reachable through a three-pane workspace and an explorable knowledge graph.",
     "detail": "docs/DETAIL.md"
   }
 }

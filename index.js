@@ -651,15 +651,19 @@ function normalizeEntry(raw, projectIds, now) {
     if (evidence.length >= LIMITS.evidence) break
   }
   const source = normalizeSource(raw.source)
-  if (!evidence.length && (source.label || raw.sourceConversation)) {
+  // 每条记忆都必须能说清「哪来的」：有来源标注就用标注，没有就明确记为
+  // 迁移遗留（未标注来源），不当成凭空出现的知识。
+  if (!evidence.length) {
     evidence.push({
       id: newEvidenceId(),
       memoryId: id,
       sourceConversation: cleanLine(raw.sourceConversation, 120),
       sourceMessage: '',
-      content: cleanText(source.label, LIMITS.evidenceNote) || '来自历史记录',
+      content:
+        cleanText(source.label, LIMITS.evidenceNote) ||
+        '迁移自旧版本数据（人工录入，未标注来源）',
       evidenceType: raw.evidenceType && EVIDENCE_TYPES.includes(raw.evidenceType) ? raw.evidenceType : 'statement',
-      confidence: 0.7,
+      confidence: cleanText(source.label, LIMITS.evidenceNote) ? 0.7 : 0.5,
       createdAt
     })
   }

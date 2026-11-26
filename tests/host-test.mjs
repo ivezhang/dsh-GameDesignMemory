@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const PLUGIN_PATH = path.resolve(HERE, '..', 'index.js')
 const ROUTE = '/design-memory/api'
-const STORE_VERSION = 3
+const STORE_VERSION = 4
 
 const ENTRY_TYPES = ['decision', 'rule', 'assumption', 'question', 'proposal', 'reference', 'metric', 'retro', 'process']
 const RELATION_TYPES = ['belongs_to', 'depends_on', 'affects', 'derived_from', 'references', 'conflicts_with', 'supersedes', 'refines']
@@ -218,6 +218,7 @@ async function boot(dshHome) {
   const mod = await import(href)
 
   const toolDefs = []
+  const promptSections = []
   let capturedRoute = null
   const mockCtx = {
     tools: {
@@ -230,7 +231,8 @@ async function boot(dshHome) {
       run()
     },
     inject(services, callback) {
-      if (Array.isArray(services) && services.includes('webServer')) {
+      if (!Array.isArray(services)) return
+      if (services.includes('webServer')) {
         callback({
           effect(run) {
             run()
@@ -238,6 +240,22 @@ async function boot(dshHome) {
           webServer: {
             register(def) {
               capturedRoute = def
+            }
+          }
+        })
+        return
+      }
+      if (services.includes('systemPrompt')) {
+        callback({
+          effect(run) {
+            run()
+          },
+          systemPrompt: {
+            section(section) {
+              if (!section || typeof section.name !== 'string') throw new TypeError('section needs a name')
+              if (!Number.isFinite(section.order)) throw new TypeError('section needs a finite order')
+              promptSections.push(section)
+              return () => {}
             }
           }
         })
@@ -267,6 +285,7 @@ async function boot(dshHome) {
     mod,
     mockCtx,
     toolDefs,
+    promptSections,
     route: capturedRoute,
     api,
     snapshot,
@@ -281,7 +300,7 @@ async function boot(dshHome) {
 
 async function runFreshSuite() {
   const home = await makeHome('fresh')
-  const { api, toolDefs, route, storeFile } = await boot(home)
+  const { api, toolDefs, route, storeFile, promptSections } = await boot(home)
 
   const getBody = async () => {
     const res = await api.get()
@@ -297,10 +316,17 @@ async function runFreshSuite() {
     return res.json
   }
 
-  await test('registers four tools and a prefix route at /design-memory', () => {
+  await test('registers six tools and a prefix route at /design-memory', () => {
     eq(
       toolDefs.map((def) => def.name).sort(),
-      ['design_memory_analyze', 'design_memory_search', 'design_memory_suggest', 'design_memory_write'],
+      [
+        'design_memory_analyze',
+        'design_memory_observe',
+        'design_memory_recall',
+        'design_memory_search',
+        'design_memory_suggest',
+        'design_memory_write'
+      ],
       'registered tools'
     )
     eq(route.kind, 'prefix', 'route kind')
@@ -308,7 +334,16 @@ async function runFreshSuite() {
     typeOf(route.handler, 'function', 'route handler')
   })
 
-  await test('fresh store: GET returns ok/version 3/full envelope', async () => {
+  await test('registers a zhiwei system prompt section that explains recall and observe', () => {
+    eq(promptSections.length, 1, 'prompt section count')
+    const section = promptSections[0]
+    eq(section.name, 'design-memory:zhiwei', 'section name')
+    ok(Number.isFinite(section.order), 'section order must be finite')
+    ok(section.text.includes('design_memory_recall'), 'prompt should point at the recall tool')
+    ok(section.text.includes('固有约定'), 'prompt should explain protected memories')
+  })
+
+  await test('fresh store: GET returns ok/version 4/full envelope', async () => {
     const body = await getBody()
     eq(body.ok, true, 'ok')
     eq(body.version, STORE_VERSION, 'version')
@@ -326,7 +361,7 @@ async function runFreshSuite() {
     isArray(body.meta.entryTypes, 'meta.entryTypes')
   })
 
-  await test('fresh store: memories.json created on disk with version 3', async () => {
+  await test('fresh store: memories.json created on disk with version 4', async () => {
     ok(existsSync(storeFile), 'store file was not created at ' + storeFile)
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'on-disk version')
@@ -947,7 +982,7 @@ async function runFreshSuite() {
     ok(relationsText.length > 0, 'suggest relations returned empty string')
   })
 
-  await test('durability: on-disk JSON parses as version 3 and matches the API', async () => {
+  await test('durability: on-disk JSON parses as version 4 and matches the API', async () => {
     const state = await getBody()
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'disk version')
@@ -1168,7 +1203,7 @@ async function runLegacySuite() {
     eq(collection.memberIds, ['mem_a', 'mem_b'], 'memberIds')
   })
 
-  await test('legacy migration: file rewritten as version 3', async () => {
+  await test('legacy migration: file rewritten as version 4', async () => {
     const disk = JSON.parse(await readFile(storeFile, 'utf8'))
     eq(disk.version, STORE_VERSION, 'on-disk version')
     eq(disk.entries.length, 4, 'on-disk entries')
@@ -1184,6 +1219,297 @@ async function runLegacySuite() {
 }
 
 // ---------------------------------------------------------------------------
+// suite: v2.1 evolution (versions / evidence / protection / proposals / recall)
+// ---------------------------------------------------------------------------
+
+async function runEvolutionSuite() {
+  const home = await makeHome('evolve')
+  const { api } = await boot(home)
+
+  const getBody = async () => {
+    const res = await api.get()
+    eq(res.status, 200, 'GET status')
+    return res.json
+  }
+
+  const postOk = async (body, what) => {
+    const res = await api.post(body)
+    if (res.status !== 200 || !res.json || res.json.ok !== true) {
+      fail((what || 'POST') + ' failed: HTTP ' + res.status + ' ' + brief(res.text, 400))
+    }
+    return res.json
+  }
+
+  const postFail = async (body, status, code, what) => {
+    const res = await api.post(body)
+    const label = what || 'POST'
+    eq(res.status, status, label + ' status')
+    ok(res.json && res.json.ok === false, label + ' should fail with ok:false')
+    if (code) eq(res.json.error && res.json.error.code, code, label + ' error code')
+    return res.json
+  }
+
+  const byId = async (id) => {
+    const body = await getBody()
+    return body.entries.find((item) => item.id === id)
+  }
+
+  let habitId = ''
+  let conventionId = ''
+  let numericId = ''
+  let protectedMemoryId = ''
+
+  await test('entry-save fills lifecycle fields, the first version and evidence', async () => {
+    const body = await postOk({
+      action: 'entry-save',
+      title: '公告语气偏好',
+      content: '公告语气要短句、平实，不用官腔，也不要堆感叹号。',
+      type: 'habit',
+      status: 'active',
+      scope: 'global',
+      confidence: 0.9,
+      importance: 0.8,
+      domains: ['operation'],
+      tags: ['公告', '语气'],
+      source: { kind: 'conversation', label: '和用户在 11 月确认过' }
+    })
+    const entry = body.entry
+    habitId = entry.id
+    eq(entry.scope, 'global', 'scope')
+    eq(entry.status, 'active', 'status')
+    eq(entry.protectionLevel, 'confirmed', 'active memory is confirmed by default')
+    eq(entry.confidence, 0.9, 'confidence')
+    eq(entry.currentVersion, 1, 'currentVersion')
+    eq(entry.versions.length, 1, 'versions')
+    eq(entry.versions[0].changeType, 'create', 'first version changeType')
+    eq(entry.evidence.length, 1, 'source label becomes an evidence row')
+    eq(entry.evidence[0].content.includes('确认过'), true, 'evidence keeps the source text')
+  })
+
+  await test('entry-save creates a project-scoped convention memory', async () => {
+    const body = await postOk({
+      action: 'entry-save',
+      title: '活动规则术语规范',
+      content: '活动规则里统一写「挑战券消耗」，不要写「挑战次数」。',
+      type: 'convention',
+      status: 'active',
+      scope: 'project',
+      domains: ['operation'],
+      tags: ['公告', '术语'],
+      source: { kind: 'conversation', label: '术语评审' }
+    })
+    conventionId = body.entry.id
+    eq(body.entry.scope, 'project', 'scope')
+    eq(body.entry.tags.includes('术语'), true, 'tags')
+  })
+
+  await test('entry-save creates a numeric rule used by the conflict path', async () => {
+    const body = await postOk({
+      action: 'entry-save',
+      title: '金币产出规则',
+      content: '金币产出每秒 12 个，单局上限 600。',
+      type: 'rule',
+      status: 'active',
+      domains: ['economy'],
+      tags: ['数值', '金币']
+    })
+    numericId = body.entry.id
+    eq(body.entry.type, 'rule', 'type')
+  })
+
+  await test('entry-protect locks a memory and records a protect version', async () => {
+    const before = await byId(habitId)
+    const body = await postOk({ action: 'entry-protect', id: habitId, level: 'protected' }, 'protect')
+    eq(body.entry.protectionLevel, 'protected', 'protectionLevel')
+    eq(body.entry.versions.length, before.versions.length + 1, 'protect should append a version')
+    eq(body.entry.versions[body.entry.versions.length - 1].changeType, 'protect', 'changeType')
+  })
+
+  await test('a protected memory refuses silent content edits with 409 protected', async () => {
+    await postFail(
+      { action: 'entry-save', id: habitId, content: '公告语气可以随便写。' },
+      409,
+      'protected',
+      'protected edit'
+    )
+    const entry = await byId(habitId)
+    eq(entry.content.includes('短句'), true, 'content must stay untouched')
+  })
+
+  await test('force edit applies and appends a version with a reason', async () => {
+    const before = await byId(habitId)
+    const body = await postOk({
+      action: 'entry-save',
+      id: habitId,
+      content: '公告语气要短句、平实、对玩家友好，不用官腔。',
+      force: true,
+      changeType: 'correct',
+      note: '用户明确要求改语气'
+    })
+    eq(body.entry.versions.length, before.versions.length + 1, 'force edit appends a version')
+    const version = body.entry.versions[body.entry.versions.length - 1]
+    eq(version.changeType, 'correct', 'changeType')
+    eq(version.changeReason, '用户明确要求改语气', 'changeReason')
+    eq(version.content.includes('对玩家友好'), true, 'version snapshots the new content')
+  })
+
+  await test('entry-version-restore rolls back and records a restore version', async () => {
+    const entry = await byId(habitId)
+    const first = entry.versions[0]
+    const body = await postOk({ action: 'entry-version-restore', id: habitId, versionId: first.id, force: true })
+    eq(body.entry.content, first.content, 'content rolled back')
+    const last = body.entry.versions[body.entry.versions.length - 1]
+    eq(last.changeType, 'restore', 'restore version changeType')
+    eq(last.version, body.entry.currentVersion, 'currentVersion follows versions length')
+  })
+
+  await test('evidence-add appends an evidence row without touching content', async () => {
+    const before = await byId(habitId)
+    const body = await postOk({
+      action: 'evidence-add',
+      id: habitId,
+      evidence: '11 月 20 日又说了一次不要官腔',
+      evidenceType: 'confirmation',
+      sourceConversation: 'conv-42'
+    })
+    eq(body.entry.evidence.length, before.evidence.length + 1, 'evidence grows')
+    eq(body.entry.content, before.content, 'content untouched')
+    eq(body.entry.evidence[body.entry.evidence.length - 1].sourceConversation, 'conv-42', 'sourceConversation')
+  })
+
+  await test('memory-observe creates pending candidates instead of dumping chat logs', async () => {
+    const body = await postOk(
+      {
+        action: 'memory-observe',
+        text: '每周三下午三点开项目同步会，会议纪要发到项目群。\n\n需求评审前一天要把原型发给主策。',
+        conversationId: 'conv-obs'
+      },
+      'observe'
+    )
+    ok(body.created.length >= 1, 'observe should create at least one candidate')
+    const created = body.created[0]
+    const entry = await byId(created.id)
+    ok(entry, 'candidate should exist in the store')
+    eq(entry.status, 'pending', 'observations land as pending candidates')
+    eq(entry.protectionLevel, 'normal', 'candidates are never protected automatically')
+    eq(entry.source.kind, 'ai', 'source kind')
+    ok(entry.evidence.length >= 1, 'candidate keeps its evidence')
+    eq(entry.evidence[0].sourceConversation, 'conv-obs', 'evidence points at the conversation')
+  })
+
+  await test('memory-observe turns protected contradictions into proposals, not edits', async () => {
+    const created = await postOk({
+      action: 'entry-save',
+      title: '秘境战斗节奏约定',
+      content: '秘境战斗节奏：每波之间必须留 3 秒喘息，禁止连续刷怪。',
+      type: 'convention',
+      status: 'active',
+      scope: 'project',
+      domains: ['combat'],
+      tags: ['秘境', '战斗节奏']
+    })
+    const protectedId = created.entry.id
+    await postOk({ action: 'entry-protect', id: protectedId, level: 'protected' }, 'protect the pacing rule')
+    const before = await byId(protectedId)
+
+    const body = await postOk(
+      {
+        action: 'memory-observe',
+        text: '秘境战斗节奏改成每波之间只留 1 秒，连续刷怪更刺激。',
+        conversationId: 'conv-conflict'
+      },
+      'observe over a protected memory'
+    )
+    ok(body.proposed.length >= 1, 'protected memory change must become a proposal')
+    const entry = await byId(protectedId)
+    eq(entry.content, before.content, 'protected content must not change')
+    const pending = body.proposals.filter((item) => item.memoryId === protectedId && item.status === 'pending')
+    eq(pending.length >= 1, true, 'a pending proposal should exist')
+    protectedMemoryId = protectedId
+  })
+
+  await test('proposal-decide accept applies the proposed content and keeps history', async () => {
+    const snapshot = await getBody()
+    const proposal = snapshot.proposals.find(
+      (item) => item.memoryId === protectedMemoryId && item.status === 'pending'
+    )
+    ok(proposal, 'pending proposal missing')
+    const before = snapshot.entries.find((item) => item.id === protectedMemoryId)
+    const body = await postOk({ action: 'proposal-decide', proposalId: proposal.id, decision: 'accept' })
+    eq(body.entry.content, proposal.proposedContent, 'accepted content applied')
+    eq(body.entry.versions.length, before.versions.length + 1, 'accepted proposal appends a version')
+    const decided = body.proposals.find((item) => item.id === proposal.id)
+    eq(decided.status, 'accepted', 'proposal status')
+  })
+
+  await test('memory-recall ranks protected project rules first and records a real call', async () => {
+    const body = await postOk({ action: 'memory-recall', task: '写活动公告，注意语气和术语' }, 'recall')
+    ok(body.items && body.items.length >= 1, 'recall should serve at least one memory')
+    for (const item of body.items) {
+      ok(Number.isFinite(item.tier), 'every served item carries a tier')
+    }
+    const tiers = body.items.map((item) => item.tier)
+    const sorted = tiers.slice().sort((left, right) => left - right)
+    eq(tiers, sorted, 'recall items are ordered by tier')
+    ok(typeof body.logged === 'string' && body.logged, 'recall should be logged')
+    const recallLog = body.recalls[0]
+    ok(recallLog && Array.isArray(recallLog.ids), 'recall log should keep the served ids')
+    const served = body.items[0]
+    const entry = await byId(served.entryId)
+    ok(entry.usageCount >= 1, 'served memory counts a real usage')
+    ok(entry.lastUsedAt, 'served memory remembers when it was used')
+  })
+
+  await test('memory-merge folds duplicates and re-points relations', async () => {
+    const first = await postOk({
+      action: 'entry-save',
+      title: '公告长度',
+      content: '公告标题控制在 12 个字以内。',
+      type: 'rule',
+      status: 'active',
+      tags: ['公告']
+    })
+    const second = await postOk({
+      action: 'entry-save',
+      title: '公告标题长度限制',
+      content: '标题超过 12 个字会换行，尽量压短。',
+      type: 'rule',
+      status: 'active',
+      tags: ['公告']
+    })
+    await postOk({
+      action: 'relation-create',
+      sourceMemoryId: first.entry.id,
+      targetMemoryId: conventionId,
+      relationType: 'references'
+    })
+    const body = await postOk({ action: 'memory-merge', ids: [first.entry.id, second.entry.id], targetId: first.entry.id })
+    eq(body.merged.includes(second.entry.id), true, 'merged ids reported')
+    eq(body.entry.content.includes('标题超过 12 个字'), true, 'merged content keeps both blocks')
+    const last = body.entry.versions[body.entry.versions.length - 1]
+    eq(last.changeType, 'merge', 'merge version changeType')
+    const snapshot = await getBody()
+    const stillThere = snapshot.entries.some((item) => item.id === second.entry.id)
+    eq(stillThere, false, 'merged memory removed')
+    const relation = snapshot.relations.find(
+      (item) => item.sourceMemoryId === first.entry.id && item.targetMemoryId === conventionId
+    )
+    ok(relation, 'relation should survive the merge')
+  })
+
+  await test('memory-tidy reports pending work without mutating the store', async () => {
+    const before = await getBody()
+    const body = await postOk({ action: 'memory-tidy' }, 'tidy')
+    ok(body.report && Array.isArray(body.report.duplicates), 'tidy should return a report')
+    ok(Array.isArray(body.report.pendingProposals), 'report.pendingProposals')
+    ok(Array.isArray(body.report.orphans), 'report.orphans')
+    ok(Number.isFinite(body.report.protectedCount), 'report.protectedCount')
+    const after = await getBody()
+    eq(after.entries.length, before.entries.length, 'tidy must not change the memory count')
+  })
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -1191,6 +1517,7 @@ async function main() {
   ok(existsSync(PLUGIN_PATH), 'plugin not found at ' + PLUGIN_PATH)
   await runFreshSuite()
   await runLegacySuite()
+  await runEvolutionSuite()
 
   const total = passed + failed
   console.log('')
@@ -1213,3 +1540,7 @@ main()
       await rm(root, { recursive: true, force: true }).catch(() => {})
     }
   })
+
+
+
+

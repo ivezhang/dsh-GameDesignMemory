@@ -24,6 +24,7 @@ const mod = await import(pathToFileURL('D:/Agent工作台/99_临时/zhiwei-v2/in
 
 const tools = new Map()
 const routes = new Map()
+const promptSections = []
 let routeHandler = null
 
 function assertSupportedSchema(schema, label) {
@@ -65,6 +66,18 @@ const ctx = {
         fn()
         return { label }
       },
+      systemPrompt: {
+        section(section) {
+          if (!section || typeof section.name !== 'string' || !section.name) throw new TypeError('section name required')
+          if (typeof section.text !== 'string' || !section.text.trim()) throw new TypeError('section text required')
+          if (typeof section.order !== 'number' || !Number.isFinite(section.order)) throw new TypeError('section order required')
+          promptSections.push(section)
+          return () => {
+            const index = promptSections.indexOf(section)
+            if (index >= 0) promptSections.splice(index, 1)
+          }
+        }
+      },
       webServer: {
         register(route) {
           if (route.kind !== 'prefix' && route.kind !== 'exact') throw new Error('route kind invalid')
@@ -90,9 +103,16 @@ check('apply resolves without throwing', () => {
   if (applyError) throw applyError
   return 'ok'
 })
-check('registers four tools', () => {
-  if (tools.size !== 4) throw new Error('expected 4 tools, got ' + tools.size)
+check('registers six tools', () => {
+  if (tools.size !== 6) throw new Error('expected 6 tools, got ' + tools.size)
   return [...tools.keys()].join(', ')
+})
+check('registers a system prompt section for recall + observe discipline', () => {
+  if (promptSections.length !== 1) throw new Error('expected 1 prompt section, got ' + promptSections.length)
+  const section = promptSections[0]
+  if (!section.text.includes('design_memory_recall')) throw new Error('prompt section must mention design_memory_recall')
+  if (!section.text.includes('固有约定')) throw new Error('prompt section must mention 固有约定')
+  return section.name + ' order=' + section.order
 })
 check('each tool exposes schema + render', () => {
   for (const [name, tool] of tools) {
@@ -126,15 +146,16 @@ function fakeRes() {
   }
 }
 
-check('GET /design-memory/api returns v3 payload', async () => {
+check('GET /design-memory/api returns v4 payload', async () => {
   const res = fakeRes()
   await routeHandler({ method: 'GET', url: '/design-memory/api', headers: { host: '127.0.0.1:1', origin: 'http://127.0.0.1:1' } }, res)
   if (res.statusCode !== 200) throw new Error('status ' + res.statusCode + ' body ' + res.body.slice(0, 200))
   const payload = JSON.parse(res.body)
-  if (payload.version !== 3) throw new Error('version ' + payload.version)
+  if (payload.version !== 4) throw new Error('version ' + payload.version)
   if (!Array.isArray(payload.entries) || !Array.isArray(payload.relations) || !Array.isArray(payload.collections)) {
     throw new Error('payload missing collections arrays')
   }
+  if (!Array.isArray(payload.proposals) || !Array.isArray(payload.recalls)) throw new Error('payload missing proposals/recalls')
   return 'entries=' + payload.entries.length + ' version=' + payload.version
 })
 

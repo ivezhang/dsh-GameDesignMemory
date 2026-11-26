@@ -195,6 +195,7 @@ window.__ModuleLoader__.load({
       'overview.stat.inbox': '待整理',
       'overview.stat.collections': '主题集合',
       'overview.stat.relations': '关联',
+      'overview.stat.recalls': '调用',
       'overview.recent': '最近更新',
       'overview.inbox': '待整理',
       'overview.decisions': '最近确认的设计决策',
@@ -383,6 +384,7 @@ window.__ModuleLoader__.load({
       'graph.filters': '筛选',
       'graph.byType': '按类型',
       'graph.byRelation': '按关系类型',
+      'graph.byProject': '按项目',
       'graph.byDomain': '按领域',
       'graph.byCollection': '按集合',
       'graph.suggestedOnly': '只看 AI 建议',
@@ -437,7 +439,113 @@ window.__ModuleLoader__.load({
       'assist.downstream': '下游（受它影响的）',
       'assist.notApplied': '仅供参考，不会自动写入',
       'action.undo': '撤销',
-      'common.none': '无'
+      'common.none': '无',
+
+      'type.habit': '用户习惯',
+      'type.convention': '通用约定',
+      'type.context': '项目背景',
+      'type.task': '临时事项',
+      'protection.normal': '普通',
+      'protection.confirmed': '已确认',
+      'protection.protected': '固有约定',
+      'change.create': '新建',
+      'change.refine': '细化',
+      'change.augment': '补充',
+      'change.correct': '纠正',
+      'change.conflict': '冲突',
+      'change.merge': '合并',
+      'change.protect': '保护级别',
+      'change.status': '状态',
+      'change.restore': '回滚',
+      'evidence.statement': '用户陈述',
+      'evidence.confirmation': '多次确认',
+      'evidence.behavior': '行为推断',
+      'evidence.inference': 'AI 推测',
+      'evidence.temporary': '临时上下文',
+      'scope.global': '跨项目',
+      'scope.project': '项目内',
+      'detail.protection': '保护级别',
+      'detail.protectionLocked': '固有约定不会被自动改动，修改需你明确要求',
+      'detail.confidence': '置信度',
+      'detail.importance': '重要程度',
+      'detail.usage': '被调用',
+      'detail.recallTimes': '次',
+      'detail.lastUsed': '最近调用',
+      'detail.neverUsed': '尚未调用',
+      'detail.evidenceCount': '证据',
+      'detail.proposal': '修改建议',
+      'detail.protected': '受保护',
+      'detail.accept': '接受修改',
+      'detail.reject': '保留原样',
+      'detail.evidence': '来源与证据',
+      'detail.evidenceHint': '每条记忆都保留原始出处',
+      'detail.noEvidence': '还没有证据记录',
+      'detail.evidencePlaceholder': '补充一条来源或证据…',
+      'detail.addEvidence': '记下',
+      'detail.versions': '版本历史',
+      'detail.restore': '回滚到这一版',
+      'common.collapse': '收起',
+      'common.expand': '展开',
+      'tidy.title': '整理中心',
+      'tidy.sub': 'AI 自动整理的结果与待确认事项',
+      'tidy.duplicates': '疑似重复',
+      'tidy.duplicatesHint': '内容高度相似的记忆，可合并为一条',
+      'tidy.orphans': '孤立记忆',
+      'tidy.orphansHint': '没有任何关联，考虑补关系或归档',
+      'tidy.proposals': '待确认的修改建议',
+      'tidy.proposalsHint': '受保护记忆或冲突场景，需要你决定',
+      'tidy.pending': '待整理的新记忆',
+      'tidy.pendingHint': '自动观察得到的候选，确认后才会生效',
+      'tidy.review': '待复核',
+      'tidy.reviewHint': '被新信息影响，需要复核是否仍有效',
+      'tidy.relations': '待确认的关系',
+      'tidy.relationsHint': 'AI 依据语义发现，确认后进入关系网',
+      'tidy.empty': '目前没有需要整理的内容',
+      'tidy.merge': '合并',
+      'tidy.protectedCount': '固有约定',
+      'tidy.openEntry': '查看',
+      'recall.title': '调用记录',
+      'recall.sub': 'AI 在新对话里真实取用过哪些记忆',
+      'recall.empty': '还没有调用记录，下次对话里需要时会自动留下痕迹',
+      'recall.outcome.served': '已提供',
+      'recall.outcome.ignored': '未采用',
+      'recall.outcome.conflict': '有冲突',
+      'recall.items': '取用记忆',
+      'nav.tidy': '整理中心',
+      'nav.recall': '调用记录',
+      'toast.merged': '已合并记忆',
+      'toast.restoredVersion': '已回滚到该版本',
+      'toast.protected': '已设为固有约定',
+      'toast.proposalAccepted': '已应用修改建议',
+      'toast.proposalRejected': '已保留原样',
+      'toast.evidenceAdded': '已记下证据',
+      'toast.tidyRefreshed': '整理结果已更新',
+      'toast.observed': '已整理这段内容',
+      'action.observe': '整理这段内容',
+      'action.refresh': '重新分析',
+      'action.merge': '合并',
+      'observe.title': '粘贴一段对话或笔记',
+      'observe.hint': 'AI 会判断是新增记忆、补充已有记忆，还是与固有约定冲突',
+      'observe.placeholder': '把原始内容贴进来…',
+      'observe.conversationId': '来源对话（可选）',
+      'observe.run': '交给 AI 整理',
+      'observe.result': '整理结果',
+      'observe.created': '新建记忆',
+      'observe.updated': '更新已有记忆',
+      'observe.proposed': '生成修改建议',
+      'observe.reinforced': '只补充了证据',
+      'observe.skipped': '已跳过',
+      'observe.relations': '新发现的关系',
+      'graph.confidence': '置信度',
+      'graph.weak': '弱连接（待确认）',
+      'graph.suggested': 'AI 建议',
+      'graph.confirmedRel': '已确认',
+      'graph.rejected': '已否决',
+      'graph.tidyHint': '在整理中心批量处理 AI 建议',
+      'graph.focus': '高亮上下游',
+      'graph.impact': '上下游',
+      'action.reject': '否决',
+      'common.loading': '加载中',
     }
 
     const EN = {
@@ -529,6 +637,7 @@ window.__ModuleLoader__.load({
       'overview.stat.inbox': 'Inbox',
       'overview.stat.collections': 'Collections',
       'overview.stat.relations': 'Relations',
+      'overview.stat.recalls': 'Recalls',
       'overview.recent': 'Recently updated',
       'overview.inbox': 'Inbox',
       'overview.decisions': 'Confirmed decisions',
@@ -717,6 +826,7 @@ window.__ModuleLoader__.load({
       'graph.filters': 'Filters',
       'graph.byType': 'By type',
       'graph.byRelation': 'By relation',
+      'graph.byProject': 'By project',
       'graph.byDomain': 'By domain',
       'graph.byCollection': 'By collection',
       'graph.suggestedOnly': 'AI suggestions only',
@@ -771,7 +881,113 @@ window.__ModuleLoader__.load({
       'assist.downstream': 'Downstream (affected by this)',
       'assist.notApplied': 'For reference only, nothing is written',
       'action.undo': 'Undo',
-      'common.none': 'none'
+      'common.none': 'none',
+
+      'type.habit': 'Habit',
+      'type.convention': 'Convention',
+      'type.context': 'Context',
+      'type.task': 'Task',
+      'protection.normal': 'Normal',
+      'protection.confirmed': 'Confirmed',
+      'protection.protected': 'Protected',
+      'change.create': 'Created',
+      'change.refine': 'Refined',
+      'change.augment': 'Augmented',
+      'change.correct': 'Corrected',
+      'change.conflict': 'Conflict',
+      'change.merge': 'Merged',
+      'change.protect': 'Protection',
+      'change.status': 'Status',
+      'change.restore': 'Restored',
+      'evidence.statement': 'Statement',
+      'evidence.confirmation': 'Confirmation',
+      'evidence.behavior': 'Behavior',
+      'evidence.inference': 'Inference',
+      'evidence.temporary': 'Temporary',
+      'scope.global': 'Global',
+      'scope.project': 'Project',
+      'detail.protection': 'Protection',
+      'detail.protectionLocked': 'Protected memories never change on their own — only an explicit request from you can edit them',
+      'detail.confidence': 'Confidence',
+      'detail.importance': 'Importance',
+      'detail.usage': 'Recalled',
+      'detail.recallTimes': 'times',
+      'detail.lastUsed': 'Last recalled',
+      'detail.neverUsed': 'Never recalled',
+      'detail.evidenceCount': 'Evidence',
+      'detail.proposal': 'Proposed change',
+      'detail.protected': 'Protected',
+      'detail.accept': 'Accept change',
+      'detail.reject': 'Keep as is',
+      'detail.evidence': 'Sources & evidence',
+      'detail.evidenceHint': 'Every memory keeps its original sources',
+      'detail.noEvidence': 'No evidence recorded yet',
+      'detail.evidencePlaceholder': 'Add a source or piece of evidence…',
+      'detail.addEvidence': 'Record',
+      'detail.versions': 'Version history',
+      'detail.restore': 'Restore this version',
+      'common.collapse': 'Collapse',
+      'common.expand': 'Expand',
+      'tidy.title': 'Tidy up',
+      'tidy.sub': 'What the AI organized, and what still needs your call',
+      'tidy.duplicates': 'Possible duplicates',
+      'tidy.duplicatesHint': 'Highly similar memories that can be merged',
+      'tidy.orphans': 'Orphans',
+      'tidy.orphansHint': 'No relations at all — link or archive them',
+      'tidy.proposals': 'Pending change proposals',
+      'tidy.proposalsHint': 'Protected or conflicting content needs your decision',
+      'tidy.pending': 'New memories to review',
+      'tidy.pendingHint': 'Candidates from auto-observation; only effective after you confirm',
+      'tidy.review': 'Needs review',
+      'tidy.reviewHint': 'Affected by newer information — check whether it still holds',
+      'tidy.relations': 'Relations to confirm',
+      'tidy.relationsHint': 'Found semantically by the AI; confirm to enter the graph',
+      'tidy.empty': 'Nothing needs tidying right now',
+      'tidy.merge': 'Merge',
+      'tidy.protectedCount': 'Protected',
+      'tidy.openEntry': 'Open',
+      'recall.title': 'Recall log',
+      'recall.sub': 'What the AI actually retrieved in past conversations',
+      'recall.empty': 'No recalls yet — traces appear when memories are needed in a conversation',
+      'recall.outcome.served': 'Served',
+      'recall.outcome.ignored': 'Not used',
+      'recall.outcome.conflict': 'Conflict',
+      'recall.items': 'Memories used',
+      'nav.tidy': 'Tidy up',
+      'nav.recall': 'Recall log',
+      'toast.merged': 'Memories merged',
+      'toast.restoredVersion': 'Version restored',
+      'toast.protected': 'Marked as protected',
+      'toast.proposalAccepted': 'Proposal applied',
+      'toast.proposalRejected': 'Kept as is',
+      'toast.evidenceAdded': 'Evidence recorded',
+      'toast.tidyRefreshed': 'Tidy report refreshed',
+      'toast.observed': 'Content organized',
+      'action.observe': 'Organize this',
+      'action.refresh': 'Re-analyze',
+      'action.merge': 'Merge',
+      'observe.title': 'Paste a conversation or note',
+      'observe.hint': 'The AI decides whether this is new, an addition to an existing memory, or a conflict with a protected one',
+      'observe.placeholder': 'Paste the raw content…',
+      'observe.conversationId': 'Source conversation (optional)',
+      'observe.run': 'Hand to the AI',
+      'observe.result': 'Result',
+      'observe.created': 'New memories',
+      'observe.updated': 'Updated memories',
+      'observe.proposed': 'Proposals created',
+      'observe.reinforced': 'Evidence only',
+      'observe.skipped': 'Skipped',
+      'observe.relations': 'New relations',
+      'graph.confidence': 'Confidence',
+      'graph.weak': 'Weak link (unconfirmed)',
+      'graph.suggested': 'AI suggested',
+      'graph.confirmedRel': 'Confirmed',
+      'graph.rejected': 'Rejected',
+      'graph.tidyHint': 'Batch-handle AI suggestions in Tidy up',
+      'graph.focus': 'Highlight neighborhood',
+      'graph.impact': 'Upstream & downstream',
+      'action.reject': 'Reject',
+      'common.loading': 'Loading',
     }
 
     const CSS = `
@@ -1860,6 +2076,317 @@ window.__ModuleLoader__.load({
       outline: 2px solid var(--zw-accent);
       outline-offset: 2px;
     }
+    /* 生命周期 / 证据 / 版本 / 提案 */
+    .zw-life {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .zw-lifeItem {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .zw-lifeHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--zw-text-2);
+    }
+    .zw-lifeLabel {
+      letter-spacing: 0.01em;
+    }
+    .zw-lifeValue {
+      color: var(--zw-text);
+      font-variant-numeric: tabular-nums;
+    }
+    .zw-lifeFoot {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--zw-text-3);
+    }
+    .zw-protectNote {
+      margin-top: 8px;
+      padding: 7px 9px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--zw-warn) 12%, transparent);
+      color: var(--zw-warn);
+      font-size: 11.5px;
+      line-height: 1.55;
+    }
+    .zw-proposalList {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .zw-proposal {
+      border: 1px solid color-mix(in srgb, var(--zw-accent) 38%, var(--zw-border));
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: color-mix(in srgb, var(--zw-accent) 6%, var(--zw-surface));
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .zw-proposalHead {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--zw-accent-text);
+    }
+    .zw-proposalNote {
+      font-size: 11.5px;
+      color: var(--zw-text-2);
+      line-height: 1.6;
+    }
+    .zw-proposalDiff {
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--zw-text);
+      background: var(--zw-bg-soft);
+      border-radius: 8px;
+      padding: 8px 9px;
+      max-height: 160px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    .zw-proposalActions {
+      display: flex;
+      gap: 6px;
+    }
+    .zw-evidenceList {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .zw-evidence {
+      border-left: 2px solid color-mix(in srgb, var(--zw-accent) 40%, transparent);
+      padding: 2px 0 2px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .zw-evidenceTop {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .zw-evidenceText {
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--zw-text);
+      white-space: pre-wrap;
+    }
+    .zw-evidenceAdd {
+      margin-top: 10px;
+      display: flex;
+      gap: 6px;
+    }
+    .zw-evidenceAdd .zw-input {
+      flex: 1;
+      min-width: 0;
+    }
+    .zw-versionList {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .zw-version {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 7px 0;
+      border-bottom: 1px dashed var(--zw-border);
+    }
+    .zw-version:last-child {
+      border-bottom: 0;
+    }
+    .zw-versionTop {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+    .zw-versionNo {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: var(--zw-text-3);
+    }
+    .zw-versionNote {
+      font-size: 11.5px;
+      color: var(--zw-text-2);
+      line-height: 1.55;
+    }
+    /* 整理中心 / 调用记录 */
+    .zw-tidy {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 4px 2px 24px;
+    }
+    .zw-tidyBar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .zw-tidyStat {
+      font-size: 11.5px;
+      color: var(--zw-text-3);
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--zw-bg-soft);
+      border: 1px solid var(--zw-border);
+    }
+    .zw-tidyGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+    .zw-tidyCard {
+      border: 1px solid var(--zw-border);
+      border-radius: 12px;
+      background: var(--zw-surface);
+      padding: 12px 13px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 90px;
+    }
+    .zw-tidyCardWide {
+      grid-column: 1 / -1;
+    }
+    .zw-tidyHead {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--zw-text-2);
+    }
+    .zw-tidyTitle {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--zw-text);
+    }
+    .zw-tidyCount {
+      font-size: 11px;
+      color: var(--zw-text-3);
+      font-variant-numeric: tabular-nums;
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--zw-bg-soft);
+    }
+    .zw-tidyHint {
+      font-size: 11px;
+      color: var(--zw-text-3);
+      line-height: 1.55;
+    }
+    .zw-tidyEmpty {
+      font-size: 11.5px;
+      color: var(--zw-text-3);
+      padding: 10px 0 4px;
+    }
+    .zw-tidyRow {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 0;
+      border-top: 1px dashed var(--zw-border);
+    }
+    .zw-tidyRowBody {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .zw-tidyRowTitle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: var(--zw-text);
+      flex-wrap: wrap;
+    }
+    .zw-tidyRowMeta {
+      font-size: 11px;
+      color: var(--zw-text-3);
+      line-height: 1.5;
+    }
+    .zw-tidyRowActions {
+      display: flex;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .zw-tidyLink {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 0;
+      background: none;
+      padding: 5px 0;
+      color: var(--zw-text);
+      font-size: 12.5px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .zw-tidyLink:hover {
+      color: var(--zw-accent-text);
+    }
+    .zw-recallList {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 2px 2px 20px;
+    }
+    .zw-recallRow {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 12px 2px;
+      border-bottom: 1px dashed var(--zw-border);
+    }
+    .zw-recallTop {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--zw-text-2);
+    }
+    .zw-recallTask {
+      font-size: 13px;
+      color: var(--zw-text);
+      flex: 1;
+      min-width: 180px;
+    }
+    .zw-recallIds {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }    .zw-gnodeUp .zw-gnodeCore {
+      stroke: var(--zw-accent-2) !important;
+      stroke-width: 2.6;
+    }
+    .zw-gnodeDown .zw-gnodeCore {
+      stroke: var(--zw-accent) !important;
+      stroke-width: 2.6;
+    }
+    .zw-gedgeUp .zw-gedgePath {
+      opacity: 1;
+      stroke-width: 2;
+    }
+    .zw-gedgeDown .zw-gedgePath {
+      opacity: 1;
+      stroke-width: 2;
+    }
+
     `
 
     const ICONS = {
@@ -2082,7 +2609,25 @@ window.__ModuleLoader__.load({
         ['rect', { x: 9, y: 9, width: 11.4, height: 11.4, rx: 2.4 }],
         ['path', { d: 'M15 5.4H6.4a2 2 0 0 0-2 2V16' }]
       ],
-      dot: [['circle', { cx: 12, cy: 12, r: 3.2, fill: 'currentColor', stroke: 'none' }]]
+      dot: [['circle', { cx: 12, cy: 12, r: 3.2, fill: 'currentColor', stroke: 'none' }]],
+      lock: [
+        ['rect', { x: 4.5, y: 10.5, width: 15, height: 9.5, rx: 2.2 }],
+        ['path', { d: 'M8 10.5V8a4 4 0 0 1 8 0v2.5' }],
+        ['path', { d: 'M12 14v2.4' }]
+      ],
+      shield: [
+        ['path', { d: 'M12 3.5 19 6v5.4c0 4.3-2.8 7.4-7 9.1-4.2-1.7-7-4.8-7-9.1V6l7-2.5Z' }],
+        ['path', { d: 'M9 12.1l2.1 2.1L15.2 10' }]
+      ],
+      history: [
+        ['path', { d: 'M4 12a8 8 0 1 0 2.6-5.9' }],
+        ['path', { d: 'M4 4.5V8h3.5' }],
+        ['path', { d: 'M12 8v4.4l3 1.8' }]
+      ],
+      broom: [
+        ['path', { d: 'M14.5 4.5 19 9' }],
+        ['path', { d: 'M13 6 18 11l-6.4 6.4a3.5 3.5 0 0 1-4.9 0l-1.1-1.1a3.5 3.5 0 0 1 0-4.9L13 6Z' }]
+      ]
     }
 
     function Icon(props) {
@@ -2698,6 +3243,7 @@ window.__ModuleLoader__.load({
       const nav = props.nav
       const collapsed = props.collapsed
       const stats = props.stats
+      const tidyCount = props.tidyCount || 0
       const item = (kind, label, icon, count) =>
         h(
           'button',
@@ -2742,9 +3288,11 @@ window.__ModuleLoader__.load({
           item('overview', t('nav.overview'), 'home'),
           item('all', t('nav.all'), 'book', stats.entries),
           item('inbox', t('nav.inbox'), 'inbox', stats.inbox),
+          item('tidy', t('nav.tidy'), 'broom', tidyCount),
           item('collections', t('nav.collections'), 'folder', stats.collections),
           item('favorites', t('nav.favorites'), 'star', stats.favorites),
-          item('recent', t('nav.recent'), 'clock')
+          item('recent', t('nav.recent'), 'clock'),
+          item('recall', t('nav.recall'), 'history', stats.recalls)
         ),
         props.projects.length
           ? h(
@@ -3394,6 +3942,12 @@ window.__ModuleLoader__.load({
             label: t('overview.stat.relations'),
             icon: 'graph',
             onClick: () => props.onNav('graph')
+          }),
+          h(StatTile, {
+            value: props.stats.recalls || 0,
+            label: t('overview.stat.recalls'),
+            icon: 'history',
+            onClick: () => props.onNav('recall')
           })
         ),
         props.suggestedRelations.length
@@ -3541,6 +4095,68 @@ window.__ModuleLoader__.load({
               emptyText: t('common.empty'),
               onOpen: props.onOpen
             })
+          ),
+          h(
+            'div',
+            { className: 'zw-panelCard' },
+            h(SectionHead, {
+              icon: 'broom',
+              title: t('tidy.title'),
+              count: (props.stats.pendingProposals || 0) + (props.stats.suggestedRelations || 0),
+              action: h(
+                'button',
+                { type: 'button', className: 'zw-panelLink', onClick: () => props.onNav('tidy') },
+                t('action.open')
+              )
+            }),
+            h(MiniRows, {
+              entries: sortEntries(
+                props.entries.filter((entry) => entry.status === 'review'),
+                'updated'
+              ).slice(0, 4),
+              metaOf: labelOfEntry,
+              emptyText: t('tidy.empty'),
+              onOpen: props.onOpen
+            })
+          ),
+          h(
+            'div',
+            { className: 'zw-panelCard' },
+            h(SectionHead, {
+              icon: 'history',
+              title: t('recall.title'),
+              count: (props.recalls || []).length,
+              action: h(
+                'button',
+                { type: 'button', className: 'zw-panelLink', onClick: () => props.onNav('recall') },
+                t('common.all')
+              )
+            }),
+            (props.recalls || []).length
+              ? h(
+                  'div',
+                  { className: 'zw-miniList' },
+                  (props.recalls || []).slice(0, 4).map((recall) =>
+                    h(
+                      'div',
+                      { key: recall.id, className: 'zw-mini' },
+                      h(Icon, { name: 'target', size: 12 }),
+                      h(
+                        'div',
+                        { className: 'zw-miniBody' },
+                        h('span', { className: 'zw-miniTitle' }, recall.task),
+                        h(
+                          'span',
+                          { className: 'zw-miniMeta' },
+                          recallOutcomeLabel(t, recall.outcome) +
+                            ' · ' +
+                            formatDay(recall.createdAt)
+                        )
+                      )
+                    )
+                  )
+                )
+              : h('div', { className: 'zw-savedEmpty' }, t('recall.empty'))
           )
         )
       )
@@ -3992,13 +4608,57 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function LifecycleBar(props) {
+      const t = props.t
+      const entry = props.entry
+      const items = [
+        { key: 'confidence', label: t('detail.confidence'), value: entry.confidence },
+        { key: 'importance', label: t('detail.importance'), value: entry.importance }
+      ]
+      return h(
+        'div',
+        { className: 'zw-life' },
+        items.map((item) =>
+          h(
+            'div',
+            { key: item.key, className: 'zw-lifeItem' },
+            h(
+              'div',
+              { className: 'zw-lifeHead' },
+              h('span', { className: 'zw-lifeLabel' }, item.label),
+              h('span', { className: 'zw-lifeValue' }, Math.round((item.value || 0) * 100) + '%')
+            ),
+            h(
+              'div',
+              { className: 'zw-scoreBar' },
+              h('div', {
+                className: 'zw-scoreFill',
+                style: { width: Math.round((item.value || 0) * 100) + '%' }
+              })
+            )
+          )
+        ),
+        h(
+          'div',
+          { className: 'zw-lifeFoot' },
+          h('span', null, t('detail.usage') + ' ' + (entry.usageCount || 0) + ' ' + t('detail.recallTimes')),
+          h('span', null, entry.lastUsedAt ? t('detail.lastUsed') + ' ' + formatDay(entry.lastUsedAt) : t('detail.neverUsed')),
+          h('span', null, t('detail.evidenceCount') + ' ' + (entry.evidenceCount || 0))
+        )
+      )
+    }
+
     function DetailRail(props) {
       const t = props.t
       const meta = props.meta
       const entry = props.entry
       const [confirmDelete, setConfirmDelete] = useState(false)
+      const [evidenceText, setEvidenceText] = useState('')
+      const [showAllVersions, setShowAllVersions] = useState(false)
       useEffect(() => {
         setConfirmDelete(false)
+        setEvidenceText('')
+        setShowAllVersions(false)
       }, [entry ? entry.id : null])
 
       if (!entry) {
@@ -4069,7 +4729,12 @@ window.__ModuleLoader__.load({
                     { className: statusTone(entry.status) },
                     labelOf(t, meta.statuses, entry.status, 'status')
                   ),
-                  entry.domains.map((domain) =>
+                  h(
+                    'span',
+                    { className: 'zw-badge zw-badgeNeutral' },
+                    labelOf(t, meta.scopes, entry.scope || 'project', 'scope')
+                  ),
+                  (entry.domains || []).map((domain) =>
                     h(
                       'span',
                       { key: domain, className: 'zw-tag' },
@@ -4154,6 +4819,227 @@ window.__ModuleLoader__.load({
                   )
                 )
               ),
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h(
+                    'span',
+                    { className: 'zw-blockTitle' },
+                    h(Icon, { name: entry.protectionLevel === 'protected' ? 'lock' : 'book', size: 12 }),
+                    t('detail.protection')
+                  ),
+                  h('span', { className: 'zw-blockHint' }, hintOf(meta.protectionLevels, entry.protectionLevel))
+                ),
+                h(
+                  'div',
+                  { className: 'zw-seg' },
+                  (meta.protectionLevels || []).map((level) =>
+                    h(
+                      'button',
+                      {
+                        key: level.id,
+                        type: 'button',
+                        className:
+                          'zw-segBtn' + (entry.protectionLevel === level.id ? ' zw-segBtnOn' : ''),
+                        title: labelOf(t, meta.protectionLevels, level.id, 'protection'),
+                        onClick: () => props.onProtect(entry.id, level.id)
+                      },
+                      labelOf(t, meta.protectionLevels, level.id, 'protection')
+                    )
+                  )
+                ),
+                entry.protectionLevel === 'protected'
+                  ? h('div', { className: 'zw-blockHint zw-protectNote' }, t('detail.protectionLocked'))
+                  : null,
+                props.pendingProposals && props.pendingProposals.length
+                  ? h(
+                      'div',
+                      { className: 'zw-proposalList' },
+                      props.pendingProposals.map((proposal) =>
+                        h(
+                          'div',
+                          { key: proposal.id, className: 'zw-proposal' },
+                          h(
+                            'div',
+                            { className: 'zw-proposalHead' },
+                            h(Icon, { name: 'sparkle', size: 11 }),
+                            t('detail.proposal') +
+                              ' · ' +
+                              labelOf(t, meta.changeTypes, proposal.changeType, 'change'),
+                            proposal.protected ? h('span', { className: 'zw-tag' }, t('detail.protected')) : null
+                          ),
+                          proposal.reason
+                            ? h('div', { className: 'zw-proposalNote' }, proposal.reason)
+                            : null,
+                          h('div', { className: 'zw-proposalDiff' }, proposal.proposedContent),
+                          h(
+                            'div',
+                            { className: 'zw-proposalActions' },
+                            h(
+                              'button',
+                              {
+                                type: 'button',
+                                className: 'zw-btn zw-btnSm zw-btnPrimary',
+                                onClick: () => props.onDecideProposal(proposal.id, 'accept')
+                              },
+                              t('detail.accept')
+                            ),
+                            h(
+                              'button',
+                              {
+                                type: 'button',
+                                className: 'zw-btn zw-btnSm zw-btnGhost',
+                                onClick: () => props.onDecideProposal(proposal.id, 'reject')
+                              },
+                              t('detail.reject')
+                            )
+                          )
+                        )
+                      )
+                    )
+                  : null,
+                h(LifecycleBar, { t: t, entry: entry })
+              ),
+              h(
+                'div',
+                { className: 'zw-block' },
+                h(
+                  'div',
+                  { className: 'zw-blockHead' },
+                  h(
+                    'span',
+                    { className: 'zw-blockTitle' },
+                    t('detail.evidence') + ' · ' + (entry.evidence ? entry.evidence.length : 0)
+                  ),
+                  h('span', { className: 'zw-blockHint' }, t('detail.evidenceHint'))
+                ),
+                entry.evidence && entry.evidence.length
+                  ? h(
+                      'div',
+                      { className: 'zw-evidenceList' },
+                      entry.evidence
+                        .slice(-6)
+                        .reverse()
+                        .map((item) =>
+                          h(
+                            'div',
+                            { key: item.id, className: 'zw-evidence' },
+                            h(
+                              'div',
+                              { className: 'zw-evidenceTop' },
+                              h(
+                                'span',
+                                { className: 'zw-tag' },
+                                labelOf(t, meta.evidenceTypes, item.evidenceType, 'evidence')
+                              ),
+                              h(
+                                'span',
+                                { className: 'zw-rowDate' },
+                                formatDay(item.createdAt) + (item.sourceConversation ? ' · ' + item.sourceConversation : '')
+                              )
+                            ),
+                            h('div', { className: 'zw-evidenceText' }, item.content)
+                          )
+                        )
+                    )
+                  : h('div', { className: 'zw-savedEmpty' }, t('detail.noEvidence')),
+                h(
+                  'div',
+                  { className: 'zw-evidenceAdd' },
+                  h('input', {
+                    className: 'zw-input',
+                    value: evidenceText,
+                    placeholder: t('detail.evidencePlaceholder'),
+                    onChange: (event) => setEvidenceText(event.target.value),
+                    onKeyDown: (event) => {
+                      if (event.key === 'Enter' && evidenceText.trim()) {
+                        props.onAddEvidence(entry.id, evidenceText.trim())
+                        setEvidenceText('')
+                      }
+                    }
+                  }),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'zw-btn zw-btnSm zw-btnGhost',
+                      disabled: !evidenceText.trim(),
+                      onClick: () => {
+                        props.onAddEvidence(entry.id, evidenceText.trim())
+                        setEvidenceText('')
+                      }
+                    },
+                    h(Icon, { name: 'plus', size: 11 }),
+                    t('detail.addEvidence')
+                  )
+                )
+              ),
+              entry.versions && entry.versions.length > 1
+                ? h(
+                    'div',
+                    { className: 'zw-block' },
+                    h(
+                      'div',
+                      { className: 'zw-blockHead' },
+                      h(
+                        'span',
+                        { className: 'zw-blockTitle' },
+                        t('detail.versions') + ' · ' + entry.versions.length
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-panelLink',
+                          onClick: () => setShowAllVersions(!showAllVersions)
+                        },
+                        showAllVersions ? t('common.collapse') : t('common.expand')
+                      )
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-versionList' },
+                      entry.versions
+                        .slice()
+                        .reverse()
+                        .slice(0, showAllVersions ? entry.versions.length : 3)
+                        .map((version) =>
+                          h(
+                            'div',
+                            { key: version.id, className: 'zw-version' },
+                            h(
+                              'div',
+                              { className: 'zw-versionTop' },
+                              h('span', { className: 'zw-versionNo' }, 'v' + version.version),
+                              h(
+                                'span',
+                                { className: 'zw-tag' },
+                                labelOf(t, meta.changeTypes, version.changeType, 'change')
+                              ),
+                              h('span', { className: 'zw-rowDate' }, formatDateTime(version.createdAt)),
+                              version.version > 1
+                                ? h(
+                                    'button',
+                                    {
+                                      type: 'button',
+                                      className: 'zw-panelLink',
+                                      onClick: () => props.onRestoreVersion(entry.id, version.id)
+                                    },
+                                    t('detail.restore')
+                                  )
+                                : null
+                            ),
+                            version.changeReason
+                              ? h('div', { className: 'zw-versionNote' }, version.changeReason)
+                              : null
+                          )
+                        )
+                    )
+                  )
+                : null,
               h(
                 'div',
                 { className: 'zw-block' },
@@ -5462,7 +6348,82 @@ window.__ModuleLoader__.load({
       )
     }
 
-
+    function ObserveDialog(props) {
+      const t = props.t
+      const [text, setText] = useState('')
+      const [conversationId, setConversationId] = useState('')
+      const result = props.result || null
+      const lines = []
+      if (result) {
+        if (result.created && result.created.length) lines.push(t('observe.created') + ' ' + result.created.length)
+        if (result.updated && result.updated.length) lines.push(t('observe.updated') + ' ' + result.updated.length)
+        if (result.proposed && result.proposed.length) lines.push(t('observe.proposed') + ' ' + result.proposed.length)
+        if (result.reinforced && result.reinforced.length) lines.push(t('observe.reinforced') + ' ' + result.reinforced.length)
+        if (result.skipped && result.skipped.length) lines.push(t('observe.skipped') + ' ' + result.skipped.length)
+      }
+      return h(
+        Modal,
+        {
+          title: t('observe.title'),
+          icon: 'sparkle',
+          wide: true,
+          onClose: props.onClose,
+          closeLabel: t('action.close'),
+          footer: h(
+            React.Fragment,
+            null,
+            h('button', { type: 'button', className: 'zw-btn zw-btnGhost', onClick: props.onClose }, t('action.close')),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'zw-btn zw-btnPrimary',
+                disabled: props.busy || !text.trim(),
+                onClick: () => props.onRun(text, conversationId)
+              },
+              h(Icon, { name: props.busy ? 'refresh' : 'sparkle', size: 12 }),
+              props.busy ? t('assist.running') : t('observe.run')
+            )
+          )
+        },
+        h(
+          'div',
+          { className: 'zw-form' },
+          h('div', { className: 'zw-fieldLabel' }, t('observe.hint')),
+          h('textarea', {
+            className: 'zw-textarea zw-textareaBig',
+            value: text,
+            placeholder: t('observe.placeholder'),
+            onChange: (event) => setText(event.target.value)
+          }),
+          h(
+            'div',
+            { className: 'zw-field' },
+            h('div', { className: 'zw-fieldLabel' }, t('observe.conversationId')),
+            h('input', {
+              className: 'zw-input',
+              value: conversationId,
+              onChange: (event) => setConversationId(event.target.value)
+            })
+          ),
+          result
+            ? h(
+                'div',
+                { className: 'zw-assistPanel' },
+                h('div', { className: 'zw-assistHead' }, h('span', null, t('observe.result'))),
+                lines.map((line, index) => h('div', { key: index, className: 'zw-assistRow' }, line)),
+                result.relations && result.relations.length
+                  ? h(
+                      'div',
+                      { className: 'zw-assistRow' },
+                      t('observe.relations') + ' ' + result.relations.length
+                    )
+                  : null
+              )
+            : null
+        )
+      )
+    }
     // ---------------------------------------------------------------------
     // AI assist panel
     //
@@ -6305,6 +7266,7 @@ window.__ModuleLoader__.load({
       const [hiddenTypes, setHiddenTypes] = useState(seed.hiddenTypes || [])
       const [hiddenRelations, setHiddenRelations] = useState(seed.hiddenRelations || [])
       const [hiddenDomains, setHiddenDomains] = useState(seed.hiddenDomains || [])
+      const [hiddenProjects, setHiddenProjects] = useState(seed.hiddenProjects || [])
       const [collapsed, setCollapsed] = useState(seed.collapsed || [])
       const [hiddenCollections, setHiddenCollections] = useState(seed.hiddenCollections || [])
       const [search, setSearch] = useState(seed.search || '')
@@ -6343,6 +7305,7 @@ window.__ModuleLoader__.load({
           hiddenTypes: hiddenTypes,
           hiddenRelations: hiddenRelations,
           hiddenDomains: hiddenDomains,
+          hiddenProjects: hiddenProjects,
           hiddenCollections: hiddenCollections,
           collapsed: collapsed,
           search: search
@@ -6354,6 +7317,7 @@ window.__ModuleLoader__.load({
         hiddenTypes.join(','),
         hiddenRelations.join(','),
         hiddenDomains.join(','),
+        hiddenProjects.join(','),
         hiddenCollections.join(','),
         collapsed.join(','),
         search
@@ -6382,6 +7346,7 @@ window.__ModuleLoader__.load({
         const visibleIds = new Set()
         props.entries
           .filter((entry) => !hiddenTypes.includes(entry.type))
+          .filter((entry) => !hiddenProjects.includes(entry.projectId))
           .filter((entry) => !entry.domains.length || entry.domains.some((domain) => !hiddenDomains.includes(domain)))
           .forEach((entry) => {
             const clusterId = clusterOf.get(entry.id)
@@ -6444,6 +7409,7 @@ window.__ModuleLoader__.load({
         hiddenTypes.join(','),
         hiddenRelations.join(','),
         hiddenDomains.join(','),
+        hiddenProjects.join(','),
         hiddenCollections.join(','),
         collapsed.join(',')
       ])
@@ -6836,6 +7802,20 @@ window.__ModuleLoader__.load({
       const highlightIds = new Set(selection)
       searchMatches.forEach((node) => highlightIds.add(node.id))
 
+      // 上下游高亮：选中单个节点时，沿关系方向标出上游（指向它）与下游（由它指出）
+      const upstreamIds = new Set()
+      const downstreamIds = new Set()
+      if (selection.length === 1) {
+        const anchor = selection[0]
+        props.relations.forEach((relation) => {
+          if (relation.status === 'rejected') return
+          if (relation.sourceMemoryId === anchor) downstreamIds.add(relation.targetMemoryId)
+          if (relation.targetMemoryId === anchor) upstreamIds.add(relation.sourceMemoryId)
+        })
+      }
+      const impactClass = (id) =>
+        (upstreamIds.has(id) ? ' zw-gnodeUp' : '') + (downstreamIds.has(id) ? ' zw-gnodeDown' : '')
+
       return h(
         'div',
         { className: 'zw-graphWrap', ref: wrapRef },
@@ -6907,7 +7887,9 @@ window.__ModuleLoader__.load({
                       'zw-gedge' +
                       (active ? ' zw-gedgeOn' : '') +
                       (dim ? ' zw-gedgeDim' : '') +
-                      (edge.kind === 'suggested' ? ' zw-gedgeSuggested' : ''),
+                      (edge.kind === 'suggested' ? ' zw-gedgeSuggested' : '') +
+                      (selection.includes(edge.source) ? ' zw-gedgeDown' : '') +
+                      (selection.includes(edge.target) ? ' zw-gedgeUp' : ''),
                     onPointerEnter: () => setHoverEdge(edge.id),
                     onPointerLeave: () => setHoverEdge('')
                   },
@@ -6953,7 +7935,11 @@ window.__ModuleLoader__.load({
                     'g',
                     {
                       key: node.id,
-                      className: 'zw-gnode' + (selected ? ' zw-gnodeOn' : '') + (dim ? ' zw-gnodeDim' : ''),
+                      className:
+                        'zw-gnode' +
+                        (selected ? ' zw-gnodeOn' : '') +
+                        (dim ? ' zw-gnodeDim' : '') +
+                        impactClass(node.id),
                       transform: 'translate(' + point.x + ',' + point.y + ')',
                       onPointerDown: (event) => startNodeDrag(event, node),
                       style: { cursor: 'pointer' }
@@ -6984,7 +7970,11 @@ window.__ModuleLoader__.load({
                   'g',
                   {
                     key: node.id,
-                    className: 'zw-gnode' + (selected ? ' zw-gnodeOn' : '') + (dim ? ' zw-gnodeDim' : ''),
+                    className:
+                      'zw-gnode' +
+                      (selected ? ' zw-gnodeOn' : '') +
+                      (dim ? ' zw-gnodeDim' : '') +
+                      impactClass(node.id),
                     transform: 'translate(' + point.x + ',' + point.y + ')',
                     onPointerDown: (event) => startNodeDrag(event, node),
                     style: { cursor: tool === 'link' ? 'crosshair' : 'pointer' }
@@ -7244,6 +8234,99 @@ window.__ModuleLoader__.load({
               h(
                 'div',
                 { className: 'zw-graphSection' },
+                h('div', { className: 'zw-blockHint' }, t('graph.weak')),
+                h(
+                  'div',
+                  { className: 'zw-legendRow' },
+                  h('span', {
+                    className: 'zw-legendSample',
+                    style: { borderTop: '1px dashed var(--zw-text-3)' }
+                  }),
+                  h('span', { className: 'zw-legendName' }, t('graph.suggested')),
+                  h(
+                    'span',
+                    { className: 'zw-legendCount' },
+                    props.stats ? props.stats.suggestedRelations : ''
+                  )
+                ),
+                h(
+                  'div',
+                  { className: 'zw-legendRow' },
+                  h('span', {
+                    className: 'zw-legendSample',
+                    style: { borderTop: '1px solid var(--zw-graph-edge)' }
+                  }),
+                  h('span', { className: 'zw-legendName' }, t('graph.confirmedRel')),
+                  h(
+                    'span',
+                    { className: 'zw-legendCount' },
+                    props.stats ? props.stats.confirmedRelations : ''
+                  )
+                ),
+                h(
+                  'div',
+                  { className: 'zw-legendRow' },
+                  h('span', {
+                    className: 'zw-legendSample',
+                    style: { borderTop: '1px dashed var(--zw-danger)', opacity: 0.6 }
+                  }),
+                  h('span', { className: 'zw-legendName' }, t('graph.rejected'))
+                ),
+                props.onOpenTidy
+                  ? h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-legendRow',
+                        title: t('graph.tidyHint'),
+                        onClick: props.onOpenTidy
+                      },
+                      h(Icon, { name: 'broom', size: 12 }),
+                      h('span', { className: 'zw-legendName' }, t('nav.tidy'))
+                    )
+                  : null
+              ),
+              h(
+                'div',
+                { className: 'zw-graphSection' },
+                h('div', { className: 'zw-legendRow' }, h('span', { className: 'zw-legendName' }, t('graph.focus'))),
+                h(
+                  'div',
+                  { className: 'zw-legendRow' },
+                  h('span', { className: 'zw-legendName' }, t('graph.impact'))
+                )
+              ),
+              h(
+                'div',
+                { className: 'zw-graphSection' },
+                h('div', { className: 'zw-blockHint' }, t('graph.byProject')),
+                (props.projects || []).map((project) =>
+                  h(
+                    'button',
+                    {
+                      key: project.id,
+                      type: 'button',
+                      className:
+                        'zw-legendRow' + (hiddenProjects.includes(project.id) ? ' zw-legendRowOff' : ''),
+                      onClick: () =>
+                        setHiddenProjects((prev) =>
+                          prev.includes(project.id)
+                            ? prev.filter((item) => item !== project.id)
+                            : prev.concat([project.id])
+                        )
+                    },
+                    h('span', { className: 'zw-legendName' }, project.name),
+                    h(
+                      'span',
+                      { className: 'zw-legendCount' },
+                      props.entries.filter((entry) => entry.projectId === project.id).length
+                    )
+                  )
+                )
+              ),
+              h(
+                'div',
+                { className: 'zw-graphSection' },
                 h('div', { className: 'zw-blockHint' }, t('graph.byDomain')),
                 domainOptions.map((option) =>
                   h(
@@ -7344,6 +8427,330 @@ window.__ModuleLoader__.load({
     }
 
 
+    // 整理中心：AI 自动整理的结果与待确认事项
+    // 调用记录：真实发生过的记忆取用
+
+    function TidyCard(props) {
+      const t = props.t
+      return h(
+        'section',
+        { className: 'zw-tidyCard' + (props.wide ? ' zw-tidyCardWide' : '') },
+        h(
+          'div',
+          { className: 'zw-tidyHead' },
+          h(Icon, { name: props.icon || 'broom', size: 13 }),
+          h('span', { className: 'zw-tidyTitle' }, props.title),
+          h('span', { className: 'zw-tidyCount' }, props.count),
+          props.action || null
+        ),
+        props.hint ? h('div', { className: 'zw-tidyHint' }, props.hint) : null,
+        props.children
+      )
+    }
+
+    function TidyEmptyRow(props) {
+      return h('div', { className: 'zw-tidyEmpty' }, props.text)
+    }
+
+    function recallOutcomeLabel(t, outcome) {
+      if (outcome === 'ignored') return t('recall.outcome.ignored')
+      if (outcome === 'conflict') return t('recall.outcome.conflict')
+      return t('recall.outcome.served')
+    }
+
+    function TidyView(props) {
+      const t = props.t
+      const meta = props.meta
+      const report = props.report || {}
+      const duplicates = report.duplicates || []
+      const orphans = report.orphans || []
+      const proposals = report.pendingProposals || []
+      const relations = report.suggestedRelations || []
+
+      return h(
+        'div',
+        { className: 'zw-tidy' },
+        h('div', { className: 'zw-tidyHint' }, t('tidy.sub')),
+        h(
+          'div',
+          { className: 'zw-tidyBar' },
+          h('span', { className: 'zw-tidyStat', title: t('tidy.pendingHint') }, t('tidy.pending') + ' ' + (report.pendingMemories || 0)),
+          h('span', { className: 'zw-tidyStat', title: t('tidy.reviewHint') }, t('tidy.review') + ' ' + (report.reviewMemories || 0)),
+          h('span', { className: 'zw-tidyStat' }, t('tidy.protectedCount') + ' ' + (report.protectedCount || 0)),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'zw-btn zw-btnSm zw-btnGhost',
+              disabled: props.busy,
+              onClick: props.onRefresh
+            },
+            h(Icon, { name: 'refresh', size: 12 }),
+            props.busy ? t('common.loading') : t('action.refresh')
+          )
+        ),
+        h(
+          'div',
+          { className: 'zw-tidyGrid' },
+          h(
+            TidyCard,
+            {
+              t: t,
+              icon: 'sparkle',
+              title: t('tidy.proposals'),
+              count: proposals.length,
+              hint: t('tidy.proposalsHint')
+            },
+            proposals.length
+              ? proposals.map((proposal) =>
+                  h(
+                    'div',
+                    { key: proposal.id, className: 'zw-tidyRow' },
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowBody' },
+                      h(
+                        'div',
+                        { className: 'zw-tidyRowTitle' },
+                        proposal.title,
+                        proposal.protected ? h('span', { className: 'zw-tag' }, t('detail.protected')) : null
+                      ),
+                      h(
+                        'div',
+                        { className: 'zw-tidyRowMeta' },
+                        labelOf(t, meta.changeTypes, proposal.changeType, 'change') +
+                          (proposal.reason ? ' · ' + proposal.reason : '')
+                      )
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowActions' },
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnPrimary',
+                          onClick: () => props.onDecideProposal(proposal.id, 'accept')
+                        },
+                        t('detail.accept')
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnGhost',
+                          onClick: () => props.onDecideProposal(proposal.id, 'reject')
+                        },
+                        t('detail.reject')
+                      )
+                    )
+                  )
+                )
+              : h(TidyEmptyRow, { text: t('tidy.empty') })
+          ),
+          h(
+            TidyCard,
+            {
+              t: t,
+              icon: 'link',
+              title: t('tidy.relations'),
+              count: relations.length,
+              hint: t('tidy.relationsHint')
+            },
+            relations.length
+              ? relations.map((relation) =>
+                  h(
+                    'div',
+                    { key: relation.id, className: 'zw-tidyRow' },
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowBody' },
+                      h(
+                        'div',
+                        { className: 'zw-tidyRowTitle' },
+                        relation.sourceTitle + ' → ' + relation.targetTitle
+                      ),
+                      h(
+                        'div',
+                        { className: 'zw-tidyRowMeta' },
+                        labelOf(t, meta.relationTypes, relation.relationType, 'relation') +
+                          ' · ' +
+                          t('graph.confidence') +
+                          ' ' +
+                          Math.round((relation.confidence || 0) * 100) +
+                          '%'
+                      )
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowActions' },
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnPrimary',
+                          onClick: () => props.onConfirmRelation(relation.id)
+                        },
+                        t('action.confirm')
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnGhost',
+                          onClick: () => props.onRejectRelation(relation.id)
+                        },
+                        t('action.reject')
+                      )
+                    )
+                  )
+                )
+              : h(TidyEmptyRow, { text: t('tidy.empty') })
+          ),
+          h(
+            TidyCard,
+            {
+              t: t,
+              icon: 'copy',
+              title: t('tidy.duplicates'),
+              count: duplicates.length,
+              hint: t('tidy.duplicatesHint')
+            },
+            duplicates.length
+              ? duplicates.map((pair, index) =>
+                  h(
+                    'div',
+                    { key: index, className: 'zw-tidyRow' },
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowBody' },
+                      h(
+                        'div',
+                        { className: 'zw-tidyRowTitle' },
+                        pair.a.title,
+                        h(Icon, { name: 'arrowRight', size: 11 }),
+                        pair.b.title
+                      ),
+                      h('div', { className: 'zw-tidyRowMeta' }, pair.reason)
+                    ),
+                    h(
+                      'div',
+                      { className: 'zw-tidyRowActions' },
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnGhost',
+                          onClick: () => props.onOpen(pair.a.id)
+                        },
+                        t('tidy.openEntry')
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'zw-btn zw-btnSm zw-btnPrimary',
+                          title: t('action.merge'),
+                          onClick: () => props.onMerge(pair.a.id, pair.b.id)
+                        },
+                        t('tidy.merge')
+                      )
+                    )
+                  )
+                )
+              : h(TidyEmptyRow, { text: t('tidy.empty') })
+          ),
+          h(
+            TidyCard,
+            {
+              t: t,
+              icon: 'target',
+              title: t('tidy.orphans'),
+              count: orphans.length,
+              hint: t('tidy.orphansHint')
+            },
+            orphans.length
+              ? orphans.map((entry) =>
+                  h(
+                    'div',
+                    { key: entry.id, className: 'zw-tidyRow' },
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'zw-tidyLink',
+                        onClick: () => props.onOpen(entry.id)
+                      },
+                      h(Icon, { name: TYPE_ICON[entry.type] || 'book', size: 11 }),
+                      entry.title
+                    )
+                  )
+                )
+              : h(TidyEmptyRow, { text: t('tidy.empty') })
+          )
+        )
+      )
+    }
+
+    function RecallView(props) {
+      const t = props.t
+      const recalls = props.recalls || []
+      const entryById = props.entryById
+      if (!recalls.length) {
+        return h(
+          EmptyState,
+          {
+            icon: 'history',
+            title: t('recall.title'),
+            text: t('recall.empty')
+          }
+        )
+      }
+      return h(
+        'div',
+        { className: 'zw-recallList' },
+        h('div', { className: 'zw-tidyHint' }, t('recall.sub')),
+        recalls.map((recall) =>
+          h(
+            'div',
+            { key: recall.id, className: 'zw-recallRow' },
+            h(
+              'div',
+              { className: 'zw-recallTop' },
+              h(Icon, { name: 'history', size: 12 }),
+              h('span', { className: 'zw-recallTask' }, recall.task),
+              h(
+                'span',
+                { className: 'zw-tag' },
+                recallOutcomeLabel(t, recall.outcome)
+              ),
+              h('span', { className: 'zw-rowDate' }, formatDateTime(recall.at))
+            ),
+            h(
+              'div',
+              { className: 'zw-recallIds', title: t('recall.items') },
+              recall.ids.length
+                ? recall.ids.map((id) => {
+                    const entry = entryById.get(id)
+                    if (!entry) return null
+                    return h(
+                      'button',
+                      {
+                        key: id,
+                        type: 'button',
+                        className: 'zw-tag zw-tagBtn',
+                        onClick: () => props.onOpen(id)
+                      },
+                      entry.title
+                    )
+                  })
+                : h('span', { className: 'zw-tidyRowMeta' }, t('common.none'))
+            )
+          )
+        )
+      )
+    }
+
     function NameDialog(props) {
       const t = props.t
       const [value, setValue] = useState(props.value || '')
@@ -7425,6 +8832,8 @@ window.__ModuleLoader__.load({
       const [modal, setModal] = useState(null)
       const [graphView, setGraphView] = useState(null)
       const [assist, setAssist] = useState({ entryId: '', action: '', result: null, error: '', busy: false })
+      const [tidyReport, setTidyReport] = useState(null)
+      const [tidyBusy, setTidyBusy] = useState(false)
 
       const notify = useCallback((text, tone, action) => {
         const id = 'toast_' + Date.now() + '_' + Math.round(Math.random() * 999)
@@ -7443,6 +8852,8 @@ window.__ModuleLoader__.load({
           collections: payload.collections || [],
           projects: payload.projects || [],
           views: payload.views || [],
+          proposals: payload.proposals || [],
+          recalls: payload.recalls || [],
           stats: payload.stats || {},
           storagePath: payload.storagePath || '',
           error: null
@@ -7493,6 +8904,8 @@ window.__ModuleLoader__.load({
       const collections = data.collections || []
       const projects = data.projects || []
       const stats = data.stats || {}
+      const proposals = data.proposals || []
+      const recalls = data.recalls || []
       const defaultProjectId = projects.length ? projects[0].id : 'prj_default'
 
       const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries])
@@ -7560,6 +8973,81 @@ window.__ModuleLoader__.load({
         },
         [entryById, relations, collections]
       )
+
+      const loadTidy = useCallback(async (quiet) => {
+        setTidyBusy(true)
+        try {
+          const result = await mutateState({ action: 'memory-tidy' })
+          setTidyReport(result.result || null)
+          if (!quiet) notify(t('toast.tidyRefreshed'), 'ok')
+        } catch (err) {
+          notify(isOfflineError(err) ? t('error.offline') : errorText(err, t('error.write')), 'error')
+        } finally {
+          setTidyBusy(false)
+        }
+      }, [notify, t])
+
+      useEffect(() => {
+        if (nav.kind === 'tidy' && !tidyReport && !tidyBusy) loadTidy(true)
+      }, [nav.kind, tidyReport, tidyBusy, loadTidy])
+
+      const protectEntry = useCallback(
+        (id, level) => mutate({ action: 'entry-protect', id: id, level: level }, t('toast.protected')),
+        [mutate, t]
+      )
+
+      const restoreVersion = useCallback(
+        (id, versionId) => mutate({ action: 'entry-version-restore', id: id, versionId: versionId }, t('toast.restoredVersion')),
+        [mutate, t]
+      )
+
+      const addEvidenceTo = useCallback(
+        (id, text) =>
+          mutate(
+            { action: 'evidence-add', id: id, evidence: text, evidenceType: 'statement' },
+            t('toast.evidenceAdded')
+          ),
+        [mutate, t]
+      )
+
+      const decideProposal = useCallback(
+        (proposalId, decision) =>
+          mutate(
+            { action: 'proposal-decide', proposalId: proposalId, decision: decision },
+            decision === 'accept' ? t('toast.proposalAccepted') : t('toast.proposalRejected')
+          ),
+        [mutate, t]
+      )
+
+      const mergeEntries = useCallback(
+        (targetId, otherId) =>
+          mutate({ action: 'memory-merge', ids: [targetId, otherId], targetId: targetId }, t('toast.merged')),
+        [mutate, t]
+      )
+
+      const observeContent = useCallback(
+        async (text, conversationId) => {
+          setBusy('memory-observe')
+          try {
+            const result = await mutateState({
+              action: 'memory-observe',
+              text: text,
+              conversationId: conversationId || ''
+            })
+            applyState(result)
+            setModal({ type: 'observe', result: result.result || null })
+            notify(t('toast.observed'), 'ok')
+            return result
+          } catch (err) {
+            notify(isOfflineError(err) ? t('error.offline') : errorText(err, t('error.write')), 'error')
+            return null
+          } finally {
+            setBusy('')
+          }
+        },
+        [applyState, notify, t]
+      )
+
       const projectCounts = useMemo(() => {
         const counts = {}
         projects.forEach((project) => {
@@ -7618,6 +9106,8 @@ window.__ModuleLoader__.load({
         if (nav.kind === 'favorites') return t('view.favorites')
         if (nav.kind === 'recent') return t('view.recent')
         if (nav.kind === 'graph') return t('view.graph')
+        if (nav.kind === 'tidy') return t('tidy.title')
+        if (nav.kind === 'recall') return t('recall.title')
         if (nav.kind === 'project') {
           const project = projects.find((item) => item.id === nav.id)
           return project ? project.name : t('view.all')
@@ -8149,6 +9639,7 @@ window.__ModuleLoader__.load({
             stats: stats,
             entries: entries,
             suggestedRelations: suggestedRelations,
+            recalls: recalls,
             onNav: setNavKind,
             onFilterNav: (kind, next) => {
               setFilters(Object.assign({ projectId: '', types: [], statuses: [], domains: [], tags: [] }, next || {}))
@@ -8210,6 +9701,28 @@ window.__ModuleLoader__.load({
             onOpen: openEntry
           })
         }
+        if (nav.kind === 'tidy') {
+          return h(TidyView, {
+            t: t,
+            meta: meta,
+            report: tidyReport,
+            busy: tidyBusy,
+            onRefresh: loadTidy,
+            onOpen: openEntry,
+            onDecideProposal: decideProposal,
+            onConfirmRelation: (id) => decideRelation(id, 'confirmed'),
+            onRejectRelation: (id) => decideRelation(id, 'rejected'),
+            onMerge: mergeEntries
+          })
+        }
+        if (nav.kind === 'recall') {
+          return h(RecallView, {
+            t: t,
+            recalls: recalls,
+            entryById: entryById,
+            onOpen: openEntry
+          })
+        }
         if (nav.kind === 'graph') {
           return h(GraphView, {
             key: nav.id || 'graph',
@@ -8218,6 +9731,7 @@ window.__ModuleLoader__.load({
             entries: navEntries,
             relations: relations,
             collections: collections,
+            projects: projects,
             stats: stats,
             selection: graphSelection,
             initialConfig: graphView,
@@ -8227,6 +9741,7 @@ window.__ModuleLoader__.load({
               setModal({ type: 'relation', sourceId: sourceId, targetId: targetId }),
             onDecideRelation: decideRelation,
             onSaveView: () => setModal({ type: 'saveView' }),
+            onOpenTidy: () => setNav({ kind: 'tidy', id: '' }),
             onBatchAction: batchAction,
             onState: onGraphState
           })
@@ -8275,6 +9790,7 @@ window.__ModuleLoader__.load({
             nav: nav,
             collapsed: railCollapsed,
             stats: stats,
+            tidyCount: (stats.pendingProposals || 0) + (stats.suggestedRelations || 0) + (stats.inbox || 0),
             projects: projects,
             projectCounts: projectCounts,
             views: data.views || [],
@@ -8327,6 +9843,16 @@ window.__ModuleLoader__.load({
                         h(Icon, { name: 'close', size: 11 })
                       )
                     : null
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'zw-iconBtn',
+                    title: t('action.observe'),
+                    onClick: () => setModal({ type: 'observe', result: null })
+                  },
+                  h(Icon, { name: 'sparkle', size: 14 })
                 ),
                 h(
                   'button',
@@ -8439,6 +9965,13 @@ window.__ModuleLoader__.load({
             onSplitSegment: splitSegment,
             onRelateSuggestion: relateSuggestion,
             onResolveConflict: resolveConflict,
+            onProtect: protectEntry,
+            onRestoreVersion: restoreVersion,
+            onAddEvidence: addEvidenceTo,
+            onDecideProposal: decideProposal,
+            pendingProposals: selectedEntry
+              ? proposals.filter((proposal) => proposal.memoryId === selectedEntry.id && proposal.status === 'pending')
+              : [],
             onShowMembers: (ids) => {
               setChecked(ids.slice())
               setNav({ kind: 'all', id: '' })
@@ -8446,6 +9979,15 @@ window.__ModuleLoader__.load({
           })
         ),
         h(ToastHost, { toasts: toasts }),
+        modal && modal.type === 'observe'
+          ? h(ObserveDialog, {
+              t: t,
+              busy: busy === 'memory-observe',
+              result: modal.result || null,
+              onRun: observeContent,
+              onClose: () => setModal(null)
+            })
+          : null,
         modal && modal.type === 'summary'
           ? h(
               Modal,

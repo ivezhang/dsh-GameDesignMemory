@@ -184,7 +184,7 @@ await writeFile(storeFile, JSON.stringify(original, null, 2), 'utf8')
 
 const { route, snapshot } = await boot(dshDir)
 
-check(snapshot.version === 3, 'store migrated to version 3 (got ' + snapshot.version + ')')
+check(snapshot.version === 4, 'store migrated to version 4 (got ' + snapshot.version + ')')
 check(
   snapshot.entries.length === original.entries.length,
   'no memory lost: ' + snapshot.entries.length + ' of ' + original.entries.length
@@ -234,10 +234,10 @@ check(
 const backups = (await readdir(storeDir)).filter((name) => name.includes('.bak'))
 check(backups.length >= 1, 'a .bak backup was written before rewriting: ' + backups.join(', '))
 const onDisk = JSON.parse(await readFile(storeFile, 'utf8'))
-check(onDisk.version === 3, 'file on disk is version 3')
+check(onDisk.version === 4, 'file on disk is version 4')
 if (live) {
   check(
-    Number(live.version) === 3 && Array.isArray(live.entries) && live.entries.length > 0,
+    Number(live.version) >= 3 && Array.isArray(live.entries) && live.entries.length > 0,
     'live store is readable on disk: v' + live.version + ' · ' + (live.entries || []).length + ' memories'
   )
 }

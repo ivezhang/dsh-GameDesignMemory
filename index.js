@@ -10,7 +10,7 @@ export const name = 'design-memory'
 export const inject = ['tools']
 
 const ROUTE_PATH = '/design-memory'
-const STORE_VERSION = 3
+const STORE_VERSION = 4
 const MAX_BODY_BYTES = 2 * 1024 * 1024
 
 const ENTRY_TYPES = [
@@ -22,7 +22,11 @@ const ENTRY_TYPES = [
   'reference',
   'metric',
   'retro',
-  'process'
+  'process',
+  'habit',
+  'convention',
+  'context',
+  'task'
 ]
 
 const TYPE_LABEL = {
@@ -34,7 +38,11 @@ const TYPE_LABEL = {
   reference: '参考案例',
   metric: '数值数据',
   retro: '复盘结论',
-  process: '流程约定'
+  process: '流程约定',
+  habit: '用户习惯',
+  convention: '通用约定',
+  context: '项目背景',
+  task: '临时上下文'
 }
 
 const TYPE_HINT = {
@@ -46,8 +54,66 @@ const TYPE_HINT = {
   reference: '竞品、行业案例与设计灵感',
   metric: '具体参数、数值配置、计算结果',
   retro: '测试、玩家反馈、运营结果与经验',
-  process: '团队约定、交付流程与协作规范'
+  process: '团队约定、交付流程与协作规范',
+  habit: '长期稳定的工作方式与表达偏好',
+  convention: '需要长期遵守的命名、术语与输出标准',
+  context: '项目目标、背景、约束等不变的事实',
+  task: '有期限的临时事项与阶段进度'
 }
+
+const MEMORY_SCOPES = ['global', 'project']
+
+const SCOPE_LABEL = { global: '全局', project: '项目' }
+
+const PROTECTION_LEVELS = ['normal', 'confirmed', 'protected']
+
+const PROTECTION_LABEL = {
+  normal: '普通记忆',
+  confirmed: '已确认',
+  protected: '固有约定'
+}
+
+const PROTECTION_HINT = {
+  normal: '允许根据新证据补充和修订',
+  confirmed: '修改会保留版本与依据，可回看',
+  protected: '默认锁定，只有你明确要求才能改动'
+}
+
+const CHANGE_TYPES = ['create', 'refine', 'augment', 'correct', 'conflict', 'merge', 'protect', 'status', 'restore']
+
+const CHANGE_LABEL = {
+  create: '新建',
+  refine: '细化',
+  augment: '补充',
+  correct: '更正',
+  conflict: '冲突待判',
+  merge: '合并',
+  protect: '保护级别变更',
+  status: '状态变更',
+  restore: '回滚版本'
+}
+
+const PROPOSAL_STATUSES = ['pending', 'accepted', 'rejected', 'superseded']
+
+const PROPOSAL_STATUS_LABEL = {
+  pending: '待确认',
+  accepted: '已接受',
+  rejected: '已拒绝',
+  superseded: '已失效'
+}
+
+const EVIDENCE_TYPES = ['statement', 'confirmation', 'behavior', 'inference', 'temporary']
+
+const EVIDENCE_LABEL = {
+  statement: '用户陈述',
+  confirmation: '用户确认',
+  behavior: '多次行为',
+  inference: 'AI 推断',
+  temporary: '临时要求'
+}
+
+const RECALL_OUTCOMES = ['served', 'ignored', 'conflict']
+
 
 const DOMAINS = [
   'combat',
@@ -75,11 +141,12 @@ const DOMAIN_LABEL = {
   tech: '技术约束'
 }
 
-const STATUSES = ['draft', 'pending', 'active', 'deprecated', 'archived']
+const STATUSES = ['draft', 'pending', 'review', 'active', 'deprecated', 'archived']
 
 const STATUS_LABEL = {
   draft: '草稿',
   pending: '待确认',
+  review: '待复核',
   active: '已生效',
   deprecated: '已废弃',
   archived: '已归档'
@@ -88,6 +155,7 @@ const STATUS_LABEL = {
 const STATUS_HINT = {
   draft: '还没整理完，先放着',
   pending: '等确认，还没生效',
+  review: 'AI 觉得可能需要更新，等你复核',
   active: '已经生效，可以作为依据',
   deprecated: '被替代或不再适用',
   archived: '收起来，不参与日常检索'
@@ -183,7 +251,20 @@ const LIMITS = {
   projectName: 60,
   views: 40,
   viewName: 40,
-  history: 30
+  history: 30,
+  versions: 40,
+  versionNote: 500,
+  evidence: 60,
+  evidenceNote: 1200,
+  evidenceType: 24,
+  proposals: 300,
+  proposalNote: 1200,
+  recalls: 300,
+  recallTask: 400,
+  recallNote: 1600,
+  mergeIds: 60,
+  observeText: 20000,
+  observeCandidates: 12
 }
 
 const DEFAULT_PROJECT_ID = 'prj_default'
@@ -197,6 +278,11 @@ const META = {
   relationTypes: RELATION_TYPES.map((id) => ({ id, label: RELATION_LABEL[id], hint: RELATION_HINT[id] })),
   relationStatuses: RELATION_STATUS.map((id) => ({ id, label: RELATION_STATUS_LABEL[id] })),
   sourceKinds: SOURCE_KINDS.map((id) => ({ id, label: SOURCE_LABEL[id] })),
+  scopes: MEMORY_SCOPES.map((id) => ({ id, label: SCOPE_LABEL[id] })),
+  protectionLevels: PROTECTION_LEVELS.map((id) => ({ id, label: PROTECTION_LABEL[id], hint: PROTECTION_HINT[id] })),
+  changeTypes: CHANGE_TYPES.map((id) => ({ id, label: CHANGE_LABEL[id] })),
+  proposalStatuses: PROPOSAL_STATUSES.map((id) => ({ id, label: PROPOSAL_STATUS_LABEL[id] })),
+  evidenceTypes: EVIDENCE_TYPES.map((id) => ({ id, label: EVIDENCE_LABEL[id] })),
   collectionColors: COLLECTION_COLORS,
   collectionStatuses: COLLECTION_STATUS,
   limits: LIMITS
@@ -351,6 +437,30 @@ function newViewId() {
   return 'view_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
 }
 
+function newVersionId() {
+  return 'ver_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
+}
+
+function newEvidenceId() {
+  return 'evd_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
+}
+
+function newProposalId() {
+  return 'prp_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
+}
+
+function newRecallId() {
+  return 'rcl_' + Date.now().toString(36) + '_' + randomBytes(2).toString('hex')
+}
+
+function clamp01(value, fallback) {
+  const num = Number(value)
+  if (!Number.isFinite(num)) return fallback
+  if (num < 0) return 0
+  if (num > 1) return 1
+  return num
+}
+
 function deriveSummary(content, fallback) {
   const text = cleanText(content, LIMITS.body)
   const base = text || fallback || ''
@@ -376,6 +486,99 @@ function normalizeHistory(raw) {
   }
   return history.slice(0, LIMITS.history)
 }
+
+function normalizeScope(raw) {
+  return MEMORY_SCOPES.includes(raw) ? raw : 'project'
+}
+
+function normalizeProtection(raw, status) {
+  if (PROTECTION_LEVELS.includes(raw)) return raw
+  if (status === 'active' || status === 'archived') return 'confirmed'
+  return 'normal'
+}
+
+function normalizeChangeType(raw) {
+  return CHANGE_TYPES.includes(raw) ? raw : 'refine'
+}
+
+function normalizeVersion(raw, memoryId, index, now) {
+  if (!raw || typeof raw !== 'object') return null
+  const content = cleanText(raw.content !== undefined ? raw.content : raw.body, LIMITS.body)
+  if (!content) return null
+  return {
+    id: cleanLine(raw.id, 64) || newVersionId(),
+    memoryId,
+    version: Number.isFinite(Number(raw.version)) ? Math.max(1, Math.trunc(Number(raw.version))) : index + 1,
+    title: cleanLine(raw.title, LIMITS.title),
+    content,
+    changeType: normalizeChangeType(raw.changeType),
+    changeReason: cleanText(raw.changeReason || raw.reason, LIMITS.versionNote),
+    evidenceIds: Array.isArray(raw.evidenceIds)
+      ? raw.evidenceIds.map((item) => cleanLine(item, 64)).filter(Boolean).slice(0, 12)
+      : [],
+    sourceConversation: cleanLine(raw.sourceConversation, 120),
+    createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now,
+    createdBy: cleanLine(raw.createdBy, 40) || 'ai'
+  }
+}
+
+function normalizeEvidence(raw, memoryId, now) {
+  if (!raw || typeof raw !== 'object') return null
+  const content = cleanText(raw.content || raw.evidenceContent, LIMITS.evidenceNote)
+  if (!content) return null
+  return {
+    id: cleanLine(raw.id, 64) || newEvidenceId(),
+    memoryId: cleanLine(raw.memoryId, 64) || memoryId,
+    sourceConversation: cleanLine(raw.sourceConversation, 120),
+    sourceMessage: cleanLine(raw.sourceMessage, 120),
+    content,
+    evidenceType: EVIDENCE_TYPES.includes(raw.evidenceType || raw.type) ? raw.evidenceType || raw.type : 'statement',
+    confidence: clamp01(raw.confidence, 0.6),
+    createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now
+  }
+}
+
+function normalizeProposal(raw, entryIds, now) {
+  if (!raw || typeof raw !== 'object') return null
+  const memoryId = cleanLine(raw.memoryId, 64)
+  if (!entryIds.has(memoryId)) return null
+  const proposedContent = cleanText(raw.proposedContent, LIMITS.body)
+  if (!proposedContent) return null
+  return {
+    id: cleanLine(raw.id, 64) || newProposalId(),
+    memoryId,
+    title: cleanLine(raw.title, LIMITS.title),
+    oldContent: cleanText(raw.oldContent, LIMITS.body),
+    proposedContent,
+    changeType: normalizeChangeType(raw.changeType),
+    reason: cleanText(raw.reason || raw.note, LIMITS.proposalNote),
+    evidenceIds: Array.isArray(raw.evidenceIds)
+      ? raw.evidenceIds.map((item) => cleanLine(item, 64)).filter(Boolean).slice(0, 12)
+      : [],
+    confidence: clamp01(raw.confidence, 0.6),
+    status: PROPOSAL_STATUSES.includes(raw.status) ? raw.status : 'pending',
+    createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now,
+    decidedAt: isIsoDate(raw.decidedAt) ? raw.decidedAt : '',
+    createdBy: cleanLine(raw.createdBy, 40) || 'ai'
+  }
+}
+
+function normalizeRecall(raw, now) {
+  if (!raw || typeof raw !== 'object') return null
+  const task = cleanLine(raw.task, LIMITS.recallTask)
+  if (!task) return null
+  return {
+    id: cleanLine(raw.id, 64) || newRecallId(),
+    task,
+    projectId: cleanLine(raw.projectId, 64),
+    at: isIsoDate(raw.at || raw.createdAt) ? raw.at || raw.createdAt : now,
+    ids: Array.isArray(raw.ids) ? raw.ids.map((item) => cleanLine(item, 64)).filter(Boolean).slice(0, 20) : [],
+    outcome: RECALL_OUTCOMES.includes(raw.outcome) ? raw.outcome : 'served',
+    note: cleanText(raw.note, LIMITS.recallNote),
+    source: cleanLine(raw.source, 40) || 'agent'
+  }
+}
+
 
 function normalizeProject(raw, fallbackId) {
   if (!raw || typeof raw !== 'object') return null
@@ -413,6 +616,54 @@ function normalizeEntry(raw, projectIds, now) {
     : projectIds.has(DEFAULT_PROJECT_ID)
       ? DEFAULT_PROJECT_ID
       : Array.from(projectIds)[0] || DEFAULT_PROJECT_ID
+  const status = normalizeStatus(raw.status)
+  const versions = []
+  const versionIds = new Set()
+  for (const item of Array.isArray(raw.versions) ? raw.versions : []) {
+    const version = normalizeVersion(item, id, versions.length, now)
+    if (!version || versionIds.has(version.id)) continue
+    versionIds.add(version.id)
+    versions.push(version)
+    if (versions.length >= LIMITS.versions) break
+  }
+  if (!versions.length) {
+    versions.push({
+      id: newVersionId(),
+      memoryId: id,
+      version: 1,
+      title,
+      content,
+      changeType: 'create',
+      changeReason: '迁移自旧版本数据',
+      evidenceIds: [],
+      sourceConversation: '',
+      createdAt,
+      createdBy: 'system'
+    })
+  }
+  const evidence = []
+  const evidenceIds = new Set()
+  for (const item of Array.isArray(raw.evidence) ? raw.evidence : []) {
+    const record = normalizeEvidence(item, id, now)
+    if (!record || evidenceIds.has(record.id)) continue
+    evidenceIds.add(record.id)
+    evidence.push(record)
+    if (evidence.length >= LIMITS.evidence) break
+  }
+  const source = normalizeSource(raw.source)
+  if (!evidence.length && (source.label || raw.sourceConversation)) {
+    evidence.push({
+      id: newEvidenceId(),
+      memoryId: id,
+      sourceConversation: cleanLine(raw.sourceConversation, 120),
+      sourceMessage: '',
+      content: cleanText(source.label, LIMITS.evidenceNote) || '来自历史记录',
+      evidenceType: raw.evidenceType && EVIDENCE_TYPES.includes(raw.evidenceType) ? raw.evidenceType : 'statement',
+      confidence: 0.7,
+      createdAt
+    })
+  }
+  const versions2 = versions.slice(-LIMITS.versions)
   return {
     id,
     title,
@@ -421,12 +672,24 @@ function normalizeEntry(raw, projectIds, now) {
     type: normalizeType(raw.type || raw.category),
     domains: normalizeDomains(raw.domains),
     tags: normalizeTags(raw.tags || raw.tag),
-    status: normalizeStatus(raw.status),
+    status,
+    scope: normalizeScope(raw.scope),
     projectId,
-    source: normalizeSource(raw.source),
+    confidence: clamp01(raw.confidence, status === 'active' ? 0.85 : 0.6),
+    importance: clamp01(raw.importance, raw.pinned ? 0.9 : 0.5),
+    protectionLevel: normalizeProtection(raw.protectionLevel || raw.protection, status),
+    source,
     facts: normalizeFacts(raw.facts),
     pinned: Boolean(raw.pinned),
     favorite: Boolean(raw.favorite || raw.starred),
+    usageCount: Number.isFinite(Number(raw.usageCount)) ? Math.max(0, Math.trunc(Number(raw.usageCount))) : 0,
+    lastUsedAt: isIsoDate(raw.lastUsedAt) ? raw.lastUsedAt : '',
+    evidenceCount: evidence.length,
+    currentVersion: versions2.length,
+    supersededBy: cleanLine(raw.supersededBy, 64),
+    expiresAt: isIsoDate(raw.expiresAt) ? raw.expiresAt : '',
+    versions: versions2,
+    evidence,
     createdAt,
     updatedAt,
     history: normalizeHistory(raw.history),
@@ -440,15 +703,20 @@ function normalizeRelation(raw, entryIds, now) {
   const targetMemoryId = cleanLine(raw.targetMemoryId || raw.to || raw.targetId, 64)
   if (!entryIds.has(sourceMemoryId) || !entryIds.has(targetMemoryId)) return null
   if (sourceMemoryId === targetMemoryId) return null
+  const status = normalizeRelationStatus(raw.status)
   return {
     id: cleanLine(raw.id, 64) || newRelationId(),
     sourceMemoryId,
     targetMemoryId,
     relationType: normalizeRelationType(raw.relationType || raw.type),
     description: cleanText(raw.description || raw.label || raw.note, LIMITS.relationNote),
-    status: normalizeRelationStatus(raw.status),
+    status,
+    confidence: clamp01(raw.confidence, status === 'confirmed' ? 0.9 : 0.55),
+    evidence: cleanText(raw.evidence, LIMITS.relationNote),
+    source: raw.createdBy === 'ai' || raw.source === 'ai' ? 'ai' : raw.source === 'user' || raw.createdBy === 'user' ? 'user' : 'system',
     createdBy: cleanLine(raw.createdBy, 40) || 'user',
-    createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now
+    createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now,
+    updatedAt: isIsoDate(raw.updatedAt) ? raw.updatedAt : isIsoDate(raw.createdAt) ? raw.createdAt : now
   }
 }
 
@@ -621,7 +889,25 @@ function migrateStore(parsed) {
     if (views.length >= LIMITS.views) break
   }
 
-  return { version: STORE_VERSION, projects, entries, relations, collections, views }
+  const proposals = []
+  const proposalIds = new Set()
+  for (const item of Array.isArray(parsed.proposals) ? parsed.proposals : []) {
+    const proposal = normalizeProposal(item, entryIds, now)
+    if (!proposal || proposalIds.has(proposal.id)) continue
+    proposalIds.add(proposal.id)
+    proposals.push(proposal)
+    if (proposals.length >= LIMITS.proposals) break
+  }
+
+  const recalls = []
+  for (const item of Array.isArray(parsed.recalls) ? parsed.recalls : []) {
+    const recall = normalizeRecall(item, now)
+    if (!recall) continue
+    recalls.push(recall)
+    if (recalls.length >= LIMITS.recalls) break
+  }
+
+  return { version: STORE_VERSION, projects, entries, relations, collections, views, proposals, recalls }
 }
 
 function pruneStore(store) {
@@ -638,6 +924,15 @@ function pruneStore(store) {
       members.push(id)
     }
     collection.memberIds = members
+  }
+  if (Array.isArray(store.proposals)) {
+    store.proposals = store.proposals.filter((proposal) => entryIds.has(proposal.memoryId))
+  }
+  if (Array.isArray(store.recalls)) {
+    for (const recall of store.recalls) {
+      recall.ids = recall.ids.filter((id) => entryIds.has(id))
+    }
+    store.recalls = store.recalls.filter((recall) => recall.ids.length > 0 || recall.outcome !== 'served')
   }
   return store
 }
@@ -1462,6 +1757,654 @@ function suggestCollections(store, projectId) {
       }
       return '未知的分析结果。'
     }
+// --------------------------------------------------------------- evolve
+// Ratchet-style memory evolution: observe -> compare -> propose/revise ->
+// version + evidence -> relations. Every mutation here is deterministic and
+// keeps an audit trail; nothing is ever silently overwritten.
+
+function unique(list) {
+  return Array.from(new Set(Array.isArray(list) ? list : []))
+}
+
+function memoryText(entry) {
+  return String((entry && (entry.content || entry.summary || entry.title)) || '')
+}
+
+function tokensForEntry(entry) {
+  return tokensOf(memoryText(entry))
+}
+
+function relationKeyOf(sourceId, targetId, relationType) {
+  return sourceId + '\u0000' + targetId + '\u0000' + relationType
+}
+
+function relationsTouching(store, entryId) {
+  return store.relations.filter(
+    (relation) => relation.sourceMemoryId === entryId || relation.targetMemoryId === entryId
+  )
+}
+
+// A relation the user explicitly rejected must never be recreated by the
+// engine: the rejected row stays in the store as a tombstone.
+function relationTombstoned(store, sourceId, targetId, relationType) {
+  return store.relations.some(
+    (relation) =>
+      relation.sourceMemoryId === sourceId &&
+      relation.targetMemoryId === targetId &&
+      relation.relationType === relationType &&
+      relation.status === 'rejected'
+  )
+}
+
+function hasRelation(store, sourceId, targetId, relationType) {
+  return store.relations.some(
+    (relation) =>
+      relation.sourceMemoryId === sourceId &&
+      relation.targetMemoryId === targetId &&
+      (!relationType || relation.relationType === relationType) &&
+      relation.status !== 'rejected'
+  )
+}
+
+function storeEntry(store, id) {
+  return store.entries.find((entry) => entry.id === id) || null
+}
+
+function pushVersion(entry, change) {
+  const at = isIsoDate(change.at) ? change.at : isoNow()
+  const version = {
+    id: newVersionId(),
+    memoryId: entry.id,
+    version: entry.versions.length + 1,
+    title: change.title !== undefined ? change.title : entry.title,
+    content: change.content !== undefined ? change.content : entry.content,
+    changeType: normalizeChangeType(change.changeType),
+    changeReason: cleanText(change.changeReason, LIMITS.versionNote),
+    evidenceIds: Array.isArray(change.evidenceIds) ? change.evidenceIds : [],
+    sourceConversation: cleanLine(change.sourceConversation, 120),
+    createdAt: at,
+    createdBy: cleanLine(change.createdBy, 40) || 'ai'
+  }
+  entry.versions.push(version)
+  if (entry.versions.length > LIMITS.versions) {
+    entry.versions = entry.versions.slice(-LIMITS.versions)
+  }
+  entry.currentVersion = entry.versions.length
+  entry.updatedAt = version.createdAt
+  return version
+}
+
+function addEvidence(entry, input) {
+  const record = normalizeEvidence(input, entry.id, isoNow())
+  if (!record) return null
+  const duplicate = entry.evidence.find(
+    (item) => item.content === record.content && item.sourceConversation === record.sourceConversation
+  )
+  if (duplicate) return duplicate
+  entry.evidence.push(record)
+  if (entry.evidence.length > LIMITS.evidence) {
+    entry.evidence = entry.evidence.slice(-LIMITS.evidence)
+  }
+  entry.evidenceCount = entry.evidence.length
+  return record
+}
+
+function pendingProposalFor(store, memoryId, changeType) {
+  return (
+    store.proposals.find(
+      (proposal) =>
+        proposal.memoryId === memoryId &&
+        proposal.status === 'pending' &&
+        (!changeType || proposal.changeType === changeType)
+    ) || null
+  )
+}
+
+function createProposal(state, entry, change) {
+  const proposed = cleanText(change.content, LIMITS.body)
+  if (!proposed || proposed === entry.content) return null
+  const existing = pendingProposalFor(state, entry.id, change.changeType)
+  if (existing) {
+    existing.oldContent = entry.content
+    existing.proposedContent = proposed
+    existing.title = change.title !== undefined ? cleanLine(change.title, LIMITS.title) : existing.title
+    existing.reason = cleanText(change.reason, LIMITS.proposalNote)
+    existing.evidenceIds = Array.isArray(change.evidenceIds) ? change.evidenceIds.slice(0, 12) : existing.evidenceIds
+    existing.confidence = clamp01(change.confidence, existing.confidence)
+    existing.createdAt = isoNow()
+    return existing
+  }
+  const proposal = {
+    id: newProposalId(),
+    memoryId: entry.id,
+    title: change.title !== undefined ? cleanLine(change.title, LIMITS.title) : entry.title,
+    oldContent: entry.content,
+    proposedContent: proposed,
+    changeType: normalizeChangeType(change.changeType),
+    reason: cleanText(change.reason, LIMITS.proposalNote),
+    evidenceIds: Array.isArray(change.evidenceIds) ? change.evidenceIds.slice(0, 12) : [],
+    confidence: clamp01(change.confidence, 0.6),
+    status: 'pending',
+    createdAt: isoNow(),
+    decidedAt: '',
+    createdBy: 'ai'
+  }
+  state.proposals.unshift(proposal)
+  if (state.proposals.length > LIMITS.proposals) {
+    state.proposals = state.proposals.slice(0, LIMITS.proposals)
+  }
+  return proposal
+}
+
+// Decide whether a change may be applied directly or must wait for the user.
+function revisionMode(entry, change, options) {
+  const force = Boolean(options && options.force)
+  if (force) return 'apply'
+  if (entry.protectionLevel === 'protected') return 'propose'
+  if (change.changeType === 'conflict') return 'propose'
+  if (entry.status === 'active' && entry.protectionLevel === 'confirmed' && change.changeType === 'correct') {
+    return 'propose'
+  }
+  return 'apply'
+}
+
+// Apply one ratchet step. Returns { mode, entry, version, proposal, evidence }.
+function reviseEntry(state, entry, change, options) {
+  const evidence = change.evidence ? addEvidence(entry, change.evidence) : null
+  const mode = revisionMode(entry, change, options)
+  if (mode === 'propose') {
+    const proposal = createProposal(state, entry, {
+      title: change.title,
+      content: change.content,
+      changeType: change.changeType,
+      reason: change.reason,
+      evidenceIds: evidence ? [evidence.id] : change.evidenceIds,
+      confidence: change.confidence
+    })
+    if (!proposal) {
+      // 观察到的内容没有带来实际变化（只是重复确认），保留证据即可。
+      return { mode: 'noop', entry, proposal: null, evidence }
+    }
+    if (entry.status === 'active' && entry.protectionLevel !== 'protected') {
+      entry.status = 'review'
+    }
+    return { mode: 'proposed', entry, proposal, evidence }
+  }
+  if (change.title !== undefined && change.title !== entry.title) {
+    entry.title = cleanLine(change.title, LIMITS.title) || entry.title
+  }
+  if (change.content !== undefined && change.content !== entry.content) {
+    entry.content = cleanText(change.content, LIMITS.body)
+  }
+  if (change.summary !== undefined) {
+    entry.summary = cleanText(change.summary, LIMITS.summary) || deriveSummary(entry.content, entry.title)
+  } else if (change.content !== undefined) {
+    entry.summary = deriveSummary(entry.content, entry.title)
+  }
+  if (Array.isArray(change.tags)) entry.tags = normalizeTags(change.tags.concat(entry.tags))
+  if (Array.isArray(change.domains)) entry.domains = normalizeDomains(change.domains.concat(entry.domains))
+  if (change.type) entry.type = normalizeType(change.type)
+  if (change.confidence !== undefined) entry.confidence = clamp01(change.confidence, entry.confidence)
+  if (change.status) entry.status = normalizeStatus(change.status)
+  const version = pushVersion(entry, {
+    title: entry.title,
+    content: entry.content,
+    changeType: change.changeType,
+    changeReason: change.reason,
+    evidenceIds: evidence ? [evidence.id] : change.evidenceIds,
+    sourceConversation: change.sourceConversation,
+    createdBy: change.createdBy || 'ai'
+  })
+  entry.evidenceCount = entry.evidence.length
+  return { mode: 'applied', entry, version, evidence }
+}
+
+// Incremental relation suggestions: semantic overlap only, and never
+// resurrect a relation the user rejected.
+function autoRelate(state, entry, options) {
+  const created = []
+  if (!entry) return created
+  const candidates = suggestRelationsFor(entry, state)
+  const limit = (options && options.limit) || 4
+  for (const item of candidates) {
+    if (created.length >= limit) break
+    if (item.alreadyLinked) continue
+    if (relationTombstoned(state, entry.id, item.targetMemoryId, item.relationType)) continue
+    if (relationTombstoned(state, item.targetMemoryId, entry.id, item.relationType)) continue
+    if (hasRelation(state, entry.id, item.targetMemoryId, item.relationType)) continue
+    if (item.confidence < 0.45) continue
+    const relation = {
+      id: newRelationId(),
+      sourceMemoryId: entry.id,
+      targetMemoryId: item.targetMemoryId,
+      relationType: normalizeRelationType(item.relationType),
+      description: cleanText(item.description, LIMITS.relationNote),
+      status: 'suggested',
+      confidence: clamp01(item.confidence, 0.5),
+      evidence: item.reasons && item.reasons.length ? item.reasons.join('；') : '',
+      source: 'ai',
+      createdBy: 'ai',
+      createdAt: isoNow(),
+      updatedAt: isoNow()
+    }
+    state.relations.push(relation)
+    created.push(relation)
+    if (state.relations.length >= LIMITS.relations) {
+      state.relations = state.relations.slice(-LIMITS.relations)
+    }
+  }
+  return created
+}
+
+function splitObservations(text) {
+  const raw = String(text || '').trim()
+  if (!raw) return []
+  const blocks = raw
+    .split(/\n\s*\n/)
+    .map((block) => block.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+  const pieces = []
+  for (const block of blocks) {
+    const sentences = splitSentences(block).filter((line) => line.length >= 10)
+    if (sentences.length >= 2) {
+      for (const sentence of sentences) pieces.push(sentence)
+    } else {
+      pieces.push(block)
+    }
+  }
+  const merged = []
+  for (const piece of pieces) {
+    const last = merged[merged.length - 1]
+    if (last && last.length + piece.length <= 420) {
+      merged[merged.length - 1] = last + ' ' + piece
+    } else {
+      merged.push(piece)
+    }
+  }
+  return merged
+    .map((piece) => cleanText(piece, 900))
+    .filter((piece) => piece.length >= 12)
+    .slice(0, LIMITS.observeCandidates)
+}
+
+function numbersSignature(text) {
+  const found = String(text || '').match(/\d+(?:\.\d+)?/g) || []
+  return new Set(found)
+}
+
+function pickChangeType(existing, candidate, seed) {
+  const existingTokens = tokensForEntry(existing)
+  const candidateTokens = tokensOf(candidate)
+  const overlap = overlapCount(existingTokens, candidateTokens)
+  const existingNumbers = numbersSignature(memoryText(existing))
+  const candidateNumbers = numbersSignature(candidate)
+  let sharedNumbers = 0
+  for (const value of candidateNumbers) {
+    if (existingNumbers.has(value)) sharedNumbers += 1
+  }
+  if (candidateNumbers.size && !sharedNumbers) return 'conflict'
+  if (overlap <= 2) return 'conflict'
+  if (candidate.length > memoryText(existing).length * 1.15) return 'augment'
+  if (seed && seed.type && seed.type !== existing.type) return 'refine'
+  return 'refine'
+}
+
+function composeContent(existing, candidate) {
+  const base = String(existing || '').trim()
+  const extra = String(candidate || '').trim()
+  if (!base) return extra
+  if (!extra) return base
+  if (base.indexOf(extra) >= 0) return base
+  // 新内容把整条旧内容包了进去：以新内容为准，别当成没变化。
+  if (extra.indexOf(base) >= 0) return extra
+  return base + '\n\n' + extra
+}
+
+// Automatic observation. Turns conversation text into memory candidates,
+// merges into existing memories when they are clearly the same topic, and
+// leaves uncertain changes as proposals or candidates for the user.
+function observeMemories(state, input) {
+  const text = cleanText(
+    input && (input.text || (Array.isArray(input.messages) ? input.messages.join('\n') : '')),
+    LIMITS.observeText
+  )
+  if (!text) throw httpError(400, 'empty-observation', '需要提供要观察的对话内容')
+  const conversationId = cleanLine(input.conversationId, 120)
+  const projectId = resolveProjectId(state, input.projectId)
+  const autoCreate = input.autoCreate !== false
+  const protectedOnly = Boolean(input.protectedOnly)
+  const candidates = splitObservations(text)
+  const result = { created: [], updated: [], proposed: [], reinforced: [], skipped: [], relations: [] }
+
+  for (const candidate of candidates) {
+    const seed = suggestEntry({ content: candidate, projectId, titleHint: input.titleHint }, state)
+    let best = null
+    let bestScore = 0
+    const probe = { content: candidate, tags: seed.tags, domains: seed.domains, title: seed.title }
+    const probeTokens = tokensOf(candidate)
+    for (const entry of state.entries) {
+      if (entry.status === 'archived') continue
+      if (entry.projectId !== projectId && entry.scope !== 'global') continue
+      const sim = similarityOf(probe, entry, probeTokens)
+      if (sim.score > bestScore) {
+        bestScore = sim.score
+        best = entry
+      }
+    }
+
+    const evidence = {
+      memoryId: '',
+      sourceConversation: conversationId || 'conversation',
+      sourceMessage: '',
+      content: candidate,
+      evidenceType: input.evidenceType || 'statement',
+      confidence: input.confidence === undefined ? 0.7 : clamp01(input.confidence, 0.7)
+    }
+
+    if (best && bestScore >= 5) {
+      const matchTokens = tokensForEntry(best)
+      const candidateTokens = tokensOf(candidate)
+      const existingIsSubset = overlapCount(candidateTokens, matchTokens) >= candidateTokens.size * 0.8
+      if (existingIsSubset) {
+        addEvidence(best, evidence)
+        result.reinforced.push({ id: best.id, title: best.title })
+        continue
+      }
+      const changeType = pickChangeType(best, candidate, seed)
+      if (protectedOnly && best.protectionLevel !== 'protected') {
+        result.skipped.push({ id: best.id, title: best.title, reason: '仅观察固有约定' })
+        continue
+      }
+      const revision = reviseEntry(
+        state,
+        best,
+        {
+          // 冲突时把「新说法」原样交给用户判断，不擅自把两段拼在一起。
+          content: changeType === 'conflict' ? candidate : composeContent(best.content, candidate),
+          changeType,
+          reason:
+            changeType === 'conflict'
+              ? '新对话的说法与现有记忆不一致：接受会以新说法替换正文，拒绝则保留原约定。'
+              : '从对话中补充了一条更具体的信息。',
+          evidence,
+          sourceConversation: conversationId,
+          confidence: evidence.confidence * 0.95,
+          tags: seed.tags,
+          domains: seed.domains
+        },
+        {}
+      )
+      if (revision.mode === 'proposed') {
+        result.proposed.push({ id: best.id, title: best.title, proposalId: revision.proposal && revision.proposal.id })
+      } else if (revision.mode === 'noop') {
+        result.reinforced.push({ id: best.id, title: best.title })
+      } else {
+        result.updated.push({ id: best.id, title: best.title, changeType })
+        for (const relation of autoRelate(state, best, { limit: 2 })) {
+          result.relations.push({ id: relation.id, from: relation.sourceMemoryId, to: relation.targetMemoryId })
+        }
+      }
+      continue
+    }
+
+    if (!autoCreate) {
+      result.skipped.push({ title: seed.title, reason: '没有匹配到已有记忆，且未开启自动新建' })
+      continue
+    }
+    const now = isoNow()
+    const entry = normalizeEntry(
+      {
+        title: seed.title,
+        content: candidate,
+        type: seed.type,
+        domains: seed.domains,
+        tags: seed.tags,
+        status: 'pending',
+        scope: 'project',
+        projectId,
+        source: { kind: 'ai', label: '自动观察' + (conversationId ? '：' + conversationId : '') },
+        confidence: evidence.confidence,
+        importance: 0.5,
+        protectionLevel: 'normal',
+        evidence: [evidence]
+      },
+      new Set(state.projects.map((project) => project.id)),
+      now
+    )
+    entry.createdAt = now
+    entry.sourceConversation = conversationId
+    state.entries.unshift(entry)
+    result.created.push({ id: entry.id, title: entry.title, type: entry.type })
+    for (const relation of autoRelate(state, entry, { limit: 3 })) {
+      result.relations.push({ id: relation.id, from: relation.sourceMemoryId, to: relation.targetMemoryId })
+    }
+  }
+  return result
+}
+
+// Deterministic recall: rank by keyword overlap, protection, confidence,
+// importance and recency. Frequency only nudges ranking, never deletes.
+function rankRecall(state, input) {
+  const task = cleanText(input && input.task, LIMITS.recallTask)
+  if (!task) throw httpError(400, 'empty-task', '需要提供当前任务或问题')
+  const projectId = cleanLine(input && input.projectId, 64) || ''
+  const limit = Math.max(1, Math.min(20, Number(input && input.limit) || 6))
+  const tokens = tokensOf(task)
+  const rows = []
+  for (const entry of state.entries) {
+    if (entry.status === 'archived' || entry.status === 'deprecated') continue
+    const entryTokens = tokensForEntry(entry)
+    let hits = overlapCount(tokens, entryTokens)
+    for (const tag of entry.tags) {
+      if (task.indexOf(tag) >= 0) hits += 2
+    }
+    if (!hits && entry.protectionLevel !== 'protected') continue
+    let tier = 4
+    if (entry.protectionLevel === 'protected' && (entry.projectId === projectId || entry.scope === 'global')) tier = 1
+    else if (entry.projectId === projectId) tier = 2
+    else if (entry.scope === 'global' || entry.type === 'habit') tier = 3
+    const statusBonus = entry.status === 'active' ? 1.2 : entry.status === 'review' ? 0.4 : 0
+    const protectionBonus = entry.protectionLevel === 'protected' ? 1.6 : entry.protectionLevel === 'confirmed' ? 0.8 : 0
+    const recency = entry.updatedAt ? Math.max(0, 1 - (Date.now() - Date.parse(entry.updatedAt)) / (1000 * 60 * 60 * 24 * 365)) : 0
+    const score = hits * 3 + (entry.importance || 0.5) * 2 + (entry.confidence || 0.5) + statusBonus + protectionBonus + recency
+    const reasons = []
+    if (hits) reasons.push('命中 ' + hits + ' 处任务相关词')
+    if (entry.protectionLevel === 'protected') reasons.push('固有约定，需明确遵守')
+    if (entry.status === 'active') reasons.push('当前生效')
+    if (entry.type === 'habit') reasons.push('长期习惯')
+    if (entry.lastUsedAt) reasons.push('最近调用过')
+    rows.push({
+      entryId: entry.id,
+      title: entry.title,
+      type: entry.type,
+      status: entry.status,
+      protectionLevel: entry.protectionLevel,
+      projectId: entry.projectId,
+      confidence: entry.confidence,
+      importance: entry.importance,
+      score: Number(score.toFixed(2)),
+      tier,
+      reasons,
+      updatedAt: entry.updatedAt
+    })
+  }
+  rows.sort((left, right) => left.tier - right.tier || right.score - left.score)
+  return { kind: 'recall', task, projectId, items: rows.slice(0, limit), total: rows.length }
+}
+
+function recordRecall(state, input, ranked) {
+  const ids = Array.isArray(input && input.ids) && input.ids.length
+    ? input.ids.filter((id) => storeEntry(state, id))
+    : (ranked ? ranked.items.map((item) => item.entryId) : [])
+  const now = isoNow()
+  for (const id of ids) {
+    const entry = storeEntry(state, id)
+    if (!entry) continue
+    entry.usageCount = (entry.usageCount || 0) + 1
+    entry.lastUsedAt = now
+  }
+  const recall = normalizeRecall(
+    {
+      task: (input && input.task) || (ranked && ranked.task) || '',
+      projectId: (input && input.projectId) || (ranked && ranked.projectId) || '',
+      ids,
+      outcome: (input && input.outcome) || 'served',
+      note: (input && input.note) || '',
+      source: (input && input.source) || 'agent',
+      at: now
+    },
+    now
+  )
+  if (recall) {
+    state.recalls.unshift(recall)
+    if (state.recalls.length > LIMITS.recalls) {
+      state.recalls = state.recalls.slice(0, LIMITS.recalls)
+    }
+  }
+  return { recall, updated: ids }
+}
+
+// Tidy-up payload for the management center: duplicates, orphans, conflicts,
+// pending proposals. Read-only.
+function tidyReport(state) {
+  const duplicates = []
+  const entries = state.entries.filter((entry) => entry.status !== 'archived')
+  for (let i = 0; i < entries.length; i += 1) {
+    for (let j = i + 1; j < entries.length; j += 1) {
+      const left = entries[i]
+      const right = entries[j]
+      if (left.type !== right.type) continue
+      const shared = shareTags(left, right)
+      const leftTokens = tokensForEntry(left)
+      const sim = similarityOf(left, right, leftTokens)
+      if (shared.length >= 2 && sim.score >= 8) {
+        duplicates.push({
+          a: { id: left.id, title: left.title },
+          b: { id: right.id, title: right.title },
+          score: sim.score,
+          reason: '共同标签 ' + shared.length + ' 个，正文主题词重合 ' + sim.tokenHits + ' 个'
+        })
+      }
+    }
+  }
+  const linked = new Set()
+  for (const relation of state.relations) {
+    if (relation.status === 'rejected') continue
+    linked.add(relation.sourceMemoryId)
+    linked.add(relation.targetMemoryId)
+  }
+  const orphans = entries
+    .filter((entry) => !linked.has(entry.id))
+    .map((entry) => ({ id: entry.id, title: entry.title, type: entry.type }))
+  const pendingProposals = state.proposals
+    .filter((proposal) => proposal.status === 'pending')
+    .map((proposal) => {
+      const entry = findEntry(state, proposal.memoryId)
+      return {
+        id: proposal.id,
+        memoryId: proposal.memoryId,
+        title: (entry && entry.title) || proposal.title,
+        changeType: proposal.changeType,
+        reason: proposal.reason,
+        protected: Boolean(entry && entry.protectionLevel === 'protected'),
+        createdAt: proposal.createdAt
+      }
+    })
+  const suggestedRelations = state.relations
+    .filter((relation) => relation.status === 'suggested')
+    .map((relation) => {
+      const source = findEntry(state, relation.sourceMemoryId)
+      const target = findEntry(state, relation.targetMemoryId)
+      return {
+        id: relation.id,
+        sourceMemoryId: relation.sourceMemoryId,
+        targetMemoryId: relation.targetMemoryId,
+        sourceTitle: source ? source.title : '',
+        targetTitle: target ? target.title : '',
+        relationType: relation.relationType,
+        confidence: relation.confidence,
+        source: relation.source
+      }
+    })
+  return {
+    kind: 'tidy',
+    duplicates: duplicates.slice(0, 8),
+    orphans: orphans.slice(0, 12),
+    pendingProposals,
+    suggestedRelations: suggestedRelations.slice(0, 30),
+    pendingRelations: suggestedRelations.length,
+    pendingMemories: state.entries.filter((entry) => entry.status === 'pending').length,
+    reviewMemories: state.entries.filter((entry) => entry.status === 'review').length,
+    protectedCount: state.entries.filter((entry) => entry.protectionLevel === 'protected').length
+  }
+}
+
+// Merge several memories into one, keeping relations, collections and history.
+function mergeMemories(state, input) {
+  const ids = Array.isArray(input && input.ids) ? unique(input.ids.map((id) => cleanLine(id, 64))) : []
+  if (ids.length < 2) throw httpError(400, 'need-two', '合并至少需要两条记忆')
+  const targetId = cleanLine(input && input.targetId, 64) || ids[0]
+  const target = mustEntry(state, targetId)
+  if (target.protectionLevel === 'protected' && !(input && input.force)) {
+    throw httpError(409, 'protected', '「' + target.title + '」是固有约定，请先解除保护再合并')
+  }
+  const removed = []
+  const tags = new Set(target.tags)
+  const domains = new Set(target.domains)
+  const blocks = [target.content]
+  for (const id of ids) {
+    if (id === targetId) continue
+    const entry = mustEntry(state, id)
+    if (entry.protectionLevel === 'protected' && !(input && input.force)) {
+      throw httpError(409, 'protected', '「' + entry.title + '」是固有约定，请先解除保护再合并')
+    }
+    for (const tag of entry.tags) tags.add(tag)
+    for (const domain of entry.domains) domains.add(domain)
+    blocks.push('## ' + entry.title + '\n' + entry.content)
+    for (const relation of state.relations) {
+      if (relation.sourceMemoryId === entry.id) relation.sourceMemoryId = targetId
+      if (relation.targetMemoryId === entry.id) relation.targetMemoryId = targetId
+    }
+    for (const collection of state.collections) {
+      const index = collection.memberIds.indexOf(entry.id)
+      if (index >= 0) {
+        collection.memberIds.splice(index, 1)
+        if (collection.memberIds.indexOf(targetId) < 0) collection.memberIds.push(targetId)
+      }
+    }
+    for (const proposal of state.proposals) {
+      if (proposal.memoryId === entry.id) proposal.memoryId = targetId
+    }
+    target.evidence = target.evidence.concat(entry.evidence).slice(-LIMITS.evidence)
+    target.evidenceCount = target.evidence.length
+    removed.push(entry.id)
+    state.entries = state.entries.filter((candidate) => candidate.id !== entry.id)
+  }
+  const deduped = []
+  const seen = new Set()
+  for (const relation of state.relations) {
+    if (relation.sourceMemoryId === relation.targetMemoryId) continue
+    const key = relationKeyOf(relation.sourceMemoryId, relation.targetMemoryId, relation.relationType)
+    if (seen.has(key)) continue
+    seen.add(key)
+    deduped.push(relation)
+  }
+  state.relations = deduped
+  target.tags = normalizeTags(Array.from(tags))
+  target.domains = normalizeDomains(Array.from(domains))
+  target.content = blocks.filter(Boolean).join('\n\n')
+  target.summary = deriveSummary(target.content, target.title)
+  pushVersion(target, {
+    title: target.title,
+    content: target.content,
+    changeType: 'merge',
+    changeReason: '合并了 ' + removed.length + ' 条重复记忆',
+    createdBy: 'user'
+  })
+  return { entry: target, merged: removed, restored: false }
+}
+
+
 function httpError(status, code, message) {
   const error = new Error(message || code)
   error.statusCode = status
@@ -1511,10 +2454,12 @@ function saveEntry(store, input) {
   let entry = isUpdate ? mustEntry(store, input.id) : null
   const content = cleanText(input.content !== undefined ? input.content : input.body, LIMITS.body)
   const legacySummary = cleanText(input.summary, LIMITS.summary)
+  const now = isoNow()
   if (!entry) {
     if (!content && !cleanLine(input.title, LIMITS.title)) {
       throw httpError(400, 'empty-entry', '至少需要标题或正文')
     }
+    const status = normalizeStatus(input.status || 'draft')
     entry = {
       id: newEntryId(),
       title: cleanLine(input.title, LIMITS.title) || suggestTitle(content),
@@ -1523,20 +2468,59 @@ function saveEntry(store, input) {
       type: normalizeType(input.type),
       domains: normalizeDomains(input.domains),
       tags: normalizeTags(input.tags),
-      status: normalizeStatus(input.status || 'draft'),
+      status,
+      scope: normalizeScope(input.scope),
       projectId: resolveProjectId(store, input.projectId),
+      confidence: clamp01(input.confidence, status === 'active' ? 0.85 : 0.6),
+      importance: clamp01(input.importance, 0.5),
+      protectionLevel: normalizeProtection(input.protectionLevel, status),
       source: normalizeSource(input.source),
       facts: normalizeFacts(input.facts),
       pinned: Boolean(input.pinned),
       favorite: Boolean(input.favorite),
-      createdAt: isoNow(),
-      updatedAt: isoNow(),
-      history: [{ at: isoNow(), note: '创建' }]
+      usageCount: 0,
+      lastUsedAt: '',
+      evidenceCount: 0,
+      currentVersion: 1,
+      supersededBy: '',
+      expiresAt: isIsoDate(input.expiresAt) ? input.expiresAt : '',
+      versions: [],
+      evidence: [],
+      createdAt: now,
+      updatedAt: now,
+      history: [{ at: now, note: '创建' }]
     }
+    pushVersion(entry, {
+      title: entry.title,
+      content: entry.content,
+      changeType: 'create',
+      changeReason: cleanText(input.note, LIMITS.versionNote) || '创建记忆',
+      sourceConversation: cleanLine(input.sourceConversation, 120),
+      createdBy: cleanLine(input.createdBy, 40) || 'user',
+      at: now
+    })
+    if (input.source && input.source.label) {
+      addEvidence(entry, {
+        content: cleanText(input.evidence || input.source.label, LIMITS.evidenceNote),
+        sourceConversation: cleanLine(input.sourceConversation, 120),
+        evidenceType: EVIDENCE_TYPES.includes(input.evidenceType) ? input.evidenceType : 'statement',
+        confidence: clamp01(input.confidence, 0.7)
+      })
+    }
+    entry.evidenceCount = entry.evidence.length
     store.entries.unshift(entry)
     return { entry, created: true }
   }
 
+  const contentChanged =
+    (input.content !== undefined || input.body !== undefined) && content !== entry.content
+  if (entry.protectionLevel === 'protected' && contentChanged && !input.force) {
+    throw httpError(
+      409,
+      'protected',
+      '「' + entry.title + '」是固有约定，需要先解除保护或明确要求修改才能改动正文'
+    )
+  }
   const snapshotOf = () =>
     JSON.stringify([
       entry.title,
@@ -1550,11 +2534,16 @@ function saveEntry(store, input) {
       entry.projectId,
       entry.source,
       entry.pinned,
-      entry.favorite
+      entry.favorite,
+      entry.scope,
+      entry.protectionLevel,
+      entry.confidence,
+      entry.importance
     ])
   const before = snapshotOf()
-  if (input.title !== undefined) entry.title = cleanLine(input.title, LIMITS.title) || entry.title
-  if (input.content !== undefined || input.body !== undefined) {
+  const titleChanged = input.title !== undefined && cleanLine(input.title, LIMITS.title) !== entry.title
+  if (titleChanged) entry.title = cleanLine(input.title, LIMITS.title) || entry.title
+  if (contentChanged) {
     entry.content = content
     if (!legacySummary) entry.summary = deriveSummary(content, entry.title)
   }
@@ -1563,13 +2552,41 @@ function saveEntry(store, input) {
   if (input.domains !== undefined) entry.domains = normalizeDomains(input.domains)
   if (input.tags !== undefined) entry.tags = normalizeTags(input.tags)
   if (input.status !== undefined) entry.status = normalizeStatus(input.status)
+  if (input.scope !== undefined) entry.scope = normalizeScope(input.scope)
   if (input.projectId !== undefined) entry.projectId = resolveProjectId(store, input.projectId)
+  if (input.confidence !== undefined) entry.confidence = clamp01(input.confidence, entry.confidence)
+  if (input.importance !== undefined) entry.importance = clamp01(input.importance, entry.importance)
+  if (input.protectionLevel !== undefined) {
+    entry.protectionLevel = normalizeProtection(input.protectionLevel, entry.status)
+  }
+  if (input.expiresAt !== undefined) entry.expiresAt = isIsoDate(input.expiresAt) ? input.expiresAt : ''
   if (input.source !== undefined) entry.source = normalizeSource(input.source)
   if (input.facts !== undefined) entry.facts = normalizeFacts(input.facts)
   if (input.pinned !== undefined) entry.pinned = Boolean(input.pinned)
   if (input.favorite !== undefined) entry.favorite = Boolean(input.favorite)
   const after = snapshotOf()
-  if (after !== before) touchEntry(entry, cleanText(input.note, 200) || '编辑内容')
+  if (after !== before) {
+    if (titleChanged || contentChanged) {
+      pushVersion(entry, {
+        title: entry.title,
+        content: entry.content,
+        changeType: normalizeChangeType(input.changeType || 'refine'),
+        changeReason: cleanText(input.note, LIMITS.versionNote) || '编辑内容',
+        sourceConversation: cleanLine(input.sourceConversation, 120),
+        createdBy: cleanLine(input.createdBy, 40) || 'user'
+      })
+      if (input.evidence) {
+        addEvidence(entry, {
+          content: cleanText(input.evidence, LIMITS.evidenceNote),
+          sourceConversation: cleanLine(input.sourceConversation, 120),
+          evidenceType: EVIDENCE_TYPES.includes(input.evidenceType) ? input.evidenceType : 'statement',
+          confidence: clamp01(input.confidence, 0.7)
+        })
+      }
+      entry.evidenceCount = entry.evidence.length
+    }
+    touchEntry(entry, cleanText(input.note, 200) || '编辑内容')
+  }
   return { entry, created: false }
 }
 
@@ -1921,6 +2938,8 @@ function serializeState(state) {
     relatedCollectionIds: membership.get(entry.id) || [],
     relationIds: (relationsByEntry.get(entry.id) || []).map((relation) => relation.id)
   }))
+  const pending = state.proposals.filter((proposal) => proposal.status === 'pending')
+  const decided = state.proposals.filter((proposal) => proposal.status !== 'pending').slice(0, 30)
   return {
     version: STORE_VERSION,
     meta: META,
@@ -1928,7 +2947,9 @@ function serializeState(state) {
     entries,
     relations: state.relations,
     collections: state.collections,
-    views: state.views
+    views: state.views,
+    proposals: pending.concat(decided),
+    recalls: state.recalls.slice(0, 30)
   }
 }
 
@@ -1945,15 +2966,116 @@ function computeStats(state) {
     entries: state.entries.length,
     relations: state.relations.length,
     suggestedRelations: state.relations.filter((relation) => relation.status === 'suggested').length,
+    confirmedRelations: state.relations.filter((relation) => relation.status === 'confirmed').length,
+    proposedRelations: state.relations.filter((relation) => relation.source === 'ai' && relation.status === 'suggested').length,
     collections: state.collections.length,
     suggestedCollections: state.collections.filter((collection) => collection.status === 'suggested').length,
     projects: state.projects.length,
     inbox: state.entries.filter((entry) => entry.status === 'draft' || entry.status === 'pending').length,
     favorites: state.entries.filter((entry) => entry.favorite).length,
+    pendingProposals: state.proposals.filter((proposal) => proposal.status === 'pending').length,
+    review: state.entries.filter((entry) => entry.status === 'review').length,
+    protected: state.entries.filter((entry) => entry.protectionLevel === 'protected').length,
+    confirmed: state.entries.filter((entry) => entry.protectionLevel === 'confirmed').length,
+    recalls: state.recalls.length,
+    lastRecallAt: state.recalls.length ? state.recalls[0].at : '',
     byType,
     byStatus,
     byDomain
   }
+}
+
+function setEntryProtection(state, input) {
+  const entry = mustEntry(state, cleanLine(input && input.id, 64))
+  const level = PROTECTION_LEVELS.includes(input && input.level) ? input.level : 'normal'
+  if (entry.protectionLevel === level) return { entry, changed: false }
+  const previous = entry.protectionLevel
+  entry.protectionLevel = level
+  pushVersion(entry, {
+    title: entry.title,
+    content: entry.content,
+    changeType: 'protect',
+    changeReason:
+      cleanText(input && input.note, LIMITS.versionNote) ||
+      '保护级别：' + PROTECTION_LABEL[previous] + ' → ' + PROTECTION_LABEL[level],
+    createdBy: 'user'
+  })
+  touchEntry(entry, '保护级别改为' + PROTECTION_LABEL[level])
+  return { entry, changed: true, previous }
+}
+
+function restoreVersion(state, input) {
+  const entry = mustEntry(state, cleanLine(input && input.id, 64))
+  const versionId = cleanLine(input && input.versionId, 64)
+  const version = entry.versions.find((item) => item.id === versionId)
+  if (!version) throw httpError(404, 'version-not-found', '这个版本不存在：' + versionId)
+  if (entry.protectionLevel === 'protected' && !(input && input.force)) {
+    throw httpError(409, 'protected', '「' + entry.title + '」是固有约定，请先解除保护再回滚版本')
+  }
+  const before = entry.content
+  entry.content = version.content
+  entry.title = version.title || entry.title
+  entry.summary = deriveSummary(entry.content, entry.title)
+  const created = pushVersion(entry, {
+    title: entry.title,
+    content: entry.content,
+    changeType: 'restore',
+    changeReason: '回滚到第 ' + version.version + ' 版（' + CHANGE_LABEL[version.changeType] + '）',
+    evidenceIds: version.evidenceIds,
+    createdBy: 'user'
+  })
+  touchEntry(entry, '回滚到第 ' + version.version + ' 版')
+  return { entry, version: created, previousContent: before }
+}
+
+function addEntryEvidence(state, input) {
+  const entry = mustEntry(state, cleanLine(input && input.id, 64))
+  const record = addEvidence(entry, {
+    content: input && (input.content || input.evidenceContent || input.evidence),
+    sourceConversation: input && input.sourceConversation,
+    sourceMessage: input && input.sourceMessage,
+    evidenceType: input && input.evidenceType,
+    confidence: input && input.confidence
+  })
+  if (!record) throw httpError(400, 'empty-evidence', '需要提供证据内容')
+  entry.evidenceCount = entry.evidence.length
+  touchEntry(entry, '新增证据')
+  return { entry, evidence: record }
+}
+
+function decideProposal(state, input) {
+  const proposal = state.proposals.find(
+    (item) => item.id === cleanLine(input && (input.id || input.proposalId), 64)
+  )
+  if (!proposal) throw httpError(404, 'proposal-not-found', '更新建议不存在：' + (input && input.id))
+  if (proposal.status !== 'pending') throw httpError(409, 'decided', '这条建议已经处理过了')
+  const entry = mustEntry(state, proposal.memoryId)
+  const decision = cleanLine(input && input.decision, 16)
+  if (decision === 'reject') {
+    proposal.status = 'rejected'
+    proposal.decidedAt = isoNow()
+    if (entry.status === 'review') entry.status = 'active'
+    touchEntry(entry, '拒绝了一条更新建议')
+    return { proposal, entry, accepted: false }
+  }
+  proposal.status = 'accepted'
+  proposal.decidedAt = isoNow()
+  const content = cleanText((input && input.content) || proposal.proposedContent, LIMITS.body)
+  const title = cleanLine((input && input.title) || proposal.title, LIMITS.title) || entry.title
+  entry.title = title
+  entry.content = content
+  entry.summary = deriveSummary(content, title)
+  if (entry.status === 'review') entry.status = 'active'
+  pushVersion(entry, {
+    title,
+    content,
+    changeType: proposal.changeType === 'conflict' ? 'correct' : proposal.changeType,
+    changeReason: proposal.reason || '接受更新建议',
+    evidenceIds: proposal.evidenceIds,
+    createdBy: 'user'
+  })
+  touchEntry(entry, '接受了更新建议（' + CHANGE_LABEL[proposal.changeType] + '）')
+  return { proposal, entry, accepted: true }
 }
 
     // Restore a snapshot that the browser kept before a destructive action.
@@ -2154,6 +3276,14 @@ function writeParameters() {
           'entry-bulk',
           'entry-collections',
           'entry-restore',
+          'entry-protect',
+          'entry-version-restore',
+          'evidence-add',
+          'proposal-decide',
+          'memory-merge',
+          'memory-observe',
+          'memory-recall',
+          'memory-tidy',
           'collection-restore',
           'relation-create',
           'relation-update',
@@ -2168,7 +3298,7 @@ function writeParameters() {
           'project-delete'
         ],
         description:
-          'entry-save 新建或更新记忆（带 id 即更新）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间。'
+          'entry-save 新建或更新记忆（带 id 即更新，正文变化会记版本）；entry-delete 删除记忆；entry-status 改状态；entry-flag 切换收藏或置顶；entry-bulk 批量改状态/项目/收藏/集合；entry-collections 单条记忆增删所属集合（传 add / remove 数组）；entry-protect 设置保护级别（normal / confirmed / protected）；entry-version-restore 回滚到某个历史版本；evidence-add 给记忆补一条来源证据；proposal-decide 接受或拒绝 AI 修改建议（decision: accept / reject）；memory-merge 合并重复记忆；memory-observe 从对话观察沉淀记忆（自动对比、更新或生成建议）；memory-recall 按当前任务检索最该被调用的记忆；memory-tidy 返回整理中心数据；relation-create 建立带类型的关联；relation-update 改关联；relation-decide 确认或拒绝 AI 建议的关联；collection-save 新建或修改记忆集合；collection-members 增删集合成员；collection-merge / collection-split 合并或拆分集合；entry-restore / collection-restore 恢复刚被删除的记忆或集合（撤销用，保留原 id）；project-save / project-delete 管理项目空间。'
       },
       id: { type: 'string', description: '记忆 / 集合 / 关联 / 项目的 id（更新时必填）' },
       title: { type: 'string', description: '记忆标题，一句话说清是什么' },
@@ -2199,6 +3329,28 @@ function writeParameters() {
       },
       favorite: { type: 'boolean', description: '是否收藏' },
       pinned: { type: 'boolean', description: '是否置顶' },
+      scope: { type: 'string', enum: MEMORY_SCOPES, description: '作用范围：project 项目内 / global 全局通用' },
+      confidence: { type: 'number', description: '可信度 0–1' },
+      importance: { type: 'number', description: '重要程度 0–1' },
+      protectionLevel: {
+        type: 'string',
+        enum: PROTECTION_LEVELS,
+        description: '保护级别：normal 普通 / confirmed 已确认 / protected 固有约定（默认锁定）'
+      },
+      level: { type: 'string', enum: PROTECTION_LEVELS, description: 'entry-protect: 目标保护级别' },
+      versionId: { type: 'string', description: 'entry-version-restore: 要回滚到的版本 id' },
+      decision: { type: 'string', description: 'proposal-decide: accept 或 reject' },
+      evidence: { type: 'string', description: '新增证据内容（entry-save / evidence-add）' },
+      evidenceType: { type: 'string', enum: EVIDENCE_TYPES, description: '证据类型' },
+      sourceConversation: { type: 'string', description: '来源对话标识' },
+      sourceMessage: { type: 'string', description: '来源消息标识' },
+      text: { type: 'string', description: 'memory-observe: 要观察的对话或笔记原文' },
+      messages: { type: 'array', items: { type: 'string' }, description: 'memory-observe: 对话片段数组' },
+      conversationId: { type: 'string', description: 'memory-observe: 来源对话 id' },
+      autoCreate: { type: 'boolean', description: 'memory-observe: 没有匹配到已有记忆时是否新建候选记忆（默认 true）' },
+      task: { type: 'string', description: 'memory-recall: 当前任务或问题' },
+      outcome: { type: 'string', enum: RECALL_OUTCOMES, description: 'memory-recall: 本次调用结果' },
+      force: { type: 'boolean', description: '跳过固有约定保护（只在用户明确要求修改时使用）' },
       note: { type: 'string', description: '本次改动说明，写入改动记录' },
       ids: { type: 'array', items: { type: 'string' }, description: '批量操作的记忆 id 列表' },
       sourceMemoryId: { type: 'string', description: '关系起点记忆 id' },
@@ -2213,7 +3365,6 @@ function writeParameters() {
       add: { type: 'array', items: { type: 'string' }, description: 'collection-members: 要加入的记忆 id' },
       remove: { type: 'array', items: { type: 'string' }, description: 'collection-members: 要移出的记忆 id' },
       intoId: { type: 'string', description: 'collection-merge: 合并进哪个集合 id' },
-      projectId: { type: 'string', description: '所属项目空间 id（留空则用默认项目）' },
       field: { type: 'string', description: 'entry-flag: favorite 或 pinned' },
       op: { type: 'string', description: 'entry-bulk: status / project / favorite / pin / addCollection / removeCollection / delete' },
       collectionId: { type: 'string', description: 'entry-bulk: 目标集合 id' },
@@ -2276,6 +3427,25 @@ function applyAction(state, input) {
       }
       return { entry: findEntry(state, id), added: add.length, removed: remove.length }
     }
+    case 'entry-protect':
+      return setEntryProtection(state, input)
+    case 'entry-version-restore':
+      return restoreVersion(state, input)
+    case 'evidence-add':
+      return addEntryEvidence(state, input)
+    case 'proposal-decide':
+      return decideProposal(state, input)
+    case 'memory-merge':
+      return mergeMemories(state, input)
+    case 'memory-observe':
+      return observeMemories(state, input)
+    case 'memory-recall': {
+      const ranked = rankRecall(state, input)
+      const logged = recordRecall(state, input, ranked)
+      return Object.assign({}, ranked, { logged: logged.recall ? logged.recall.id : '', updated: logged.updated })
+    }
+    case 'memory-tidy':
+      return tidyReport(state)
     case 'relation-create':
       return saveRelation(state, { ...input, targetMemoryId: input.targetMemoryId || input.targetId })
     case 'relation-update':
@@ -2316,6 +3486,45 @@ function formatWriteResult(result, state) {
   }
   if (result.restored && result.collection) {
     return '已恢复集合：' + result.collection.name + '\nid=' + result.collection.id
+  }
+  if (result.kind === 'recall') {
+    const lines = ['按任务「' + result.task + '」召回 ' + result.items.length + ' 条记忆：']
+    for (const item of result.items) {
+      const entry = state.entries.find((candidate) => candidate.id === item.entryId)
+      lines.push(
+        '- [P' + item.tier + '] ' + (entry ? entry.title : item.title) +
+        '（' + TYPE_LABEL[item.type] + ' · ' + STATUS_LABEL[item.status] +
+        (item.protectionLevel === 'protected' ? ' · 固有约定' : '') + '）id=' + item.entryId
+      )
+      if (entry) {
+        const body = String(entry.content || '').slice(0, 400)
+        lines.push('  ' + body.replace(/\s+/g, ' '))
+      }
+    }
+    if (!result.items.length) lines.push('- 没有相关记忆')
+    return lines.join('\n')
+  }
+  if (result.kind === 'tidy') {
+    return (
+      '整理中心：待确认建议 ' + result.pendingProposals + ' 条 · 待确认关系 ' + result.pendingRelations +
+      ' 条 · 候选记忆 ' + result.pendingMemories + ' 条 · 待复核 ' + result.reviewMemories + ' 条\n' +
+      '疑似重复 ' + result.duplicates.length + ' 组 · 孤立记忆 ' + result.orphans.length + ' 条 · 固有约定 ' +
+      result.protectedCount + ' 条'
+    )
+  }
+  if (result.proposal) {
+    return result.accepted
+      ? '已接受更新建议并记入版本：' + result.entry.title + '\nid=' + result.entry.id
+      : '已拒绝更新建议：' + result.entry.title + '\nid=' + result.entry.id
+  }
+  if (result.version) {
+    return '已回滚版本：' + result.entry.title + ' → 第 ' + result.version.version + ' 版\nid=' + result.entry.id
+  }
+  if (result.evidence) {
+    return '已补一条证据：' + result.entry.title + '\n证据 id=' + result.evidence.id
+  }
+  if (result.merged && result.merged.length) {
+    return '已合并 ' + result.merged.length + ' 条记忆到「' + result.entry.title + '」\nid=' + result.entry.id
   }
   if (result.entry) {
     return (result.created ? '已保存记忆：' : '已更新记忆：') + result.entry.title + '\nid=' + result.entry.id
@@ -2410,7 +3619,9 @@ export function apply(ctx) {
     entries: [],
     relations: [],
     collections: [],
-    views: []
+    views: [],
+    proposals: [],
+    recalls: []
   }
   let chain = Promise.resolve()
 
@@ -2442,6 +3653,8 @@ export function apply(ctx) {
     state.relations = migrated.relations
     state.collections = migrated.collections
     state.views = migrated.views
+    state.proposals = migrated.proposals || []
+    state.recalls = migrated.recalls || []
     pruneStore(state)
     if (!parsed || parsed.version !== STORE_VERSION) {
       await save()
@@ -2662,6 +3875,80 @@ export function apply(ctx) {
     }
   })
 
+  ctx.tools.register({
+    name: 'design_memory_observe',
+    description: [
+      '把一段对话或笔记交给「知微」自动观察、沉淀成长期记忆。',
+      '它会先检索已有记忆：能整合的整合（会记版本与证据），不确定的给更新建议，全新的存成候选记忆（status=pending，等你确认）。',
+      '默认不会覆盖任何已确认或固有约定的内容：固有约定的改动只会生成「待确认的修改建议」。',
+      '适合在完成一次需求讨论、方案评审、问题排查后调用；不需要用户手动整理。'
+    ].join('\n'),
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: '要观察的对话或笔记原文（优先）' },
+        messages: { type: 'array', items: { type: 'string' }, description: '对话片段数组（没有整段文本时使用）' },
+        conversationId: { type: 'string', description: '来源对话标识，便于日后追溯' },
+        projectId: { type: 'string', description: '归属项目 id' },
+        autoCreate: { type: 'boolean', description: '没有匹配到已有记忆时是否新建候选记忆，默认 true' },
+        protectedOnly: { type: 'boolean', description: '只观察固有约定相关内容' }
+      },
+      additionalProperties: false
+    },
+    output: TEXT_OUTPUT,
+    async execute(params) {
+      await ready
+      const result = await persist((current) => observeMemories(current, params || {}))
+      const lines = []
+      if (result.created.length) {
+        lines.push('新沉淀 ' + result.created.length + ' 条候选记忆：')
+        for (const item of result.created) lines.push('  · ' + item.title + '（' + TYPE_LABEL[item.type] + '）id=' + item.id)
+      }
+      if (result.updated.length) {
+        lines.push('已在原记忆上继续完善 ' + result.updated.length + ' 条：')
+        for (const item of result.updated) lines.push('  · ' + item.title + '（' + CHANGE_LABEL[item.changeType] + '）')
+      }
+      if (result.proposed.length) {
+        lines.push('生成 ' + result.proposed.length + ' 条待确认的修改建议（固有约定或存在冲突）：')
+        for (const item of result.proposed) lines.push('  · ' + item.title + '（建议 id=' + item.proposalId + '）')
+      }
+      if (result.reinforced.length) lines.push('已有记忆再次被印证 ' + result.reinforced.length + ' 条（只补了证据，没有改内容）')
+      if (result.skipped.length) lines.push('跳过 ' + result.skipped.length + ' 条（' + result.skipped.map((item) => item.reason).join('；') + '）')
+      if (result.relations.length) lines.push('顺便发现 ' + result.relations.length + ' 条可能的关联，等你确认')
+      return lines.length ? lines.join('\n') : '这次没有发现需要沉淀的新信息。'
+    }
+  })
+
+  ctx.tools.register({
+    name: 'design_memory_recall',
+    description: [
+      '按当前任务从「知微」里取回最该用的记忆，并记录一次真实调用。',
+      '优先级：当前项目已生效且受保护的约定 → 当前项目相关记忆 → 全局用户习惯 → 其它。',
+      '返回的每条都带优先级、类型、状态、保护级别和命中理由；固有约定会标明「固有约定，需明确遵守」。',
+      '历史方案和已废弃记忆默认不会被当成当前有效规则。'
+    ].join('\n'),
+    parameters: {
+      type: 'object',
+      properties: {
+        task: { type: 'string', description: '当前任务或问题，例如「写一版活动公告」' },
+        projectId: { type: 'string', description: '当前项目 id' },
+        limit: { type: 'number', description: '取回条数，默认 6，最多 20' }
+      },
+      required: ['task'],
+      additionalProperties: false
+    },
+    output: TEXT_OUTPUT,
+    async execute(params) {
+      await ready
+      const result = await persist((current) => {
+        const ranked = rankRecall(current, params || {})
+        recordRecall(current, params || {}, ranked)
+        return ranked
+      })
+      return formatWriteResult(result, state)
+    }
+  })
+
   async function handler(req, res) {
     try {
       const requestOrigin = req.headers.origin
@@ -2709,6 +3996,9 @@ export function apply(ctx) {
       if (action === 'ai.analyze') {
         return sendJson(res, 200, { ok: true, result: runAssist(input, state) })
       }
+      if (action === 'memory-tidy' || action === 'tidy') {
+        return sendJson(res, 200, { ok: true, report: tidyReport(state) })
+      }
       const result = await persist((current) => applyAction(current, input))
       return sendJson(res, 200, { ok: true, ...result, ...serializeState(state), stats: stats(), storagePath: storageFile })
     } catch (error) {
@@ -2730,6 +4020,23 @@ export function apply(ctx) {
       () => webCtx.webServer.register({ kind: 'prefix', path: ROUTE_PATH, handler }),
       'design-memory: 知微 knowledge api'
     )
+  })
+
+  // 静态提示：告诉模型「知微」存在，以及什么时候该召回、什么时候该沉淀。
+  // 真实调用仍然通过 design_memory_recall / design_memory_observe 工具完成，
+  // 不伪造自动注入，也不在用户不知情时改库。
+  ctx.inject(['systemPrompt'], (promptCtx) => {
+    promptCtx.systemPrompt.section({
+      name: 'design-memory:zhiwei',
+      order: 700,
+      text: [
+        '你有一个长期记忆库「知微」（工具：design_memory_recall / design_memory_observe / design_memory_search / design_memory_write / design_memory_suggest / design_memory_analyze）。',
+        '开始一个设计任务前，先用 design_memory_recall 按任务取回相关记忆：项目当前生效的约定优先，其次项目记忆，再次全局习惯。',
+        '取回的内容里，保护级别为「固有约定」的记忆必须遵守，除非用户明确要求改变；历史方案和已废弃记忆不能当作当前规则。',
+        '完成一段讨论、评审、排期或排查后，用 design_memory_observe 把稳定的结论沉淀进去，而不是把聊天记录整段存下来。',
+        '不要替用户确认新的约定，也不要在没有用户依据时修改固有约定；不确定的内容交给用户判断。'
+      ].join('\n')
+    })
   })
 }
 

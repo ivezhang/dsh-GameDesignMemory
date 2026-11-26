@@ -347,6 +347,46 @@ function applyPost(input) {
     const entry = live.entries.find((item) => item.id === input.id)
     if (entry) entry.status = input.status
   }
+  if (input.action === 'entry-protect' && input.level) {
+    const entry = live.entries.find((item) => item.id === input.id)
+    if (entry) entry.protectionLevel = input.level
+  }
+  if (input.action === 'evidence-add') {
+    const entry = live.entries.find((item) => item.id === input.id)
+    if (entry) {
+      entry.evidence = (entry.evidence || []).concat([
+        {
+          id: 'ev_smoke_' + nextId++,
+          memoryId: entry.id,
+          evidenceContent: input.content || input.evidence || '',
+          evidenceType: input.evidenceType || 'statement',
+          confidence: 1,
+          createdAt: new Date().toISOString()
+        }
+      ])
+      entry.evidenceCount = entry.evidence.length
+    }
+  }
+  if (input.action === 'memory-tidy') {
+    return {
+      ok: true,
+      result: {
+        duplicates: [],
+        orphans: [],
+        pendingProposals: [],
+        suggestedRelations: [],
+        pendingRelations: 0,
+        pendingMemories: 0,
+        reviewMemories: 0,
+        protectedCount: 0
+      }
+    }
+  }
+  if (input.action === 'memory-observe') {
+    return Object.assign(payload(), {
+      result: { created: [], updated: [], proposed: [], reinforced: [{ id: 'x' }], skipped: [] }
+    })
+  }
   return payload()
 }
 
@@ -583,7 +623,7 @@ function walkText(root, needle) {
 check(Boolean(mainSlot), 'main slot registered')
 check(slots.some((slot) => slot.options && slot.options.name === 'sidebar.panellist'), 'sidebar entry registered')
 check(entries.length > 0, 'fixture has ' + entries.length + ' memories')
-check(state.version === 3, 'store migrated to version 3')
+check(state.version === 4, 'store migrated to version 4')
 
 const passes = await settle()
 check(passes < 40, 'render settled in ' + passes + ' pass(es)')
@@ -847,6 +887,107 @@ if (boxTool) {
   pointer(byClass('zw-graphSvg')[0], 'onPointerUp', end)
   await settle(6)
   check(byClass('zw-batchbar').length >= 1, 'box select shows the batch bar')
+}
+
+// ------------------------------------------------- V2.1 detail + tidy + recall
+const allNavAgain = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.all']))
+if (allNavAgain) {
+  click(allNavAgain)
+  await settle()
+}
+const firstRow = byClass('zw-row')[0]
+if (firstRow) {
+  click(firstRow)
+  await settle()
+}
+check(byClass('zw-life').length >= 1, 'lifecycle bar rendered in the detail rail')
+check(byClass('zw-lifeFoot').length >= 1, 'lifecycle usage line rendered')
+function detailHasEvidenceHint() {
+  const rail = byClass('zw-detail')[0]
+  if (!rail) return false
+  return textOf(rail).includes(ZH['detail.evidence'])
+}
+check(
+  byClass('zw-evidenceList').length === 1 || detailHasEvidenceHint(),
+  'evidence block rendered'
+)
+check(byClass('zw-scoreBar').length >= 2, 'confidence and importance bars rendered')
+const protectionChips = byClass('zw-seg').length
+check(protectionChips >= 1, 'protection level control rendered')
+const protectChip = byClass('zw-segBtn').find((node) =>
+  textOf(node).includes(ZH['protection.protected'])
+)
+if (protectChip) {
+  click(protectChip)
+  await settle(4)
+  check(
+    posts.some((post) => post.action === 'entry-protect' && post.level === 'protected'),
+    'protection control posts entry-protect'
+  )
+}
+const scopeBadges = byClass('zw-badgeNeutral').map(textOf)
+const scopeBadge = byClass('zw-badgeNeutral').find(
+  (node) =>
+    textOf(node).includes(ZH['scope.project']) || textOf(node).includes(ZH['scope.global'])
+)
+check(Boolean(scopeBadge), 'scope badge rendered: ' + JSON.stringify(scopeBadges.slice(0, 6)))
+
+// tidy center
+const tidyNav = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.tidy']))
+check(Boolean(tidyNav), 'nav item for the tidy center')
+if (tidyNav) {
+  click(tidyNav)
+  await settle(21)
+}
+check(posts.some((post) => post.action === 'memory-tidy'), 'tidy center asks for the tidy report')
+check(byClass('zw-tidy').length === 1, 'tidy view rendered')
+check(byClass('zw-tidyCard').length >= 4, 'tidy cards: ' + byClass('zw-tidyCard').length)
+
+// recall log
+const recallNav = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.recall']))
+check(Boolean(recallNav), 'nav item for the recall log')
+if (recallNav) {
+  click(recallNav)
+  await settle(4)
+}
+check(
+  byClass('zw-recallList').length === 1 || byClass('zw-empty').length >= 1,
+  'recall view rendered'
+)
+
+// observe dialog
+const observeBtn = byClass('zw-iconBtn').find((node) => (node.props.title || '') === ZH['action.observe'])
+check(Boolean(observeBtn), 'observe button in the top bar')
+if (observeBtn) {
+  click(observeBtn)
+  await settle(4)
+  check(byClass('zw-modal').length === 1, 'observe dialog opened')
+  const observeArea = byClass('zw-textareaBig')[0]
+  check(Boolean(observeArea), 'observe textarea present')
+  if (observeArea && observeArea.props.onChange) {
+    observeArea.props.onChange({ target: { value: '以后写公告都用英文，不要用官方生硬的语气。' } })
+    await settle(4)
+    const runBtn = findAll(
+      (node) =>
+        node.type === 'button' &&
+        classesOf(node).includes('zw-btnPrimary') &&
+        textOf(node).includes(ZH['observe.run'])
+    )[0]
+    check(Boolean(runBtn), 'observe dialog has a run button')
+    if (runBtn) {
+      click(runBtn)
+      await settle(8)
+      check(posts.some((post) => post.action === 'memory-observe'), 'observe posts memory-observe')
+      check(byClass('zw-assistPanel').length >= 1, 'observe result panel rendered')
+    }
+  }
+  const closeObserve = byClass('zw-modalFoot').length
+    ? findAll((node) => node.type === 'button' && textOf(node).includes(ZH['action.close']))[0]
+    : null
+  if (closeObserve) {
+    click(closeObserve)
+    await settle(4)
+  }
 }
 
 // ---------------------------------------------------------------- 6. summary

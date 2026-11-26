@@ -8862,8 +8862,8 @@ window.__ModuleLoader__.load({
       const [selectedId, setSelectedId] = useState('')
       const [checked, setChecked] = useState([])
       const [graphSelection, setGraphSelection] = useState([])
-      // 左栏默认收起成图标条：用户要的是「记忆列表」占满宽度，导航按需展开。
-      const [railCollapsed, setRailCollapsed] = useState(() => readFlag('railCollapsed', true))
+      // 左栏默认展开（带文字导航），并记住用户自己的展开 / 收起选择。
+      const [railCollapsed, setRailCollapsed] = useState(() => readFlag('railCollapsed', false))
       const [detailCollapsed, setDetailCollapsed] = useState(() => readFlag('detailCollapsed', false))
       const [toasts, setToasts] = useState([])
       const [busy, setBusy] = useState('')
@@ -9156,6 +9156,11 @@ window.__ModuleLoader__.load({
         }
         return t('app.title')
       }, [nav, t, projects, collectionById])
+
+      // 换视图 / 换项目 / 进关系图时，右侧详情栏自动收起。
+      useEffect(() => {
+        setSelectedId('')
+      }, [nav.kind, nav.id])
 
       const openEntry = useCallback((id) => {
         setSelectedId(id)
@@ -9584,8 +9589,11 @@ window.__ModuleLoader__.load({
         [checked, mutate, t]
       )
 
+      // 切换左栏（换个视图、换个项目、进关系图）时，右侧详情栏跟着收起，
+      // 避免「已经换了地方，右边还挂着上一条记忆」。
       const setNavKind = useCallback((kind, id) => {
         setNav({ kind: kind, id: id || '' })
+        setSelectedId('')
         setChecked([])
         setSearch('')
         if (kind !== 'graph') setGraphSelection([])

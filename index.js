@@ -606,24 +606,46 @@ function normalizeProject(raw, fallbackId) {
   }
 }
 
-function normalizeFrame(raw, entryIds, now) {
+function normalizeFrameRect(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const num = (value) => {
+    const n = Number(value)
+    return Number.isFinite(n) ? Math.round(n) : null
+  }
+  const x = num(raw.x)
+  const y = num(raw.y)
+  const width = num(raw.w)
+  const height = num(raw.h)
+  if (x === null || y === null || width === null || height === null) return null
+  if (Math.abs(width) < 4 || Math.abs(height) < 4) return null
+  return {
+    x: width < 0 ? x + width : x,
+    y: height < 0 ? y + height : y,
+    w: Math.abs(width),
+    h: Math.abs(height)
+  }
+}
+
+function normalizeFrame(raw, allowedIds, now) {
   if (!raw || typeof raw !== 'object') return null
   const name = cleanLine(raw.name, LIMITS.frameName)
   if (!name) return null
+  const id = cleanLine(raw.id, 64) || newFrameId()
   const seen = new Set()
   const memberIds = []
-  for (const id of Array.isArray(raw.memberIds) ? raw.memberIds : []) {
-    const key = cleanLine(id, 64)
-    if (!key || seen.has(key) || !entryIds.has(key)) continue
+  for (const member of Array.isArray(raw.memberIds) ? raw.memberIds : []) {
+    const key = cleanLine(member, 64)
+    if (!key || key === id || seen.has(key) || !allowedIds.has(key)) continue
     seen.add(key)
     memberIds.push(key)
     if (memberIds.length >= LIMITS.frameMembers) break
   }
   return {
-    id: cleanLine(raw.id, 64) || 'frm_' + Math.random().toString(36).slice(2, 8),
+    id,
     name,
     note: cleanText(raw.note, LIMITS.frameNote),
     color: normalizeCollectionColor(raw.color),
+    rect: normalizeFrameRect(raw.rect),
     memberIds,
     createdAt: isIsoDate(raw.createdAt) ? raw.createdAt : now,
     updatedAt: isIsoDate(raw.updatedAt) ? raw.updatedAt : isIsoDate(raw.createdAt) ? raw.createdAt : now
@@ -879,13 +901,22 @@ function migrateStore(parsed) {
   // 记忆框要先落库：关系两端允许是记忆框，校验关系时需要知道哪些框存在。
   const frames = []
   const frameIds = new Set()
-  for (const item of Array.isArray(parsed.frames) ? parsed.frames : []) {
-    const frame = normalizeFrame(item, entryIds, now)
-    if (!frame || frameIds.has(frame.id)) continue
-    frameIds.add(frame.id)
+  const rawFrames = Array.isArray(parsed.frames) ? parsed.frames : []
+  // 记忆框可以互相嵌套，所以归一化成员时要知道「所有框」的 id，而不是只有条目。
+  for (const item of rawFrames) {
+    const rawId = cleanLine(item && item.id, 64)
+    if (rawId) frameIds.add(rawId)
+  }
+  const frameMemberIds = new Set(entryIds)
+  frameIds.forEach((id) => frameMemberIds.add(id))
+  for (const item of rawFrames) {
+    const frame = normalizeFrame(item, frameMemberIds, now)
+    if (!frame || frames.some((existing) => existing.id === frame.id)) continue
     frames.push(frame)
     if (frames.length >= LIMITS.frames) break
   }
+  frameIds.clear()
+  frames.forEach((frame) => frameIds.add(frame.id))
   const nodeIds = new Set(entryIds)
   frameIds.forEach((id) => nodeIds.add(id))
 
@@ -1026,6 +1057,57 @@ function pruneStore(store) {
       if (nodeIds.has(key)) next[key] = store.layout.positions[key]
     }
     store.layout.positions = next
+  }
+  rebuildFrameMembers(store)
+  return store
+}
+
+// 记忆框是「空间容器」：框里的节点自动属于这个框。
+// 只要知道每个节点的坐标，成员就不该依赖用户手动维护。
+function nodeCenters(store) {
+  const centers = new Map()
+  const positions = (store.layout && store.layout.positions) || {}
+  ;(store.entries || []).forEach((entry) => {
+    const point = positions[entry.id]
+    if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+      centers.set(entry.id, { x: point.x, y: point.y })
+    }
+  })
+  ;(store.frames || []).forEach((frame) => {
+    const point = positions[frame.id]
+    if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+      centers.set(frame.id, { x: point.x, y: point.y })
+    }
+  })
+  return centers
+}
+
+function insideRect(rect, point) {
+  if (!rect || !point) return false
+  return point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h
+}
+
+// 用坐标重算所有带 rect 的框的成员；没有 rect 的老框保留手动成员。
+// 只有「真的保存过布局」时才重算，否则一次空布局会把成员洗掉。
+function rebuildFrameMembers(store) {
+  const centers = nodeCenters(store)
+  const saved = Boolean(store.layout && store.layout.updatedAt) && centers.size > 0
+  const known = new Set(store.entries.map((entry) => entry.id))
+  ;(store.frames || []).forEach((frame) => known.add(frame.id))
+  for (const frame of store.frames || []) {
+    const members = []
+    if (frame.rect && saved) {
+      for (const [id, point] of centers) {
+        if (id === frame.id) continue
+        if (insideRect(frame.rect, point)) members.push(id)
+      }
+    } else {
+      for (const id of frame.memberIds || []) {
+        if (id !== frame.id && known.has(id)) members.push(id)
+      }
+    }
+    members.sort()
+    frame.memberIds = members.slice(0, LIMITS.frameMembers)
   }
   return store
 }
@@ -2281,11 +2363,15 @@ function rankRecall(state, input) {
   const task = cleanText(input && input.task, LIMITS.recallTask)
   if (!task) throw httpError(400, 'empty-task', '需要提供当前任务或问题')
   const projectId = cleanLine(input && input.projectId, 64) || ''
+  const frameId = cleanLine(input && (input.frameId || input.frame), 64)
+  // 指定记忆区时，先把它（含嵌套子框）范围的记忆圈出来，再在这个范围里排序。
+  const scopeIds = frameId ? frameSubtree(state, frameId).entryIds : null
   const limit = Math.max(1, Math.min(20, Number(input && input.limit) || 6))
   const tokens = tokensOf(task)
   const rows = []
   for (const entry of state.entries) {
     if (entry.status === 'archived' || entry.status === 'deprecated') continue
+    if (scopeIds && !scopeIds.has(entry.id)) continue
     const entryTokens = tokensForEntry(entry)
     let hits = overlapCount(tokens, entryTokens)
     for (const tag of entry.tags) {
@@ -3024,7 +3110,8 @@ function reorderProjects(store, input) {
 }
 
 function saveFrame(store, input) {
-  const entryIds = new Set(store.entries.map((entry) => entry.id))
+  const nodeIds = new Set(store.entries.map((entry) => entry.id))
+  store.frames.forEach((item) => nodeIds.add(item.id))
   const id = cleanLine(input && input.id, 64)
   const existing = id ? store.frames.find((frame) => frame.id === id) : null
   const name = cleanLine(input && input.name, LIMITS.frameName)
@@ -3034,15 +3121,17 @@ function saveFrame(store, input) {
     memberIds = []
     for (const raw of input.memberIds) {
       const key = cleanLine(raw, 64)
-      if (!key || seen.has(key) || !entryIds.has(key)) continue
+      if (!key || key === id || seen.has(key) || !nodeIds.has(key)) continue
       seen.add(key)
       memberIds.push(key)
       if (memberIds.length >= LIMITS.frameMembers) break
     }
   }
+  const rect = normalizeFrameRect(input && input.rect)
   if (existing) {
     if (name) existing.name = name
     if (memberIds) existing.memberIds = memberIds
+    if (input && input.rect !== undefined) existing.rect = rect
     if (input && input.color !== undefined) existing.color = normalizeCollectionColor(input.color)
     if (input && input.note !== undefined) existing.note = cleanText(input.note, LIMITS.frameNote)
     existing.updatedAt = isoNow()
@@ -3055,6 +3144,7 @@ function saveFrame(store, input) {
     name,
     note: cleanText(input && input.note, LIMITS.frameNote),
     color: normalizeCollectionColor(input && input.color),
+    rect,
     memberIds: memberIds || [],
     createdAt: isoNow(),
     updatedAt: isoNow()
@@ -3072,8 +3162,43 @@ function deleteFrame(store, input) {
   store.relations = store.relations.filter(
     (relation) => relation.sourceMemoryId !== id && relation.targetMemoryId !== id
   )
+  // 被删的框可能还挂在别的框里（嵌套），一并摘掉。
+  for (const other of store.frames) {
+    other.memberIds = (other.memberIds || []).filter((member) => member !== id)
+  }
   if (store.layout && store.layout.positions) delete store.layout.positions[id]
   return { deleted: id, name: frame.name }
+}
+
+// 拖完节点后由前端调用：把「谁在哪个框里」按当前坐标重算并落库。
+function syncFrames(store, input) {
+  const incoming = Array.isArray(input && input.frames) ? input.frames : []
+  const nodeIds = new Set(store.entries.map((entry) => entry.id))
+  store.frames.forEach((frame) => nodeIds.add(frame.id))
+  let updated = 0
+  for (const patch of incoming) {
+    const frame = store.frames.find((item) => item.id === cleanLine(patch && patch.id, 64))
+    if (!frame) continue
+    if (patch && patch.rect !== undefined) frame.rect = normalizeFrameRect(patch.rect)
+    if (Array.isArray(patch && patch.memberIds)) {
+      const seen = new Set()
+      const members = []
+      for (const raw of patch.memberIds) {
+        const key = cleanLine(raw, 64)
+        if (!key || key === frame.id || seen.has(key) || !nodeIds.has(key)) continue
+        seen.add(key)
+        members.push(key)
+        if (members.length >= LIMITS.frameMembers) break
+      }
+      frame.memberIds = members
+    }
+    frame.updatedAt = isoNow()
+    updated += 1
+  }
+  // 有 rect 的记忆区，成员永远由「框内的位置」决定，所以同步完顺手重算一遍，
+  // 免得显式成员列表和画布上的框对不上。
+  rebuildFrameMembers(store)
+  return { frames: store.frames, updated }
 }
 
 function saveLayout(store, input) {
@@ -3090,7 +3215,9 @@ function saveLayout(store, input) {
     positions[key] = { x: Math.round(x), y: Math.round(y) }
   }
   store.layout = { positions, updatedAt: isoNow() }
-  return { layout: store.layout, saved: Object.keys(positions).length }
+  // 坐标变了，框内的成员就跟着变——这是「框」作为空间容器的语义。
+  rebuildFrameMembers(store)
+  return { layout: store.layout, saved: Object.keys(positions).length, frames: store.frames }
 }
 
 function clearLayout(store) {
@@ -3503,6 +3630,25 @@ function describeEntryFull(entry, state) {
   return lines.join('\n')
 }
 
+function frameSubtree(state, frameId) {
+  const byId = new Map(state.frames.map((frame) => [frame.id, frame]))
+  const root = byId.get(frameId)
+  if (!root) throw httpError(404, 'frame-not-found', '记忆框不存在：' + frameId)
+  const seen = new Set()
+  const entries = new Set()
+  const walk = (frame) => {
+    if (!frame || seen.has(frame.id)) return
+    seen.add(frame.id)
+    for (const member of frame.memberIds || []) {
+      const nested = byId.get(member)
+      if (nested) walk(nested)
+      else entries.add(member)
+    }
+  }
+  walk(root)
+  return { frame: root, entryIds: entries, frameIds: seen }
+}
+
 function searchEntries(state, query) {
   const needle = cleanLine(query.query || query.q, 200).toLowerCase()
   const type = query.type ? normalizeType(query.type) : ''
@@ -3510,11 +3656,14 @@ function searchEntries(state, query) {
   const status = query.status ? normalizeStatus(query.status) : ''
   const projectId = cleanLine(query.projectId, 64)
   const collectionId = cleanLine(query.collectionId, 64)
+  const frameId = cleanLine(query.frameId, 64)
   let collection = null
   if (collectionId) {
     collection = state.collections.find((item) => item.id === collectionId)
     if (!collection) throw httpError(404, 'collection-not-found', '记忆集合不存在：' + collectionId)
   }
+  // 记忆框是空间容器：在框里找记忆时把嵌套的子框一起展开。
+  const frameScope = frameId ? frameSubtree(state, frameId).entryIds : null
   return state.entries
     .filter((entry) => {
       if (type && entry.type !== type) return false
@@ -3522,6 +3671,7 @@ function searchEntries(state, query) {
       if (status && entry.status !== status) return false
       if (projectId && entry.projectId !== projectId) return false
       if (collection && !collection.memberIds.includes(entry.id)) return false
+      if (frameScope && !frameScope.has(entry.id)) return false
       if (query.favorites === true && !entry.favorite) return false
       if (!needle) return true
       const haystack = [
@@ -3586,6 +3736,7 @@ function writeParameters() {
           'project-reorder',
           'frame-save',
           'frame-delete',
+          'frame-sync',
           'layout-save',
           'layout-clear',
           'import'
@@ -3801,6 +3952,8 @@ function applyAction(state, input) {
       return saveFrame(state, input)
     case 'frame-delete':
       return deleteFrame(state, input)
+    case 'frame-sync':
+      return syncFrames(state, input)
     case 'layout-save':
       return saveLayout(state, input)
     case 'layout-clear':
@@ -4174,6 +4327,7 @@ export function apply(ctx) {
         status: { type: 'string', enum: STATUSES, description: '按状态过滤' },
         projectId: { type: 'string', description: '按项目过滤' },
         collectionId: { type: 'string', description: '只看某个集合里的记忆' },
+        frameId: { type: 'string', description: '只看某个记忆区（关系图上的框，含嵌套子框）里的记忆' },
         favorites: { type: 'boolean', description: '只看收藏' },
         limit: { type: 'number', description: '返回条数，默认 12，最多 40' }
       },
@@ -4389,6 +4543,7 @@ export function apply(ctx) {
       properties: {
         task: { type: 'string', description: '当前任务或问题，例如「写一版活动公告」' },
         projectId: { type: 'string', description: '当前项目 id' },
+        frameId: { type: 'string', description: '只在这个记忆区里找（关系图上的框，含嵌套子框）' },
         limit: { type: 'number', description: '取回条数，默认 6，最多 20' }
       },
       required: ['task'],

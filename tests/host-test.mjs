@@ -1556,6 +1556,8 @@ async function runWorkspaceSuite() {
   const dshHome = await makeHome('workspace')
   const app = await boot(dshHome)
   const api = app.api
+  const searchTool = (app.toolDefs || []).find((def) => def.name === 'design_memory_search')
+  const searchFor = async (params) => (searchTool ? await searchTool.execute(params) : '')
 
   await api.post({ action: 'entry-save', title: '第一条', content: '战斗数值：暴击率 12%。', status: 'active' })
   await api.post({ action: 'entry-save', title: '第二条', content: '战斗数值：暴击率 15%。', status: 'active' })
@@ -1642,6 +1644,85 @@ async function runWorkspaceSuite() {
   const picked = await api.post({ action: 'settings.model', provider: 'demo', model: 'demo-1', enabled: true })
   check(picked.json.model.enabled === true, 'settings.model stores the choice')
   check(picked.json.model.provider === 'demo', 'settings.model keeps the provider')
+
+  // 记忆区 = 空间容器：框内节点自动归属，可以嵌套，检索与召回可以指定区域。
+  const areaBox = await api.post({
+    action: 'frame-save',
+    name: '星云区',
+    color: 'amber',
+    rect: { x: 0, y: 0, w: 400, h: 300 },
+    memberIds: []
+  })
+  check(areaBox.json.ok === true, 'frame-save accepts a rect')
+  check(areaBox.json.frame.rect && areaBox.json.frame.rect.w === 400, 'frame keeps its rect')
+  const areaId = areaBox.json.frame.id
+
+  // 两个节点落在框内，一个在框外：保存布局后按 rect 重算归属。
+  const inner = await api.post({ action: 'entry-save', title: '框内记忆', content: '框内内容', type: 'rule' })
+  const outer = await api.post({ action: 'entry-save', title: '框外记忆', content: '框外内容', type: 'rule' })
+  await api.post({
+    action: 'layout-save',
+    positions: {
+      [inner.json.entry.id]: { x: 120, y: 100 },
+      [outer.json.entry.id]: { x: 900, y: 900 },
+      [idA]: { x: 180, y: 160 },
+      [idB]: { x: 300, y: 200 }
+    }
+  })
+  state = (await api.get()).json
+  const area = state.frames.find((item) => item.id === areaId)
+  check(Boolean(area), 'memory area survives a layout save')
+  check(
+    area.memberIds.includes(inner.json.entry.id) && area.memberIds.includes(idA),
+    'memories drawn inside the box become its members'
+  )
+  check(!area.memberIds.includes(outer.json.entry.id), 'memories outside the box stay out')
+
+  const inArea = await searchFor({ frameId: areaId })
+  check(inArea.includes('框内记忆'), 'search by frameId finds memories inside the area')
+  check(!inArea.includes('框外记忆'), 'search by frameId hides memories outside the area')
+
+  const recallInArea = await api.post({ action: 'memory-recall', task: '框内规则', frameId: areaId })
+  check(recallInArea.json.ok === true, 'memory-recall accepts a frameId scope')
+  const recallRows = recallInArea.json.items || (recallInArea.json.result && recallInArea.json.result.items) || []
+  check(
+    recallRows.every((row) => !row.entry || area.memberIds.includes(row.entry.id)),
+    'frame-scoped recall only returns memories inside the area'
+  )
+
+  // 嵌套：子框落在父框里，父框子树会把子框成员一并纳入。
+  const childBox = await api.post({
+    action: 'frame-save',
+    name: '子区',
+    color: 'blue',
+    rect: { x: 40, y: 40, w: 180, h: 140 },
+    memberIds: []
+  })
+  check(Boolean(childBox.json.frame.id), 'a child area can be created inside a parent')
+  const nestedSync = await api.post({
+    action: 'frame-sync',
+    frames: [{ id: areaId, memberIds: [childBox.json.frame.id, inner.json.entry.id] }]
+  })
+  check(nestedSync.json.ok === true, 'frame-sync accepts a nested area id')
+  const nestedSearch = await searchFor({ frameId: areaId })
+  check(nestedSearch.includes('框内记忆'), 'search expands nested areas')
+
+  // 记忆区的成员由框的位置决定：把框缩小到只剩一个节点，成员就只剩那一个。
+  const sync = await api.post({
+    action: 'frame-sync',
+    frames: [{ id: areaId, rect: { x: 100, y: 80, w: 120, h: 90 } }]
+  })
+  check(sync.json.ok === true, 'frame-sync updates the area rect')
+  state = (await api.get()).json
+  const syncedArea = state.frames.find((item) => item.id === areaId)
+  check(
+    syncedArea.memberIds.includes(inner.json.entry.id),
+    'area membership follows the rect after a sync'
+  )
+  check(
+    !syncedArea.memberIds.includes(idB),
+    'area membership drops memories that fall outside the rect'
+  )
 
   console.log('WORKSPACE ' + workspaceChecks + ' checks · 0 failed')
   rm(dshHome, { recursive: true, force: true })

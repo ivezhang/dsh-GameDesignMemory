@@ -1,6 +1,6 @@
 {
   "name": "@local/design-memory",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "private": true,
   "description": "知微 — an AI-assisted knowledge workbench for game designers: typed memories, semantic relations, topic collections, a three-pane workspace, and an explorable knowledge graph, with agent tools for search, write, suggest and analyze.",
   "license": "MIT",

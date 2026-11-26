@@ -182,6 +182,14 @@ window.__ModuleLoader__.load({
       'graph.frameNodeHint': '记忆框也是节点：可以拖动，也可以拖线连到别的记忆或别的框',
       'graph.frameRenameTitle': '重命名记忆框',
       'graph.frameRenamed': '记忆框已重命名',
+      'graph.frameCreateTitle': '给这个记忆区起个名字',
+      'graph.frameDrawn': '框画好了，起个名字它就是一块记忆区',
+      'graph.frames': '记忆区',
+      'graph.framePick': '选中这个记忆区里的记忆',
+      'graph.frameDelete': '删除记忆区（记忆本身保留）',
+      'graph.frameDeleted': '记忆区已删除，里面的记忆都还在',
+      'graph.searchArea': '在这块记忆区里找',
+      'graph.noFrames': '还没有记忆区：选「圈区」在画布上画一个框',
       'action.edit': '编辑',
       'action.close': '关闭',
       'action.confirm': '确认',
@@ -681,6 +689,14 @@ window.__ModuleLoader__.load({
       'graph.frameNodeHint': 'A frame is a node too: drag it, or drag a line from it to another memory or frame',
       'graph.frameRenameTitle': 'Rename frame',
       'graph.frameRenamed': 'Frame renamed',
+      'graph.frameCreateTitle': 'Name this memory area',
+      'graph.frameDrawn': 'Box drawn — name it and it becomes a memory area',
+      'graph.frames': 'Memory areas',
+      'graph.framePick': 'Select the memories in this area',
+      'graph.frameDelete': 'Delete this area (the memories stay)',
+      'graph.frameDeleted': 'Area deleted, its memories are still here',
+      'graph.searchArea': 'Search inside this memory area',
+      'graph.noFrames': 'No memory areas yet: pick "Frame" and draw a box on the canvas',
       'action.edit': 'Edit',
       'action.close': 'Close',
       'action.confirm': 'Confirm',
@@ -1220,7 +1236,7 @@ window.__ModuleLoader__.load({
     .zw-scroll::-webkit-scrollbar-track { background: transparent; }
 
     /* ================= 三栏骨架 ================= */
-    .zw-app { display: flex; flex: 1; min-height: 0; position: relative; }
+    .zw-app { display: flex; flex: 1; min-height: 0; position: relative; overflow: hidden; }
 
     .zw-rail {
       width: 232px;
@@ -1573,20 +1589,21 @@ window.__ModuleLoader__.load({
 
     /* ================= 右详情栏 ================= */
     .zw-detail {
-      width: 372px; flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column;
+      width: clamp(272px, 32vw, 372px); flex: 0 0 auto; min-width: 0; min-height: 0;
+      display: flex; flex-direction: column;
       border-left: 1px solid var(--zw-border); background: var(--zw-bg-soft);
       transition: width 160ms ease;
     }
     .zw-detail[data-collapsed='true'] { width: 48px; }
     .zw-detailHead {
-      flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+      flex: 0 0 auto; display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap;
       padding: 11px 12px; border-bottom: 1px solid var(--zw-border);
     }
     .zw-detailTitleWrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
     .zw-detailTitle { font-size: 14px; font-weight: 650; line-height: 1.35; margin: 0; letter-spacing: -0.01em; }
     .zw-detailMeta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 10.5px; color: var(--zw-text-3); }
-    .zw-detailActions { display: flex; align-items: center; gap: 2px; }
-    .zw-detailScroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px 48px; display: flex; flex-direction: column; gap: 15px; }
+    .zw-detailActions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; margin-left: auto; }
+    .zw-detailScroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 12px 14px 48px; display: flex; flex-direction: column; gap: 15px; }
 
     .zw-block { display: flex; flex-direction: column; gap: 6px; }
     .zw-blockHead { display: flex; align-items: center; gap: 6px; }
@@ -1876,15 +1893,25 @@ window.__ModuleLoader__.load({
     @keyframes zwShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     @media (max-width: 1180px) {
-      .zw-detail { width: 330px; }
+      .zw-detail { width: 320px; }
       .zw-graphPanel { width: 204px; }
       .zw-columns { grid-template-columns: 1fr; }
     }
     @media (max-width: 940px) {
       .zw-rail { width: 62px; }
       .zw-rail .zw-navLabel, .zw-rail .zw-navCount, .zw-rail .zw-brandText { display: none; }
-      .zw-detail { width: 300px; }
       .zw-statGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    /* 窄面板：详情栏不再挤列表，而是浮在右侧；关闭按钮仍然有效。 */
+    @media (max-width: 860px) {
+      .zw-detail {
+        position: absolute; top: 0; right: 0; bottom: 0; z-index: 22;
+        width: min(366px, 92vw); box-shadow: -18px 0 38px -22px rgba(0, 0, 0, 0.45);
+        border-left: 1px solid var(--zw-border);
+      }
+      .zw-detail[data-collapsed='true'] { position: static; width: 44px; box-shadow: none; }
+      .zw-factGrid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+      .zw-graphPanel { width: 186px; }
     }
 
     /* ================= 补充件：表单外壳 / 卡片视图 / 图层 ================= */
@@ -2624,7 +2651,10 @@ window.__ModuleLoader__.load({
       color: var(--zw-text-2);
       border-bottom: 1px dashed var(--zw-border);
     }
-    `
+.zw-framePick { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.zw-framePick:hover { text-decoration: underline; }
+.zw-frameEdit { border: 0; background: none; padding: 0 2px; cursor: pointer; color: var(--zw-text-3); display: inline-flex; align-items: center; }
+.zw-frameEdit:hover { color: var(--zw-text); }`
 
     const ICONS = {
       search: [
@@ -7854,6 +7884,7 @@ window.__ModuleLoader__.load({
       const [search, setSearch] = useState(seed.search || '')
       const [linkDraft, setLinkDraft] = useState(null)
       const [boxDraft, setBoxDraft] = useState(null)
+      const autoSaveRef = useRef(null)
       const [hoverEdge, setHoverEdge] = useState('')
       const [flash, setFlash] = useState('')
       const [tick, setTick] = useState(0)
@@ -8061,10 +8092,15 @@ window.__ModuleLoader__.load({
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [model.edges.length])
 
-      // 记忆框默认贴在成员上方；被拖过的框保留用户位置。
+      // 记忆区：有 rect 的框把把手贴在框左上角；老数据没有 rect 时退回「成员上方」。
       const placeFrameNodes = () => {
         model.nodes.forEach((node) => {
           if (!node.frameNode || pinnedFrames.current.has(node.id)) return
+          const rect = node.frame && node.frame.rect
+          if (rect) {
+            positionsRef.current.set(node.id, { x: rect.x + 34, y: rect.y - 16 })
+            return
+          }
           if (!node.memberIds.length) return
           let sumX = 0
           let sumY = 0
@@ -8256,7 +8292,8 @@ window.__ModuleLoader__.load({
             }
           } else if (drag.node && drag.node.frameNode) {
             pinnedFrames.current.add(drag.id)
-          }
+            scheduleAutoSave()
+          } else scheduleAutoSave()
           return
         }
         if (drag.kind === 'link') {
@@ -8310,14 +8347,26 @@ window.__ModuleLoader__.load({
             const screenY = point.y * viewRef.current.k + viewRef.current.y
             if (screenX >= left && screenX <= right && screenY >= top && screenY <= bottom) picked.push(node.id)
           })
-          if (!picked.length) setFlash(t('graph.boxEmpty'))
+          // 画框存的是图坐标，跟缩放/平移无关，之后框内归属全靠这个 rect 重算。
+          const current = viewRef.current
+          const rect = {
+            x: Math.round((left - current.x) / current.k),
+            y: Math.round((top - current.y) / current.k),
+            w: Math.round(Math.max(56, (right - left) / current.k)),
+            h: Math.round(Math.max(44, (bottom - top) / current.k))
+          }
+          if (!picked.length && !props.onCreateFrame) setFlash(t('graph.boxEmpty'))
           else if (drag.multi) props.onMultiSelect(picked)
-          else if (props.onSaveFrame) {
+          else if (props.onCreateFrame) {
+            props.onCreateFrame({ rect: rect, memberIds: picked })
+            setFlash(t('graph.frameDrawn'))
+          } else if (props.onSaveFrame) {
             const frames = props.frames || []
             props.onSaveFrame({
               name: t('graph.frameName') + ' ' + (frames.length + 1),
               color: COLLECTION_COLORS[frames.length % COLLECTION_COLORS.length],
-              memberIds: picked
+              memberIds: picked,
+              rect: rect
             })
             setFlash(t('graph.frameSaved'))
           } else props.onMultiSelect(picked)
@@ -8445,10 +8494,61 @@ window.__ModuleLoader__.load({
         })
         .filter(Boolean)
 
-      // 记忆框：用户手动框出来的阅读单元，跟自动集合是两回事，所以单独画一层。
+      // 记忆区：用户亲手画的空间容器。框内（rect 命中）的节点自动归属，
+      // 所以拖动节点进出框，归属就会跟着变；保存布局后由 host 落库。
+      const frameRectMembers = (frame) => {
+        const visibleSet = new Set(model.nodes.map((node) => node.id))
+        if (!frame.rect) return frame.memberIds.filter((id) => visibleSet.has(id))
+        const rect = frame.rect
+        return model.nodes
+          .filter((node) => node.id !== frame.id)
+          .filter((node) => {
+            const point = positionOf(node.id)
+            return (
+              point.x >= rect.x &&
+              point.x <= rect.x + rect.w &&
+              point.y >= rect.y &&
+              point.y <= rect.y + rect.h
+            )
+          })
+          .map((node) => node.id)
+      }
+
       const frameShapes = (props.frames || [])
         .map((frame) => {
-          const members = model.nodes.filter((node) => frame.memberIds.includes(node.id))
+          const memberIds = frameRectMembers(frame)
+          const members = model.nodes.filter((node) => memberIds.includes(node.id))
+          const color = collectionColor(frame.color)
+          if (frame.rect) {
+            const rect = frame.rect
+            return h(
+              'g',
+              { key: frame.id, className: 'zw-frameBox' },
+              h('rect', {
+                className: 'zw-hullOutline',
+                x: rect.x,
+                y: rect.y,
+                width: rect.w,
+                height: rect.h,
+                rx: 16,
+                style: {
+                  fill: 'color-mix(in srgb, ' + color + ' 5%, transparent)',
+                  stroke: 'color-mix(in srgb, ' + color + ' 52%, transparent)',
+                  strokeDasharray: '7 6'
+                }
+              }),
+              h(
+                'text',
+                { className: 'zw-frameLabel', x: rect.x + 12, y: rect.y + 19, style: { fill: color } },
+                frame.name,
+                h(
+                  'tspan',
+                  { className: 'zw-frameCount', x: rect.x + 12, dy: 13 },
+                  members.length + ' ' + t('collections.memberCount')
+                )
+              )
+            )
+          }
           if (members.length < 2) return null
           const points = members.map((node) => positionOf(node.id))
           const center = points.reduce(
@@ -8466,14 +8566,14 @@ window.__ModuleLoader__.load({
               className: 'zw-hullOutline',
               d: hullPath(points, 22),
               style: {
-                fill: 'color-mix(in srgb, ' + collectionColor(frame.color) + ' 6%, transparent)',
-                stroke: 'color-mix(in srgb, ' + collectionColor(frame.color) + ' 55%, transparent)',
+                fill: 'color-mix(in srgb, ' + color + ' 6%, transparent)',
+                stroke: 'color-mix(in srgb, ' + color + ' 55%, transparent)',
                 strokeDasharray: '6 5'
               }
             }),
             h(
               'text',
-              { className: 'zw-frameLabel', x: center.x, y: topY - 26, style: { fill: collectionColor(frame.color) } },
+              { className: 'zw-frameLabel', x: center.x, y: topY - 26, style: { fill: color } },
               frame.name,
               h(
                 'tspan',
@@ -8485,13 +8585,27 @@ window.__ModuleLoader__.load({
         })
         .filter(Boolean)
 
-      const saveLayoutNow = () => {
-        if (!props.onSaveLayout) return
+      const collectPositions = () => {
         const positions = {}
         positionsRef.current.forEach((point, id) => {
           positions[id] = { x: Math.round(point.x), y: Math.round(point.y) }
         })
-        props.onSaveLayout(positions)
+        return positions
+      }
+
+      // 拖完节点/框后静默存一次布局，host 会顺手按 rect 重算记忆区归属。
+      const scheduleAutoSave = () => {
+        if (typeof props.onLayoutChange !== 'function') return
+        if (autoSaveRef.current) clearTimeout(autoSaveRef.current)
+        autoSaveRef.current = setTimeout(() => {
+          autoSaveRef.current = null
+          props.onLayoutChange(collectPositions())
+        }, 700)
+      }
+
+      const saveLayoutNow = () => {
+        if (!props.onSaveLayout) return
+        props.onSaveLayout(collectPositions())
         setFlash(t('graph.layoutSaved'))
       }
 
@@ -9069,6 +9183,79 @@ window.__ModuleLoader__.load({
                     )
                   : null
               ),
+              // 记忆区列表：点一下就选中整框成员，长按/双击可以改名或删除。
+              h(
+                'div',
+                { className: 'zw-graphSection' },
+                h('div', { className: 'zw-blockHint' }, t('graph.frames')),
+                (props.frames || []).length
+                  ? (props.frames || []).map((frame) =>
+                      h(
+                        'div',
+                        { key: frame.id, className: 'zw-legendRow' },
+                        h('span', {
+                          className: 'zw-legendSample',
+                          style: {
+                            border: '1px dashed color-mix(in srgb, ' + collectionColor(frame.color) + ' 70%, transparent)',
+                            opacity: 0.9
+                          }
+                        }),
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'zw-legendName zw-framePick',
+                            title: t('graph.framePick'),
+                            onClick: () => {
+                              if (!props.onSelectFrame) return
+                              props.onSelectFrame(frame, false)
+                            }
+                          },
+                          frame.name
+                        ),
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'zw-legendCount zw-frameEdit',
+                            title: t('graph.searchArea'),
+                            onClick: () => {
+                              if (!props.onSearchArea) return
+                              props.onSearchArea(frame)
+                            }
+                          },
+                          h(Icon, { name: 'search', size: 11 })
+                        ),
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'zw-legendCount zw-frameEdit',
+                            title: t('graph.frameRenameTitle'),
+                            onClick: () => {
+                              if (!props.onRenameFrame) return
+                              props.onRenameFrame(frame)
+                            }
+                          },
+                          h(Icon, { name: 'edit', size: 11 })
+                        ),
+                        h(
+                          'button',
+                          {
+                            type: 'button',
+                            className: 'zw-legendCount zw-frameEdit',
+                            title: t('graph.frameDelete'),
+                            onClick: () => {
+                              if (!props.onDeleteFrame) return
+                              props.onDeleteFrame(frame)
+                            }
+                          },
+                          h(Icon, { name: 'trash', size: 11 })
+                        )
+                      )
+                    )
+                  : h('div', { className: 'zw-savedEmpty' }, t('graph.noFrames'))
+              ),
               h(
                 'div',
                 { className: 'zw-graphSection' },
@@ -9537,6 +9724,17 @@ window.__ModuleLoader__.load({
     function NameDialog(props) {
       const t = props.t
       const [value, setValue] = useState(props.value || '')
+      // 输入值同时放一份 ref：对话框常被复用，靠 state 闭包容易拿到旧值。
+      const valueRef = useRef(value)
+      const change = (next) => {
+        valueRef.current = next
+        setValue(next)
+      }
+      const submit = () => {
+        const name = String(valueRef.current || '').trim()
+        console.log('SUBMIT name=' + JSON.stringify(name))
+        if (name) props.onSave(name)
+      }
       return h(
         Modal,
         {
@@ -9558,7 +9756,7 @@ window.__ModuleLoader__.load({
               {
                 type: 'button',
                 className: 'zw-btn zw-btnSm zw-btnPrimary',
-                onClick: () => value.trim() && props.onSave(value.trim())
+                onClick: submit
               },
               t('action.save')
             )
@@ -9575,9 +9773,9 @@ window.__ModuleLoader__.load({
               value: value,
               autoFocus: true,
               placeholder: props.placeholder || '',
-              onChange: (event) => setValue(event.target.value),
+              onChange: (event) => change(event.target.value),
               onKeyDown: (event) => {
-                if (event.key === 'Enter' && value.trim()) props.onSave(value.trim())
+                if (event.key === 'Enter') submit()
               }
             })
           )
@@ -9854,6 +10052,27 @@ window.__ModuleLoader__.load({
         return counts
       }, [projects, entries])
 
+      // 记忆区里的记忆：把嵌套的子框一起展开（框里可以套框）。
+      const areaScopeOf = useCallback(
+        (frameId) => {
+          const ids = new Set()
+          const guard = new Set()
+          const walk = (id) => {
+            if (guard.has(id)) return
+            guard.add(id)
+            const frame = frameById.get(id)
+            if (!frame) return
+            frame.memberIds.forEach((memberId) => {
+              if (frameById.has(memberId)) walk(memberId)
+              else if (entryById.has(memberId)) ids.add(memberId)
+            })
+          }
+          walk(frameId)
+          return ids
+        },
+        [frameById, entryById]
+      )
+
       const navEntries = useMemo(() => {
         let list = entries.slice()
         if (nav.kind === 'inbox') {
@@ -9867,12 +10086,15 @@ window.__ModuleLoader__.load({
           list = collection ? list.filter((entry) => collection.memberIds.includes(entry.id)) : []
         } else if (nav.kind === 'recent') {
           list = sortEntries(list, 'updated').slice(0, 20)
+        } else if (nav.kind === 'area') {
+          const scope = areaScopeOf(nav.id)
+          list = list.filter((entry) => scope.has(entry.id))
         }
         if (filters.projectId) list = list.filter((entry) => entry.projectId === filters.projectId)
         list = list.filter((entry) => matchesFilters(entry, filters))
         list = list.filter((entry) => matchesQuery(entry, search))
         return sortEntries(list, nav.kind === 'recent' ? 'updated' : sort)
-      }, [entries, nav, filters, search, sort, collectionById])
+      }, [entries, nav, filters, search, sort, collectionById, areaScopeOf])
 
       const suggestedRelations = useMemo(
         () =>
@@ -9914,8 +10136,12 @@ window.__ModuleLoader__.load({
           const collection = collectionById.get(nav.id)
           return collection ? collection.name : t('view.collections')
         }
+        if (nav.kind === 'area') {
+          const frame = frameById.get(nav.id)
+          return frame ? frame.name : t('graph.frames')
+        }
         return t('app.title')
-      }, [nav, t, projects, collectionById])
+      }, [nav, t, projects, collectionById, frameById])
 
       // 换视图 / 换项目 / 进关系图时，右侧详情栏自动收起。
       useEffect(() => {
@@ -10492,12 +10718,40 @@ window.__ModuleLoader__.load({
       )
 
       const saveFrame = useCallback(
-        (payload) => mutate({ action: 'frame-save', name: payload.name, memberIds: payload.memberIds, color: payload.color }, t('graph.frameSaved')),
+        (payload) =>
+          mutate(
+            {
+              action: 'frame-save',
+              id: payload.id,
+              name: payload.name,
+              memberIds: payload.memberIds,
+              rect: payload.rect,
+              color: payload.color
+            },
+            t('graph.frameSaved')
+          ),
         [mutate, t]
       )
 
       const saveLayout = useCallback(
         (positions) => mutate({ action: 'layout-save', positions: positions }, t('graph.layoutSaved')),
+        [mutate, t]
+      )
+
+      // 拖完节点静默存布局：host 会按 rect 重算记忆区归属，界面随之刷新。
+      const saveLayoutQuiet = useCallback(
+        (positions) =>
+          mutateState({ action: 'layout-save', positions: positions })
+            .then((payload) => applyState(payload))
+            .catch(() => {}),
+        [applyState]
+      )
+
+      const deleteFrame = useCallback(
+        (frame) => {
+          if (!frame) return
+          mutate({ action: 'frame-delete', id: frame.id }, t('graph.frameDeleted'))
+        },
         [mutate, t]
       )
 
@@ -10699,6 +10953,24 @@ window.__ModuleLoader__.load({
               setSelectedId('')
             },
             onRenameFrame: (frame) => setModal({ type: 'frameName', frame: frame }),
+            onSearchArea: (frame) => {
+              setSelectedId('')
+              setGraphSelection([])
+              setNav({ kind: 'area', id: frame.id })
+            },
+            onDeleteFrame: deleteFrame,
+            onCreateFrame: (draft) => {
+              const frames = data.frames || []
+              setModal({
+                type: 'frameName',
+                frame: {
+                  name: t('graph.frameName') + ' ' + (frames.length + 1),
+                  color: COLLECTION_COLORS[frames.length % COLLECTION_COLORS.length],
+                  rect: draft.rect,
+                  memberIds: draft.memberIds || []
+                }
+              })
+            },
             onDecideRelation: decideRelation,
             onSaveView: () => setModal({ type: 'saveView' }),
             onOpenTidy: () => setNav({ kind: 'tidy', id: '' }),
@@ -10706,6 +10978,7 @@ window.__ModuleLoader__.load({
             layout: data.layout || { positions: {}, updatedAt: '' },
             onSaveFrame: saveFrame,
             onSaveLayout: saveLayout,
+            onLayoutChange: saveLayoutQuiet,
             onBatchAction: batchAction,
             onState: onGraphState
           })
@@ -11185,14 +11458,23 @@ window.__ModuleLoader__.load({
         modal && modal.type === 'frameName'
           ? h(NameDialog, {
               t: t,
-              title: t('graph.frameRenameTitle'),
+              title: modal.frame.id ? t('graph.frameRenameTitle') : t('graph.frameCreateTitle'),
               label: t('common.name'),
               value: modal.frame.name,
               icon: 'frame',
               onSave: async (name) => {
                 const frame = modal.frame
                 setModal(null)
-                await mutate({ action: 'frame-save', id: frame.id, name: name }, t('graph.frameRenamed'))
+                if (frame.id) {
+                  await mutate({ action: 'frame-save', id: frame.id, name: name }, t('graph.frameRenamed'))
+                } else {
+                  await saveFrame({
+                    name: name,
+                    color: frame.color,
+                    rect: frame.rect,
+                    memberIds: frame.memberIds
+                  })
+                }
               },
               onClose: () => setModal(null)
             })

@@ -1259,6 +1259,7 @@ async function workspaceChecks() {
       name: '战斗记忆框',
       color: 'teal',
       note: '',
+      rect: { x: -210, y: -170, w: 430, h: 350 },
       memberIds: live.entries.slice(0, 3).map((item) => item.id),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -1356,6 +1357,101 @@ async function workspaceChecks() {
         if (cancel) {
           click(cancel)
           await settle(4)
+        }
+      }
+    }
+    // 记忆区是按 rect 画的大框，不是按成员糊出来的 hull
+    const boxGroup = byClass('zw-frameBox')[0]
+    check(Boolean(boxGroup), 'frame area group rendered')
+    if (boxGroup) {
+      const rectNode = (function find(node) {
+        if (!node) return null
+        if (node.type === 'rect') return node
+        const kids = node.children || []
+        for (const kid of kids) {
+          const hit = find(kid)
+          if (hit) return hit
+        }
+        return null
+      })(boxGroup)
+      check(Boolean(rectNode) && rectNode.props && rectNode.props.width >= 300, 'frame area is drawn as a rect')
+    }
+
+    // 面板里的「记忆区」列表能点选整框
+    const panelBtn = byClass('zw-toolBtn').find(
+      (node) => node.props && node.props.title === ZH['graph.filters']
+    )
+    if (panelBtn && !byClass('zw-graphPanel').length) {
+      click(panelBtn)
+      await settle(6)
+    }
+    const framePick = byClass('zw-framePick').find((node) => textOf(node).includes('战斗记忆框'))
+    check(Boolean(framePick), 'memory area listed in the graph panel')
+    if (framePick) {
+      click(framePick)
+      await settle(6)
+      check(byClass('zw-batchbar').length >= 1, 'picking an area from the panel selects its memories')
+    }
+
+    // 记忆区里找：区块行上的搜索按钮把列表切到这块记忆区
+    const areaSearch = byClass('zw-frameEdit').find(
+      (node) => node.props && node.props.title === ZH['graph.searchArea']
+    )
+    if (areaSearch) {
+      click(areaSearch)
+      await settle(8)
+      const title = byClass('zw-viewTitle')[0]
+      check(
+        Boolean(title) && textOf(title).includes('战斗记忆框'),
+        'searching inside an area switches the list to that area'
+      )
+      check(byClass('zw-row').length > 0, 'area list shows the memories inside it')
+    }
+    // 回到关系图，后面的画框断言还要用它
+    const graphNavBack = byClass('zw-navItem').find((node) => textOf(node).includes(ZH['nav.graph']))
+    if (graphNavBack) {
+      click(graphNavBack)
+      await settle(8)
+    }
+
+    // 画一个新框 → 命名对话框 → 保存时带上 rect
+    const areaBtn = byClass('zw-toolBtn').find((node) => textOf(node).includes(ZH['graph.toolBox']))
+    check(Boolean(areaBtn), 'area tool button available')
+    if (areaBtn) {
+      click(areaBtn)
+      await settle(8)
+      const boxSvg = byClass('zw-graphSvg')[0]
+      if (boxSvg) {
+        pointer(boxSvg, 'onPointerDown', { clientX: 4, clientY: 4 }, { pointerId: 41 })
+        await settle(3)
+        pointer(byClass('zw-graphSvg')[0], 'onPointerMove', { clientX: 300, clientY: 260 }, { pointerId: 41 })
+        await settle(3)
+        pointer(byClass('zw-graphSvg')[0], 'onPointerUp', { clientX: 300, clientY: 260 }, { pointerId: 41 })
+        await settle(8)
+        const boxTitle = byClass('zw-modalTitle')[0]
+        check(
+          Boolean(boxTitle) && textOf(boxTitle).includes(ZH['graph.frameCreateTitle']),
+          'drawing a box opens the area naming dialog'
+        )
+        // 弹窗在根节点最后渲染：取最后一个输入框才是对话框里的那个（搜索框也用 zw-input 家族类名）。
+        const nameInput = byClass('zw-input').filter((n) => n.type === 'input').pop()
+        if (nameInput && typeof nameInput.props.onChange === 'function') {
+          nameInput.props.onChange({ target: { value: '星云记忆区' } })
+          await settle(4)
+        }
+        // 改名之后要重新取按钮：旧的 onClick 闭包还拿着输入前的空名字。
+        const saveBtn = findAll(
+          (node) => node.type === 'button' && textOf(node).trim() === ZH['action.save']
+        )[0]
+        if (saveBtn) {
+          click(saveBtn)
+          await settle(8)
+          const saved = posts.filter((post) => post.action === 'frame-save').pop()
+          check(
+            Boolean(saved) && Boolean(saved.rect) && saved.rect.w > 50,
+            'saving a drawn box posts frame-save with a rect'
+          )
+          check(Boolean(saved) && saved.name === '星云记忆区', 'drawn area keeps the name the user typed')
         }
       }
     }

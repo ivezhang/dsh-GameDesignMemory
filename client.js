@@ -3129,7 +3129,10 @@ window.__ModuleLoader__.load({
     .zw-dupRow { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
 
     .zw-knWrap { min-height: 0; }
-    .zw-knBar { flex: 0 0 auto; }
+    .zw-knGraph { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .zw-knBar { flex: 0 0 auto; flex-wrap: wrap; row-gap: 6px; }
+    .zw-knBar .zw-knTabs { flex-wrap: wrap; max-width: 100%; }
+    .zw-knBar .zw-viewSub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .zw-detailInner { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 26px; min-width: 0; }
 
     .zw-mergeTable { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--zw-border); border-radius: 10px; padding: 6px 10px; }
@@ -8609,14 +8612,37 @@ function CollectionPicker(props) {
       useEffect(() => {
         const node = wrapRef.current
         if (!node) return undefined
+        // 画布尺寸会随侧栏展开/收起、窗口缩放、标签页切换变化，只监听 window.resize 会漏，
+        // 结果就是「按旧尺寸适应过一次，之后一直错位」。这里用 ResizeObserver 盯住容器本身。
         const measure = () => {
           const rect = node.getBoundingClientRect()
+          if (!rect || (!rect.width && !rect.height)) return
           fitPending.current = true
-          setSize({ width: Math.max(320, Math.round(rect.width)), height: Math.max(320, Math.round(rect.height)) })
+          setSize((prev) => {
+            const width = Math.max(320, Math.round(rect.width))
+            const height = Math.max(320, Math.round(rect.height))
+            if (prev.width === width && prev.height === height) return prev
+            return { width: width, height: height }
+          })
+          // 尺寸没变化时上面的 setState 不触发重渲染，单独补一次适应，保证首帧布局延迟也能兜住。
+          if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+            window.requestAnimationFrame(() => {
+              if (!fitPending.current) return
+              fitPending.current = false
+              fitToWindow()
+              setTick((value) => value + 1)
+            })
+          }
         }
         measure()
+        let observer = null
+        if (typeof window !== 'undefined' && window.ResizeObserver) {
+          observer = new window.ResizeObserver(() => measure())
+          observer.observe(node)
+        }
         if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('resize', measure)
         return () => {
+          if (observer && observer.disconnect) observer.disconnect()
           if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('resize', measure)
         }
       }, [])
@@ -8958,6 +8984,8 @@ function CollectionPicker(props) {
         const box = wrap && wrap.getBoundingClientRect ? wrap.getBoundingClientRect() : null
         const viewW = box && box.width ? Math.round(box.width) : size.width
         const viewH = box && box.height ? Math.round(box.height) : size.height
+        // 容器还没撑开时不要按这个塌陷尺寸去算，否则图会被压到左上角、之后再也不回来。
+        if (viewW < 120 || viewH < 120) return
         if (!nodes.length) {
           viewRef.current = { x: viewW / 2, y: viewH / 2, k: 1 }
           setView(viewRef.current)
@@ -11152,7 +11180,12 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
         ),
         h(
           'div',
-          { style: { flex: 1, minHeight: 0 } },
+          // 关键：这里必须是纵向 flex 容器，否则 GraphView 的 .zw-graphWrap 拿不到高度，
+          // 画布会塌成一条 100 多像素的窄带，图就被压到左上角。
+          {
+            className: 'zw-knGraph',
+            style: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }
+          },
           h(GraphView, {
             key: 'knowledge:' + view,
             t: t,
@@ -14426,7 +14459,9 @@ h('span', { className: 'zw-graphCount' }, model.nodes.length + ' / ' + model.edg
                     { className: 'zw-viewSub' },
                     nav.kind === 'graph'
                       ? t('graph.subtitle')
-                      : navEntries.length + ' ' + t('common.items')
+                      : nav.kind === 'knowledge'
+                        ? visibleNodes.length + ' ' + t('kn.objects')
+                        : navEntries.length + ' ' + t('common.items')
                   )
                 ),
                 h(

@@ -2462,6 +2462,16 @@ check(Boolean(expandAllBtn), 'graph offers expand all')
     if (knNav) {
       click(knNav)
       await settle(10)
+      {
+        // 知识网络的画布曾经因为外层不是 flex 容器而塌成一百多像素高的窄带，
+        // 图被压到左上角、计数徽标跑到画布中间。这里守住容器的布局属性。
+        const graphWrap = byClass('zw-graphWrap')[0]
+        const hostNode = byClass('zw-knGraph')[0]
+        const hostStyle = (hostNode && hostNode.props && hostNode.props.style) || {}
+        check(Boolean(graphWrap), 'knowledge view mounts its own graph canvas')
+        check(hostStyle.display === 'flex',
+          'knowledge canvas container is a flex column so the canvas can fill the height')
+      }
       for (let guard = 0; guard < 3; guard += 1) {
         if (!byClass('zw-modal').length) break
         ;(documentListeners.keydown || []).concat(windowListeners.keydown || []).forEach((handler) =>
